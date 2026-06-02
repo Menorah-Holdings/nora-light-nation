@@ -25,7 +25,7 @@ const Creators = () => (
           <div className="mt-6 flex items-center justify-between text-xs">
             <div><p className="font-display text-base">{c.followers}</p><p className="text-muted-foreground">Followers</p></div>
             <div><p className="font-display text-base">{c.plays}</p><p className="text-muted-foreground">Plays</p></div>
-            <button className="rounded-full bg-gold-gradient px-4 py-1.5 text-[11px] font-medium text-primary-foreground">Follow</button>
+            <button className="rounded-full bg-red-gradient px-4 py-1.5 text-[11px] font-medium text-primary-foreground shadow-red-glow">Follow</button>
           </div>
         </Link>
       ))}

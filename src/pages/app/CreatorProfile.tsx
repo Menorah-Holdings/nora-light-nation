@@ -30,7 +30,7 @@ const CreatorProfile = () => {
             </div>
             <p className="mt-1 text-sm text-muted-foreground">{creator.category} · {creator.followers} followers</p>
           </div>
-          <button className="inline-flex items-center gap-2 rounded-full bg-gold-gradient px-5 py-2.5 text-sm font-medium text-primary-foreground shadow-glow">
+          <button className="inline-flex items-center gap-2 rounded-full bg-red-gradient px-5 py-2.5 text-sm font-medium text-primary-foreground shadow-red-glow">
             <Plus className="h-4 w-4" /> Follow
           </button>
         </div>
@@ -58,7 +58,7 @@ const CreatorProfile = () => {
         {tabs.map(t => (
           <button key={t} onClick={() => setTab(t)} className={cn(
             "rounded-full px-4 py-1.5 text-sm transition-colors",
-            tab === t ? "bg-gold-gradient text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+            tab === t ? "bg-red-gradient text-primary-foreground" : "text-muted-foreground hover:text-foreground"
           )}>{t}</button>
         ))}
       </div>
