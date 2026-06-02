@@ -20,7 +20,7 @@ const Library = () => {
         {tabs.map(t => (
           <button key={t} onClick={() => setTab(t)} className={cn(
             "rounded-full px-4 py-1.5 text-sm transition-colors",
-            tab === t ? "bg-gold-gradient text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+            tab === t ? "bg-red-gradient text-primary-foreground" : "text-muted-foreground hover:text-foreground"
           )}>{t}</button>
         ))}
       </div>

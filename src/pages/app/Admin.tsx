@@ -24,7 +24,7 @@ const Admin = () => (
         <h1 className="mt-2 font-display text-4xl md:text-5xl">Admin Dashboard</h1>
         <p className="mt-2 text-muted-foreground">Manage your content, partners, and live events.</p>
       </div>
-      <button className="inline-flex items-center gap-2 rounded-full bg-gold-gradient px-5 py-2.5 text-sm font-medium text-primary-foreground shadow-glow"><Upload className="h-4 w-4" /> Upload Content</button>
+      <button className="inline-flex items-center gap-2 rounded-full bg-red-gradient px-5 py-2.5 text-sm font-medium text-primary-foreground shadow-red-glow"><Upload className="h-4 w-4" /> Upload Content</button>
     </div>
 
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

@@ -28,7 +28,7 @@ export const ContentCard = ({ item, size = "md" }: { item: ContentItem; size?: "
         <button className="absolute top-3 right-3 inline-flex h-8 w-8 items-center justify-center rounded-full bg-background/70 backdrop-blur text-foreground opacity-0 transition-opacity group-hover:opacity-100">
           <Bookmark className="h-4 w-4" />
         </button>
-        <button className="absolute bottom-14 right-3 inline-flex h-11 w-11 items-center justify-center rounded-full bg-gold-gradient text-primary-foreground shadow-glow opacity-0 translate-y-2 transition-all duration-300 group-hover:opacity-100 group-hover:translate-y-0">
+        <button className="absolute bottom-14 right-3 inline-flex h-11 w-11 items-center justify-center rounded-full bg-red-gradient text-primary-foreground shadow-red-glow opacity-0 translate-y-2 transition-all duration-300 group-hover:opacity-100 group-hover:translate-y-0">
           <Play className="h-5 w-5 fill-current" />
         </button>
         <div className="absolute bottom-0 left-0 right-0 p-4">

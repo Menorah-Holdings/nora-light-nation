@@ -15,7 +15,7 @@ export const MiniPlayer = () => {
         </div>
         <div className="hidden md:flex items-center gap-2">
           <button className="text-muted-foreground hover:text-foreground"><SkipBack className="h-4 w-4" /></button>
-          <button onClick={() => setPlaying(!playing)} className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-gold-gradient text-primary-foreground shadow-glow">
+          <button onClick={() => setPlaying(!playing)} className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-red-gradient text-primary-foreground shadow-red-glow">
             {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 fill-current" />}
           </button>
           <button className="text-muted-foreground hover:text-foreground"><SkipForward className="h-4 w-4" /></button>
@@ -29,7 +29,7 @@ export const MiniPlayer = () => {
         </div>
         <button className="hidden md:inline-flex text-muted-foreground hover:text-gold"><Heart className="h-4 w-4" /></button>
         <button className="hidden md:inline-flex text-muted-foreground"><Volume2 className="h-4 w-4" /></button>
-        <button onClick={() => setPlaying(!playing)} className="md:hidden inline-flex h-9 w-9 items-center justify-center rounded-full bg-gold-gradient text-primary-foreground">
+        <button onClick={() => setPlaying(!playing)} className="md:hidden inline-flex h-9 w-9 items-center justify-center rounded-full bg-red-gradient text-primary-foreground shadow-red-glow">
           {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 fill-current" />}
         </button>
       </div>

@@ -22,7 +22,7 @@ const Live = () => {
         {tabs.map(t => (
           <button key={t} onClick={() => setTab(t)} className={cn(
             "rounded-full px-4 py-1.5 text-sm transition-colors",
-            tab === t ? "bg-gold-gradient text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+            tab === t ? "bg-red-gradient text-primary-foreground" : "text-muted-foreground hover:text-foreground"
           )}>{t}</button>
         ))}
       </div>
@@ -59,7 +59,7 @@ const Live = () => {
                 <p className="mt-2 text-sm text-muted-foreground">Hosted by {e.host}</p>
                 <div className="mt-5 flex items-center justify-between">
                   <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground"><Users className="h-3.5 w-3.5" /> 4,200+ registered</span>
-                  <button className="rounded-full bg-gold-gradient px-5 py-2 text-xs font-medium text-primary-foreground shadow-glow">View event</button>
+                  <button className="rounded-full bg-red-gradient px-5 py-2 text-xs font-medium text-primary-foreground shadow-red-glow">View event</button>
                 </div>
               </div>
             </div>

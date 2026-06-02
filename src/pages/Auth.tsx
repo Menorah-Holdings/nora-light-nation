@@ -40,7 +40,7 @@ const Auth = () => {
               <label className="text-xs text-muted-foreground">Password</label>
               <input type="password" className="mt-1 w-full rounded-lg border border-border bg-secondary/60 px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-gold" placeholder="••••••••" />
             </div>
-            <Link to="/app" className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-full bg-gold-gradient py-3 text-sm font-medium text-primary-foreground shadow-glow">
+            <Link to="/app" className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-full bg-red-gradient py-3 text-sm font-medium text-primary-foreground shadow-red-glow">
               {mode === "signin" ? "Sign in" : "Create account"} <ArrowRight className="h-4 w-4" />
             </Link>
           </form>

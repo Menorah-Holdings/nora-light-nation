@@ -18,7 +18,7 @@ const ContentDetail = () => {
         <div className="relative aspect-[16/9] md:aspect-[21/9]">
           <img src={item.image} alt={item.title} className="h-full w-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
-          <button onClick={() => setPlaying(!playing)} className="absolute inset-0 m-auto h-20 w-20 rounded-full bg-gold-gradient text-primary-foreground shadow-glow inline-flex items-center justify-center hover:scale-105 transition">
+          <button onClick={() => setPlaying(!playing)} className="absolute inset-0 m-auto h-20 w-20 rounded-full bg-red-gradient text-primary-foreground shadow-red-glow inline-flex items-center justify-center hover:scale-105 transition">
             {playing ? <Pause className="h-8 w-8" /> : <Play className="h-8 w-8 fill-current" />}
           </button>
         </div>
@@ -34,7 +34,7 @@ const ContentDetail = () => {
           <p className="text-foreground/85 leading-relaxed">{item.description} A deeper exploration anchored in scripture, recorded with the spiritual care and production quality the Nora community trusts.</p>
 
           <div className="flex flex-wrap gap-3">
-            <button className="inline-flex items-center gap-2 rounded-full bg-gold-gradient px-5 py-2.5 text-sm font-medium text-primary-foreground shadow-glow"><Play className="h-4 w-4 fill-current" /> Play</button>
+            <button className="inline-flex items-center gap-2 rounded-full bg-red-gradient px-5 py-2.5 text-sm font-medium text-primary-foreground shadow-red-glow"><Play className="h-4 w-4 fill-current" /> Play</button>
             <button className="inline-flex items-center gap-2 rounded-full border border-border px-5 py-2.5 text-sm"><Bookmark className="h-4 w-4" /> Save</button>
             <button className="inline-flex items-center gap-2 rounded-full border border-border px-5 py-2.5 text-sm"><Share2 className="h-4 w-4" /> Share</button>
           </div>
