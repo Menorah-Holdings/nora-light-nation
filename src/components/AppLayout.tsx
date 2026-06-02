@@ -41,7 +41,7 @@ export const AppLayout = () => {
               className={({ isActive }) => cn(
                 "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",
                 isActive
-                  ? "bg-sidebar-accent text-gold ring-1 ring-gold/20"
+                  ? "bg-sidebar-accent text-red ring-1 ring-red/20"
                   : "text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-foreground"
               )}
             >
