@@ -7,6 +7,7 @@ import Index from "./pages/Index.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import Auth from "./pages/Auth.tsx";
 import Partner from "./pages/Partner.tsx";
+import ForgotPassword from "./pages/ForgotPassword.tsx";
 import { AppLayout } from "./components/AppLayout.tsx";
 import Discover from "./pages/app/Discover.tsx";
 import Listen from "./pages/app/Listen.tsx";
@@ -30,6 +31,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/partner" element={<Partner />} />
           <Route path="/app" element={<AppLayout />}>
             <Route index element={<Discover />} />
