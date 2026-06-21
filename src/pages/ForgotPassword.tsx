@@ -90,7 +90,7 @@ const ForgotPassword = () => {
                 send you a secure reset link.
               </p>
 
-              <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+              <form onSubmit={handleSubmit} noValidate className="mt-8 space-y-5">
                 <div>
                   <label className="text-xs text-muted-foreground">Email</label>
                   <div className="relative mt-1">
