@@ -37,7 +37,14 @@ const Auth = () => {
               <input type="email" className="mt-1 w-full rounded-lg border border-border bg-secondary/60 px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-gold" placeholder="you@nora.tv" />
             </div>
             <div>
-              <label className="text-xs text-muted-foreground">Password</label>
+              <div className="flex items-center justify-between">
+                <label className="text-xs text-muted-foreground">Password</label>
+                {mode === "signin" && (
+                  <Link to="/forgot-password" className="text-xs text-gold hover:underline">
+                    Forgot password?
+                  </Link>
+                )}
+              </div>
               <input type="password" className="mt-1 w-full rounded-lg border border-border bg-secondary/60 px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-gold" placeholder="••••••••" />
             </div>
             <Link to="/app" className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-full bg-red-gradient py-3 text-sm font-medium text-primary-foreground shadow-red-glow">
