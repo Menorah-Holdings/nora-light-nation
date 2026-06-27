@@ -38,10 +38,10 @@ const Landing = () => {
               <Sparkles className="h-3 w-3" /> Light for Every Nation
             </span>
             <h1 className="mt-6 font-display text-5xl md:text-7xl leading-[1.05] tracking-tight">
-              The trusted streaming home for <span className="gold-text-gradient">kingdom content.</span>
+              The trusted Kingdom Content Platform for <span className="gold-text-gradient">every nation.</span>
             </h1>
             <p className="mt-6 max-w-xl text-lg text-muted-foreground">
-              Stream sound doctrine, worship, stories, devotionals, podcasts, music, movies, and live faith experiences — all in one trusted platform.
+              NoraPlus helps people around the world encounter truth, grow in faith, and live transformed through high-quality Christian content and meaningful digital experiences.
             </p>
             <div className="mt-10 flex flex-wrap items-center gap-3">
               <Link to="/app" className="inline-flex items-center gap-2 rounded-full bg-gold-gradient px-6 py-3.5 text-sm font-medium text-primary-foreground shadow-glow transition-transform hover:scale-[1.02]">
@@ -198,7 +198,7 @@ const Landing = () => {
           <div className="grid gap-10 md:grid-cols-5">
             <div className="md:col-span-2">
               <Logo />
-              <p className="mt-4 max-w-xs text-sm text-muted-foreground">Light for Every Nation. The trusted streaming home for kingdom content.</p>
+              <p className="mt-4 max-w-xs text-sm text-muted-foreground">Light for Every Nation. A trusted Kingdom Content Platform for discovering, experiencing, and sharing faith.</p>
             </div>
             {[
               { title: "Platform", links: ["About", "Content", "Live Events", "Plans"] },
