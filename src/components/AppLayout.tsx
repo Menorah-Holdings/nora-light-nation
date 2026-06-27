@@ -1,12 +1,13 @@
 import { NavLink, Outlet, useLocation } from "react-router-dom";
-import { Home, Headphones, Play, Radio, BookOpen, Users, Library, LayoutDashboard, Search, Menu, X } from "lucide-react";
+import { Home, Headphones, Play, Radio, BookOpen, Users, Library, LayoutDashboard, Shield, Search, Menu, X } from "lucide-react";
 import { useState } from "react";
 import { Logo } from "./Logo";
 import { NotificationsPanel } from "./NotificationsPanel";
 import { MiniPlayer } from "./MiniPlayer";
 import { cn } from "@/lib/utils";
+import { useUser, creatorNavLabel } from "@/lib/user";
 
-const nav = [
+const baseNav = [
   { to: "/app", label: "Home", icon: Home, end: true },
   { to: "/app/listen", label: "Listen", icon: Headphones },
   { to: "/app/watch", label: "Watch", icon: Play },
@@ -14,12 +15,18 @@ const nav = [
   { to: "/app/devotionals", label: "Devotionals", icon: BookOpen },
   { to: "/app/creators", label: "Creators", icon: Users },
   { to: "/app/library", label: "Library", icon: Library },
-  { to: "/app/admin", label: "Creator Studio", icon: LayoutDashboard },
 ];
 
 export const AppLayout = () => {
   const [open, setOpen] = useState(false);
   const { pathname } = useLocation();
+  const { user, isNoraTeam } = useUser();
+
+  const nav = [
+    ...baseNav,
+    { to: "/app/admin", label: creatorNavLabel(user.creator_status), icon: LayoutDashboard },
+    ...(isNoraTeam ? [{ to: "/app/nora-admin", label: "Nora Admin", icon: Shield }] : []),
+  ];
 
   return (
     <div className="min-h-screen bg-background">
@@ -37,7 +44,7 @@ export const AppLayout = () => {
             <NavLink
               key={n.to}
               to={n.to}
-              end={n.end}
+              end={(n as any).end}
               onClick={() => setOpen(false)}
               className={({ isActive }) => cn(
                 "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",
@@ -76,7 +83,7 @@ export const AppLayout = () => {
             aria-label="Profile & Settings"
             className="hidden sm:flex h-9 w-9 items-center justify-center rounded-full bg-gold-gradient text-primary-foreground text-sm font-semibold ring-1 ring-gold/40 hover:shadow-glow transition-shadow"
           >
-            N
+            {user.avatarInitial}
           </NavLink>
         </header>
 
