@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { Logo } from "@/components/Logo";
 import { ArrowRight } from "lucide-react";
@@ -6,6 +6,17 @@ import hero from "@/assets/hero-worship.jpg";
 
 const Auth = () => {
   const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [fullName, setFullName] = useState("");
+  const navigate = useNavigate();
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (mode === "signup") {
+      navigate("/welcome", { state: { fullName: fullName || "Friend" } });
+    } else {
+      navigate("/app");
+    }
+  };
   return (
     <div className="min-h-screen grid md:grid-cols-2">
       <div className="relative hidden md:block">
