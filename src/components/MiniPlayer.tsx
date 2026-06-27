@@ -1,6 +1,7 @@
 import { Pause, Play, SkipBack, SkipForward, Volume2, Heart } from "lucide-react";
 import { useState } from "react";
 import { content } from "@/lib/mockData";
+import { NowPlayingMenu } from "./NowPlayingMenu";
 
 export const MiniPlayer = () => {
   const [playing, setPlaying] = useState(false);
