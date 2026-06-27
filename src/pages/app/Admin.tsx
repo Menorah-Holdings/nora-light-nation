@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { content } from "@/lib/mockData";
 import {
-  Upload, Headphones, Play, Radio, Inbox, ArrowUpRight, MoreHorizontal,
+  Upload, Headphones, Play, Radio,
   Sparkles, User, Building2, ArrowLeft, ArrowRight, Check, Clock,
   Image as ImageIcon, Instagram, Facebook, Youtube, Music2, Twitter, XCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { useUser } from "@/lib/user";
+import CreatorStudio from "@/components/CreatorStudio";
+
 
 /* -------------------- Dashboard (approved) -------------------- */
 
