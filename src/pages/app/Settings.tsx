@@ -22,12 +22,15 @@ import {
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 
-type TabId = "profile" | "downloads" | "notifications" | "privacy";
+type TabId = "profile" | "downloads" | "language" | "notifications" | "privacy";
 
 const tabs: { id: TabId; label: string; icon: any }[] = [
   { id: "profile", label: "Profile", icon: User },
   { id: "downloads", label: "Download Settings", icon: Download },
+  { id: "language", label: "Language & Region", icon: Globe },
   { id: "notifications", label: "Notifications", icon: Bell },
+  { id: "privacy", label: "Privacy", icon: Shield },
+];
   { id: "privacy", label: "Privacy", icon: Shield },
 ];
 
