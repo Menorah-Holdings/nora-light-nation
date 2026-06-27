@@ -21,6 +21,7 @@ import Library from "./pages/app/Library.tsx";
 import ContentDetail from "./pages/app/ContentDetail.tsx";
 import Admin from "./pages/app/Admin.tsx";
 import Settings from "./pages/app/Settings.tsx";
+import { UserProvider } from "./lib/user";
 
 const queryClient = new QueryClient();
 
