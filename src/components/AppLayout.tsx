@@ -1,7 +1,8 @@
 import { NavLink, Outlet, useLocation } from "react-router-dom";
-import { Home, Headphones, Play, Radio, BookOpen, Users, Library, LayoutDashboard, Search, Bell, Menu, X } from "lucide-react";
+import { Home, Headphones, Play, Radio, BookOpen, Users, Library, LayoutDashboard, Search, Menu, X } from "lucide-react";
 import { useState } from "react";
 import { Logo } from "./Logo";
+import { NotificationsPanel } from "./NotificationsPanel";
 import { MiniPlayer } from "./MiniPlayer";
 import { cn } from "@/lib/utils";
 
@@ -69,10 +70,7 @@ export const AppLayout = () => {
               className="w-full rounded-full border border-border bg-secondary/60 py-2.5 pl-10 pr-4 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-gold"
             />
           </div>
-          <button className="relative inline-flex h-9 w-9 items-center justify-center rounded-full bg-secondary text-muted-foreground hover:text-foreground">
-            <Bell className="h-4 w-4" />
-            <span className="absolute top-2 right-2 h-1.5 w-1.5 rounded-full bg-gold" />
-          </button>
+          <NotificationsPanel />
           <div className="hidden sm:flex h-9 w-9 items-center justify-center rounded-full bg-gold-gradient text-primary-foreground text-sm font-semibold">
             N
           </div>
