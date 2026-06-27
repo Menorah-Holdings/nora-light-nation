@@ -392,6 +392,81 @@ const LanguageRegionSettings = () => {
 
 
 
+const ProfileSettings = () => {
+  const { user, users, setActiveUserId, setCreatorStatus } = useUser();
+  const statuses: CreatorStatus[] = ["Not Applied", "Under Review", "Approved", "Rejected"];
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="font-display text-2xl text-foreground">Profile</h2>
+        <p className="mt-1 text-sm text-muted-foreground">Your Nora identity and creator status.</p>
+      </div>
+
+      <div
+        className="relative overflow-hidden rounded-2xl border border-gold/20 p-6 shadow-elegant"
+        style={{ background: "linear-gradient(160deg, hsl(350 30% 11%), hsl(350 22% 7%))" }}
+      >
+        <div className="absolute inset-0 pointer-events-none glow-radial opacity-30" />
+        <div className="relative flex items-start gap-5">
+          <div className="grid h-16 w-16 shrink-0 place-items-center rounded-full bg-gold-gradient text-xl font-semibold text-primary-foreground ring-1 ring-gold/40">
+            {user.avatarInitial}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-3">
+              <p className="font-display text-2xl truncate">{user.name}</p>
+            </div>
+            <div className="mt-2"><CreatorStatusBadge status={user.creator_status} /></div>
+            <p className="mt-3 text-xs text-muted-foreground">@{user.handle} · {user.email}</p>
+          </div>
+        </div>
+      </div>
+
+      <div
+        className="relative overflow-hidden rounded-2xl border border-gold/20 p-5 sm:p-6 shadow-elegant"
+        style={{ background: "linear-gradient(160deg, hsl(350 30% 11%), hsl(350 22% 7%))" }}
+      >
+        <div className="absolute inset-0 pointer-events-none glow-radial opacity-30" />
+        <div className="relative space-y-5">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-gold" />
+            <h3 className="font-display text-sm text-foreground">Prototype Controls</h3>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Switch between mock users to preview each creator state across the app.
+          </p>
+
+          <SettingRow title="Active Mock User" helper="Each user has its own creator_status.">
+            <Select value={user.id} onValueChange={setActiveUserId}>
+              <SelectTrigger className="w-[240px] border-border bg-secondary/60 focus:ring-1 focus:ring-gold">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {users.map((u) => (
+                  <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </SettingRow>
+
+          <SettingRow title="Creator Status" helper="Override creator_status for the active user.">
+            <Select value={user.creator_status} onValueChange={(v) => setCreatorStatus(v as CreatorStatus)}>
+              <SelectTrigger className="w-[240px] border-border bg-secondary/60 focus:ring-1 focus:ring-gold">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {statuses.map((s) => (
+                  <SelectItem key={s} value={s}>{s}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </SettingRow>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const Placeholder = ({ title, message }: { title: string; message: string }) => (
   <div className="space-y-6">
     <div>
