@@ -21,6 +21,7 @@ import Library from "./pages/app/Library.tsx";
 import ContentDetail from "./pages/app/ContentDetail.tsx";
 import Admin from "./pages/app/Admin.tsx";
 import Settings from "./pages/app/Settings.tsx";
+import { UserProvider } from "./lib/user";
 
 const queryClient = new QueryClient();
 
@@ -29,7 +30,8 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
+      <UserProvider>
+        <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
@@ -54,6 +56,7 @@ const App = () => (
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
+      </UserProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );
