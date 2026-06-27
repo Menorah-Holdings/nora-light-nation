@@ -21,6 +21,8 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
+import { useUser, CreatorStatus, MOCK_USERS } from "@/lib/user";
+import { CreatorStatusBadge } from "@/components/CreatorStatusBadge";
 
 type TabId = "profile" | "downloads" | "language" | "notifications" | "privacy";
 
