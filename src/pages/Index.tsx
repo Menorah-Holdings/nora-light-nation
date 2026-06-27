@@ -16,7 +16,7 @@ const Landing = () => {
             <a href="#vision" className="hover:text-foreground">About</a>
             <a href="#categories" className="hover:text-foreground">Content</a>
             <a href="#partner" className="hover:text-foreground">Partner</a>
-            <a href="#pricing" className="hover:text-foreground">Pricing</a>
+            <Link to="/plans" className="hover:text-foreground">Plans</Link>
           </nav>
           <div className="flex items-center gap-3">
             <Link to="/auth" className="hidden sm:inline text-sm text-muted-foreground hover:text-foreground">Sign in</Link>
@@ -165,30 +165,27 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* Pricing */}
-      <section id="pricing" className="container py-24">
+      {/* Plans */}
+      <section id="plans" className="container py-24">
         <div className="text-center max-w-xl mx-auto">
           <p className="text-xs uppercase tracking-[0.25em] text-gold">Plans</p>
-          <h2 className="mt-3 font-display text-4xl md:text-5xl">Choose how you'll grow.</h2>
+          <h2 className="mt-3 font-display text-4xl md:text-5xl">Choose your Nora experience.</h2>
+          <p className="mt-4 text-muted-foreground">Trusted kingdom content for every stage of your journey.</p>
         </div>
-        <div className="mt-14 grid gap-5 md:grid-cols-3">
+        <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {[
-            { name: "Free", price: "$0", desc: "Explore curated content, devotionals and selected live events.", features: ["Ad-light streaming", "Daily devotional", "Selected live events"] },
-            { name: "Premium", price: "$8.99", featured: true, desc: "Unlimited audio & video. Full library across every category.", features: ["Unlimited streaming", "Offline downloads", "All live events", "HD/Lossless quality"] },
-            { name: "Ministry / Creator", price: "Custom", desc: "Distribute your content with trusted reach and monetization.", features: ["Channel + analytics", "Live event hosting", "Revenue share", "Partner support"] },
+            { name: "Free Trial", badge: "New User Offer", price: "₦0", suffix: "3 Months", desc: "Enjoy full, all-access use of Nora during your first three months.", featured: true },
+            { name: "Free", badge: "Always Available", price: "₦0", suffix: "", desc: "Continue exploring trusted kingdom content with selected features." },
+            { name: "Nora Plus", price: "₦1,500", suffix: "/month", desc: "Unlimited streaming and an enhanced listening and viewing experience." },
+            { name: "Nora Premium", badge: "Most Popular", price: "₦2,500", suffix: "/month", desc: "The complete Nora experience with premium content and downloads.", popular: true },
           ].map((p) => (
-            <div key={p.name} className={`relative rounded-2xl p-8 ring-1 ${p.featured ? "ring-gold/50 bg-card-gradient shadow-elegant" : "ring-border/60 bg-card"}`}>
-              {p.featured && <span className="absolute -top-3 left-8 rounded-full bg-gold-gradient px-3 py-1 text-[10px] font-medium text-primary-foreground">Most popular</span>}
-              <p className="text-sm text-muted-foreground">{p.name}</p>
-              <p className="mt-3 font-display text-4xl">{p.price}<span className="text-sm text-muted-foreground font-sans">/mo</span></p>
-              <p className="mt-3 text-sm text-muted-foreground">{p.desc}</p>
-              <ul className="mt-6 space-y-3 text-sm">
-                {p.features.map((f) => (
-                  <li key={f} className="flex items-center gap-2"><Check className="h-4 w-4 text-gold" /> {f}</li>
-                ))}
-              </ul>
-              <Link to="/app" className={`mt-8 inline-flex w-full items-center justify-center rounded-full py-3 text-sm font-medium ${p.featured ? "bg-gold-gradient text-primary-foreground" : "border border-border hover:border-gold/40"}`}>
-                Get started
+            <div key={p.name} className={`relative rounded-2xl p-6 ring-1 ${p.popular ? "ring-gold/50 bg-card-gradient shadow-red-glow" : p.featured ? "ring-gold/40 bg-card-gradient shadow-elegant" : "ring-border/60 bg-card"}`}>
+              {p.badge && <span className={`absolute -top-3 left-6 rounded-full px-3 py-1 text-[10px] font-medium ${p.popular ? "bg-red-gradient text-foreground" : "bg-gold-gradient text-primary-foreground"}`}>{p.badge}</span>}
+              <p className="mt-2 font-display text-xl">{p.name}</p>
+              <p className="mt-3 font-display text-3xl">{p.price}<span className="text-sm text-muted-foreground font-sans"> {p.suffix}</span></p>
+              <p className="mt-3 text-sm text-muted-foreground min-h-[60px]">{p.desc}</p>
+              <Link to="/plans" className={`mt-6 inline-flex w-full items-center justify-center rounded-full py-3 text-sm font-medium ${p.popular ? "bg-red-gradient text-foreground" : p.featured ? "bg-gold-gradient text-primary-foreground" : "border border-border hover:border-gold/40"}`}>
+                Compare Plans
               </Link>
             </div>
           ))}
@@ -204,7 +201,7 @@ const Landing = () => {
               <p className="mt-4 max-w-xs text-sm text-muted-foreground">Light for Every Nation. The trusted streaming home for kingdom content.</p>
             </div>
             {[
-              { title: "Platform", links: ["About", "Content", "Live Events", "Pricing"] },
+              { title: "Platform", links: ["About", "Content", "Live Events", "Plans"] },
               { title: "Partners", links: ["Churches", "Artists", "Filmmakers", "Apply"] },
               { title: "Company", links: ["Contact", "Press", "Privacy", "Terms"] },
             ].map((col) => (

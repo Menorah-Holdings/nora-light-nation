@@ -8,7 +8,7 @@ import NotFound from "./pages/NotFound.tsx";
 import Auth from "./pages/Auth.tsx";
 import Partner from "./pages/Partner.tsx";
 import ForgotPassword from "./pages/ForgotPassword.tsx";
-import Subscription from "./pages/Subscription.tsx";
+import Plans from "./pages/Plans.tsx";
 import { AppLayout } from "./components/AppLayout.tsx";
 import Discover from "./pages/app/Discover.tsx";
 import Listen from "./pages/app/Listen.tsx";
@@ -33,7 +33,8 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/subscription" element={<Subscription />} />
+          <Route path="/plans" element={<Plans />} />
+          <Route path="/subscription" element={<Plans />} />
           <Route path="/partner" element={<Partner />} />
           <Route path="/app" element={<AppLayout />}>
             <Route index element={<Discover />} />
