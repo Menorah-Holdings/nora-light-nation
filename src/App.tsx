@@ -20,6 +20,7 @@ import CreatorProfile from "./pages/app/CreatorProfile.tsx";
 import Library from "./pages/app/Library.tsx";
 import ContentDetail from "./pages/app/ContentDetail.tsx";
 import Admin from "./pages/app/Admin.tsx";
+import Settings from "./pages/app/Settings.tsx";
 
 const queryClient = new QueryClient();
 
