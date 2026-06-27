@@ -25,7 +25,7 @@ import { toast } from "@/hooks/use-toast";
 import { useUser, CreatorStatus, MOCK_USERS } from "@/lib/user";
 import { CreatorStatusBadge } from "@/components/CreatorStatusBadge";
 
-type TabId = "profile" | "downloads" | "language" | "notifications" | "privacy";
+type TabId = "profile" | "downloads" | "language" | "notifications" | "privacy" | "help";
 
 const tabs: { id: TabId; label: string; icon: any }[] = [
   { id: "profile", label: "Profile", icon: User },
@@ -33,6 +33,7 @@ const tabs: { id: TabId; label: string; icon: any }[] = [
   { id: "language", label: "Language & Region", icon: Globe },
   { id: "notifications", label: "Notifications", icon: Bell },
   { id: "privacy", label: "Privacy", icon: Shield },
+  { id: "help", label: "Help & Support", icon: LifeBuoy },
 ];
 
 const SettingRow = ({
