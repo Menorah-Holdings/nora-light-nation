@@ -532,6 +532,7 @@ const Settings = () => {
           {tab === "privacy" && (
             <Placeholder title="Privacy" message="Manage data, security, and permissions." />
           )}
+          {tab === "help" && <HelpSupport />}
         </section>
       </div>
     </div>
