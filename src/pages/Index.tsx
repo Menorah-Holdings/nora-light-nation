@@ -201,7 +201,7 @@ const Landing = () => {
               <p className="mt-4 max-w-xs text-sm text-muted-foreground">Light for Every Nation. The trusted streaming home for kingdom content.</p>
             </div>
             {[
-              { title: "Platform", links: ["About", "Content", "Live Events", "Pricing"] },
+              { title: "Platform", links: ["About", "Content", "Live Events", "Plans"] },
               { title: "Partners", links: ["Churches", "Artists", "Filmmakers", "Apply"] },
               { title: "Company", links: ["Contact", "Press", "Privacy", "Terms"] },
             ].map((col) => (
