@@ -16,6 +16,12 @@ import {
   LogOut,
   Plug,
   Check,
+  History,
+  Tv,
+  Headphones,
+  Search,
+  Laptop,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -209,6 +215,21 @@ const AccountSettings = () => {
   // Delete account
   const [delPwd, setDelPwd] = useState("");
   const [delAck, setDelAck] = useState(false);
+
+  // Activity / history
+  type ClearTarget = "watch" | "listening" | "search" | "all";
+  const CLEAR_LABELS: Record<ClearTarget, { title: string; toast: string }> = {
+    watch: { title: "Clear Watch History?", toast: "Watch history cleared." },
+    listening: { title: "Clear Listening History?", toast: "Listening history cleared." },
+    search: { title: "Clear Search History?", toast: "Search history cleared." },
+    all: { title: "Clear All Activity?", toast: "Activity cleared successfully." },
+  };
+  const [clearTarget, setClearTarget] = useState<ClearTarget | null>(null);
+  const confirmClear = () => {
+    if (!clearTarget) return;
+    toast.success(CLEAR_LABELS[clearTarget].toast);
+    setClearTarget(null);
+  };
 
   const saveInfo = () => {
     setInfo(draft);
@@ -432,6 +453,156 @@ const AccountSettings = () => {
           </div>
         </div>
       </section>
+
+      {/* Activity */}
+      <section className="space-y-4">
+        <SectionHeader title="Activity" subtitle="Manage your account activity and viewing history." />
+        <div className="grid gap-4 md:grid-cols-2">
+          {[
+            { icon: History, title: "Recently Played", desc: "View and manage your recently played audio and video content.", action: "View History", clear: null },
+            { icon: Tv, title: "Watch History", desc: "Review videos and live events you've watched.", action: "View History", clear: "watch" as ClearTarget },
+            { icon: Headphones, title: "Listening History", desc: "Review your listening activity across music, messages, podcasts, and devotionals.", action: "View History", clear: "listening" as ClearTarget },
+            { icon: Search, title: "Search History", desc: "View and manage your recent searches.", action: "View Searches", clear: "search" as ClearTarget },
+          ].map((card) => {
+            const Icon = card.icon;
+            return (
+              <div key={card.title} className={PANEL} style={PANEL_STYLE}>
+                <div className="absolute inset-0 pointer-events-none glow-radial opacity-30" />
+                <div className="relative flex h-full flex-col gap-4 p-5">
+                  <div className="flex items-start gap-3">
+                    <div className="grid h-10 w-10 place-items-center rounded-xl bg-red/15 ring-1 ring-red/30">
+                      <Icon className="h-5 w-5 text-red-soft" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-display text-sm text-foreground">{card.title}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">{card.desc}</p>
+                    </div>
+                  </div>
+                  <div className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-2">
+                    <button
+                      onClick={() => toast.info(`${card.title} opened`)}
+                      className="text-xs font-medium text-gold hover:underline"
+                    >
+                      {card.action} →
+                    </button>
+                    {card.clear && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setClearTarget(card.clear!)}
+                        className="border-red/40 bg-transparent text-red hover:bg-red/10 hover:text-red"
+                      >
+                        <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                        Clear
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Device History */}
+        <div className={PANEL} style={PANEL_STYLE}>
+          <div className="absolute inset-0 pointer-events-none glow-radial opacity-30" />
+          <div className="relative p-5 sm:p-6">
+            <div className="flex items-start gap-3">
+              <div className="grid h-10 w-10 place-items-center rounded-xl bg-gold/15 ring-1 ring-gold/30">
+                <Laptop className="h-5 w-5 text-gold" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="font-display text-sm text-foreground">Device History</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  See devices that have recently accessed your Nora account.
+                </p>
+              </div>
+            </div>
+            <div className="mt-4 divide-y divide-border/40 rounded-xl border border-border/60 bg-secondary/30">
+              {sessions.map((s) => {
+                const Icon = s.icon;
+                return (
+                  <div key={s.id} className="flex items-center justify-between gap-3 p-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="grid h-9 w-9 place-items-center rounded-lg bg-secondary/80 ring-1 ring-border/60">
+                        <Icon className="h-4 w-4 text-gold" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm text-foreground flex items-center gap-2 truncate">
+                          {s.device}
+                          {s.current && (
+                            <span className="rounded-full bg-gold/15 px-2 py-0.5 text-[10px] uppercase tracking-wider text-gold ring-1 ring-gold/30">
+                              Current Device
+                            </span>
+                          )}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {s.browser} · {s.location} · {s.lastActive}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="mt-4 flex justify-end">
+              <Button
+                onClick={() => setDevicesOpen(true)}
+                variant="outline"
+                className="border-gold/40 bg-transparent text-gold hover:bg-gold/10 hover:text-gold"
+              >
+                Manage Devices
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* History Controls */}
+        <div className={PANEL} style={PANEL_STYLE}>
+          <div className="absolute inset-0 pointer-events-none glow-radial opacity-30" />
+          <div className="relative p-5 sm:p-6">
+            <p className="font-display text-sm text-foreground">History Controls</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Quickly clear specific activity or wipe everything at once.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Button size="sm" variant="outline" onClick={() => setClearTarget("watch")} className="border-red/40 bg-transparent text-red hover:bg-red/10 hover:text-red">
+                Clear Watch History
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => setClearTarget("listening")} className="border-red/40 bg-transparent text-red hover:bg-red/10 hover:text-red">
+                Clear Listening History
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => setClearTarget("search")} className="border-red/40 bg-transparent text-red hover:bg-red/10 hover:text-red">
+                Clear Search History
+              </Button>
+              <Button size="sm" onClick={() => setClearTarget("all")} className="bg-red-gradient text-primary-foreground hover:opacity-90">
+                Clear All Activity
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Clear Activity Confirmation */}
+      <Dialog open={!!clearTarget} onOpenChange={(o) => !o && setClearTarget(null)}>
+        <DialogContent className="border-red/40" style={{ background: "linear-gradient(160deg, hsl(350 40% 12%), hsl(350 35% 7%))" }}>
+          <DialogHeader>
+            <DialogTitle className="font-display text-xl flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-soft" />
+              {clearTarget ? CLEAR_LABELS[clearTarget].title : "Clear Activity?"}
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              This action will remove your selected activity history from your Nora account. This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="ghost" onClick={() => setClearTarget(null)}>Cancel</Button>
+            <Button onClick={confirmClear} className="bg-red-gradient text-primary-foreground hover:opacity-90">
+              Clear Activity
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Danger Zone */}
       <section className="space-y-4">
