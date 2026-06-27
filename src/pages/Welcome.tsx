@@ -6,9 +6,9 @@ import { Logo } from "@/components/Logo";
 const FEATURES = [
   { icon: Headphones, emoji: "🎧", title: "Listen", desc: "Music, messages, podcasts, and devotionals." },
   { icon: Tv, emoji: "📺", title: "Watch", desc: "Teachings, worship, films, and inspiring videos." },
-  { icon: Radio, emoji: "🔴", title: "Join Live", desc: "Worship nights, conferences, vigils, and prayer gatherings." },
-  { icon: Heart, emoji: "❤️", title: "Follow", desc: "Creators, churches, ministries, and fellowships you love." },
-  { icon: Library, emoji: "📚", title: "Build Your Library", desc: "Save content and return whenever you want." },
+  { icon: Radio, emoji: "🔴", title: "Join Live", desc: "Conferences, worship nights, vigils, and prayer gatherings." },
+  { icon: Heart, emoji: "❤️", title: "Follow", desc: "Creators, ministries, churches, and fellowships." },
+  { icon: Library, emoji: "📚", title: "Build Your Library", desc: "Save content and revisit it anytime." },
 ];
 
 const Welcome = () => {
