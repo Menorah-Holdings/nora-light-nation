@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, ReactNode } from "react";
 
 export type CreatorStatus = "Not Applied" | "Under Review" | "Approved" | "Rejected";
+export type PlatformRole = "user" | "nora_team";
 
 export interface NoraUser {
   id: string;
@@ -9,14 +10,16 @@ export interface NoraUser {
   email: string;
   avatarInitial: string;
   creator_status: CreatorStatus;
+  platform_role: PlatformRole;
   rejectionReason?: string;
 }
 
 export const MOCK_USERS: NoraUser[] = [
-  { id: "u1", name: "Nora Listener", handle: "nora_listener", email: "listener@nora.app", avatarInitial: "N", creator_status: "Not Applied" },
-  { id: "u2", name: "Ada Okafor", handle: "ada_o", email: "ada@nora.app", avatarInitial: "A", creator_status: "Under Review" },
-  { id: "u3", name: "Pastor David Adeleke", handle: "pastordavid", email: "david@nora.app", avatarInitial: "D", creator_status: "Approved" },
-  { id: "u4", name: "Joy Mwangi", handle: "joy_m", email: "joy@nora.app", avatarInitial: "J", creator_status: "Rejected", rejectionReason: "We need additional information about your content and rights ownership before approval." },
+  { id: "u1", name: "Nora Listener", handle: "nora_listener", email: "listener@nora.app", avatarInitial: "N", creator_status: "Not Applied", platform_role: "user" },
+  { id: "u2", name: "Ada Okafor", handle: "ada_o", email: "ada@nora.app", avatarInitial: "A", creator_status: "Under Review", platform_role: "user" },
+  { id: "u3", name: "Pastor David Adeleke", handle: "pastordavid", email: "david@nora.app", avatarInitial: "D", creator_status: "Approved", platform_role: "user" },
+  { id: "u4", name: "Joy Mwangi", handle: "joy_m", email: "joy@nora.app", avatarInitial: "J", creator_status: "Rejected", platform_role: "user", rejectionReason: "We need additional information about your content and rights ownership before approval." },
+  { id: "u5", name: "Nora Team", handle: "nora_admin", email: "team@nora.app", avatarInitial: "T", creator_status: "Approved", platform_role: "nora_team" },
 ];
 
 const ACTIVE_USER_KEY = "nora_active_user_id";
@@ -27,6 +30,8 @@ interface UserContextValue {
   setActiveUserId: (id: string) => void;
   setCreatorStatus: (status: CreatorStatus) => void;
   users: NoraUser[];
+  isApprovedCreator: boolean;
+  isNoraTeam: boolean;
 }
 
 const UserContext = createContext<UserContextValue | null>(null);
@@ -52,6 +57,8 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     return {
       user,
       users: MOCK_USERS,
+      isApprovedCreator: user.creator_status === "Approved",
+      isNoraTeam: user.platform_role === "nora_team",
       setActiveUserId: (id) => setActiveId(id),
       setCreatorStatus: (status) => {
         setStatusOverride(status);
@@ -72,8 +79,17 @@ export const useUser = () => {
 export const creatorBadgeLabel = (status: CreatorStatus): string => {
   switch (status) {
     case "Not Applied": return "Listener";
+    case "Under Review": return "Application Pending";
+    case "Approved": return "Creator";
+    case "Rejected": return "Application Declined";
+  }
+};
+
+export const creatorNavLabel = (status: CreatorStatus): string => {
+  switch (status) {
+    case "Approved": return "Creator Studio";
     case "Under Review": return "Application Under Review";
-    case "Approved": return "Verified Creator";
-    case "Rejected": return "Application Not Approved";
+    case "Rejected": return "Application Declined";
+    default: return "Create on Nora";
   }
 };
