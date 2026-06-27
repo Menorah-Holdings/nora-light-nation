@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { Logo } from "@/components/Logo";
 import { ArrowRight } from "lucide-react";
@@ -6,6 +6,17 @@ import hero from "@/assets/hero-worship.jpg";
 
 const Auth = () => {
   const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [fullName, setFullName] = useState("");
+  const navigate = useNavigate();
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (mode === "signup") {
+      navigate("/welcome", { state: { fullName: fullName || "Friend" } });
+    } else {
+      navigate("/app");
+    }
+  };
   return (
     <div className="min-h-screen grid md:grid-cols-2">
       <div className="relative hidden md:block">
@@ -25,11 +36,16 @@ const Auth = () => {
           <p className="text-xs uppercase tracking-[0.25em] text-gold">{mode === "signin" ? "Welcome back" : "Join Nora"}</p>
           <h2 className="mt-3 font-display text-3xl">{mode === "signin" ? "Sign in to continue" : "Create your account"}</h2>
 
-          <form className="mt-8 space-y-4" onSubmit={(e) => { e.preventDefault(); }}>
+          <form className="mt-8 space-y-4" onSubmit={handleSubmit}>
             {mode === "signup" && (
               <div>
                 <label className="text-xs text-muted-foreground">Full name</label>
-                <input className="mt-1 w-full rounded-lg border border-border bg-secondary/60 px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-gold" placeholder="Jane Doe" />
+                <input
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-border bg-secondary/60 px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-gold"
+                  placeholder="Jane Doe"
+                />
               </div>
             )}
             <div>
@@ -47,9 +63,9 @@ const Auth = () => {
               </div>
               <input type="password" className="mt-1 w-full rounded-lg border border-border bg-secondary/60 px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-gold" placeholder="••••••••" />
             </div>
-            <Link to="/app" className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-full bg-red-gradient py-3 text-sm font-medium text-primary-foreground shadow-red-glow">
+            <button type="submit" className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-full bg-red-gradient py-3 text-sm font-medium text-primary-foreground shadow-red-glow">
               {mode === "signin" ? "Sign in" : "Create account"} <ArrowRight className="h-4 w-4" />
-            </Link>
+            </button>
           </form>
 
           <div className="mt-6 flex items-center gap-3 text-xs text-muted-foreground">
