@@ -198,7 +198,7 @@ const Landing = () => {
           <div className="grid gap-10 md:grid-cols-5">
             <div className="md:col-span-2">
               <Logo />
-              <p className="mt-4 max-w-xs text-sm text-muted-foreground">Light for Every Nation. The trusted streaming home for kingdom content.</p>
+              <p className="mt-4 max-w-xs text-sm text-muted-foreground">Light for Every Nation. A trusted Kingdom Content Platform for discovering, experiencing, and sharing faith.</p>
             </div>
             {[
               { title: "Platform", links: ["About", "Content", "Live Events", "Plans"] },
