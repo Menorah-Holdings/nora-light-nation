@@ -445,6 +445,7 @@ const Settings = () => {
 
         <section>
           {tab === "downloads" && <DownloadSettings />}
+          {tab === "language" && <LanguageRegionSettings />}
           {tab === "profile" && (
             <Placeholder title="Profile" message="Manage your account details and preferences." />
           )}
