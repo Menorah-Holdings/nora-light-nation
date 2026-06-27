@@ -136,7 +136,7 @@ const Welcome = () => {
 
         {/* Feature cards */}
         <section className="mt-14 animate-fade-in">
-          <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">What you can do</p>
+          <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">Explore NoraPlus</p>
           <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
             {FEATURES.map((f, i) => {
               const Icon = f.icon;
