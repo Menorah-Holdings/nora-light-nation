@@ -71,9 +71,13 @@ export const AppLayout = () => {
             />
           </div>
           <NotificationsPanel />
-          <div className="hidden sm:flex h-9 w-9 items-center justify-center rounded-full bg-gold-gradient text-primary-foreground text-sm font-semibold">
+          <NavLink
+            to="/app/settings"
+            aria-label="Profile & Settings"
+            className="hidden sm:flex h-9 w-9 items-center justify-center rounded-full bg-gold-gradient text-primary-foreground text-sm font-semibold ring-1 ring-gold/40 hover:shadow-glow transition-shadow"
+          >
             N
-          </div>
+          </NavLink>
         </header>
 
         <main key={pathname} className="px-4 md:px-8 py-8 pb-32 animate-fade-up">
