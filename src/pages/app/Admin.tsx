@@ -4,25 +4,11 @@ import { content } from "@/lib/mockData";
 import {
   Upload, Headphones, Play, Radio, Inbox, ArrowUpRight, MoreHorizontal,
   Sparkles, User, Building2, ArrowLeft, ArrowRight, Check, Clock,
-  Image as ImageIcon, Instagram, Facebook, Youtube, Music2, Twitter,
+  Image as ImageIcon, Instagram, Facebook, Youtube, Music2, Twitter, XCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
-
-type CreatorStatus = "none" | "pending" | "approved";
-const STORAGE_KEY = "nora_creator_status";
-
-const useCreatorStatus = () => {
-  const [status, setStatus] = useState<CreatorStatus>(() => {
-    if (typeof window === "undefined") return "none";
-    return (localStorage.getItem(STORAGE_KEY) as CreatorStatus) || "none";
-  });
-  const update = (s: CreatorStatus) => {
-    localStorage.setItem(STORAGE_KEY, s);
-    setStatus(s);
-  };
-  return [status, update] as const;
-};
+import { useUser } from "@/lib/user";
 
 /* -------------------- Dashboard (approved) -------------------- */
 
