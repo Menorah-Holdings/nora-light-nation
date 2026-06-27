@@ -162,7 +162,7 @@ const faqs = [
   },
 ];
 
-const Subscription = () => {
+const Plans = () => {
   const navigate = useNavigate();
   const [activePlan, setActivePlan] = useState<Plan | null>(null);
 
@@ -432,4 +432,4 @@ const Subscription = () => {
   );
 };
 
-export default Subscription;
+export default Plans;
