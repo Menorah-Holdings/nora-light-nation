@@ -22,6 +22,9 @@ const ContentDetail = () => {
           <button onClick={() => setPlaying(!playing)} className="absolute inset-0 m-auto h-20 w-20 rounded-full bg-red-gradient text-primary-foreground shadow-red-glow inline-flex items-center justify-center hover:scale-105 transition">
             {playing ? <Pause className="h-8 w-8" /> : <Play className="h-8 w-8 fill-current" />}
           </button>
+          <div className="absolute top-3 right-3 md:top-5 md:right-5">
+            <NowPlayingMenu item={item} variant="overlay" />
+          </div>
         </div>
       </div>
 
