@@ -16,7 +16,7 @@ const Landing = () => {
             <a href="#vision" className="hover:text-foreground">About</a>
             <a href="#categories" className="hover:text-foreground">Content</a>
             <a href="#partner" className="hover:text-foreground">Partner</a>
-            <a href="#pricing" className="hover:text-foreground">Pricing</a>
+            <Link to="/plans" className="hover:text-foreground">Plans</Link>
           </nav>
           <div className="flex items-center gap-3">
             <Link to="/auth" className="hidden sm:inline text-sm text-muted-foreground hover:text-foreground">Sign in</Link>
