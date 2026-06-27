@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { Download, HardDrive, Trash2, Wifi, Sparkles, User, Bell, Shield, Globe, LifeBuoy } from "lucide-react";
+import { Download, HardDrive, Trash2, Wifi, Sparkles, User, Bell, Shield, Globe, LifeBuoy, ShieldCheck } from "lucide-react";
 import HelpSupport from "@/components/HelpSupport";
+import AccountSettings from "@/components/AccountSettings";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
@@ -25,10 +26,11 @@ import { toast } from "@/hooks/use-toast";
 import { useUser, CreatorStatus, MOCK_USERS } from "@/lib/user";
 import { CreatorStatusBadge } from "@/components/CreatorStatusBadge";
 
-type TabId = "profile" | "downloads" | "language" | "notifications" | "privacy" | "help";
+type TabId = "profile" | "account" | "downloads" | "language" | "notifications" | "privacy" | "help";
 
 const tabs: { id: TabId; label: string; icon: any }[] = [
   { id: "profile", label: "Profile", icon: User },
+  { id: "account", label: "Account Settings", icon: ShieldCheck },
   { id: "downloads", label: "Download Settings", icon: Download },
   { id: "language", label: "Language & Region", icon: Globe },
   { id: "notifications", label: "Notifications", icon: Bell },
@@ -526,6 +528,7 @@ const Settings = () => {
           {tab === "downloads" && <DownloadSettings />}
           {tab === "language" && <LanguageRegionSettings />}
           {tab === "profile" && <ProfileSettings />}
+          {tab === "account" && <AccountSettings />}
           {tab === "notifications" && (
             <Placeholder title="Notifications" message="Control how and when Nora reaches you." />
           )}
