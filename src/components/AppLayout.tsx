@@ -14,7 +14,7 @@ const nav = [
   { to: "/app/devotionals", label: "Devotionals", icon: BookOpen },
   { to: "/app/creators", label: "Creators", icon: Users },
   { to: "/app/library", label: "Library", icon: Library },
-  { to: "/app/admin", label: "Admin", icon: LayoutDashboard },
+  { to: "/app/admin", label: "Creator Dashboard", icon: LayoutDashboard },
 ];
 
 export const AppLayout = () => {
