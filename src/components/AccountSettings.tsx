@@ -216,6 +216,21 @@ const AccountSettings = () => {
   const [delPwd, setDelPwd] = useState("");
   const [delAck, setDelAck] = useState(false);
 
+  // Activity / history
+  type ClearTarget = "watch" | "listening" | "search" | "all";
+  const CLEAR_LABELS: Record<ClearTarget, { title: string; toast: string }> = {
+    watch: { title: "Clear Watch History?", toast: "Watch history cleared." },
+    listening: { title: "Clear Listening History?", toast: "Listening history cleared." },
+    search: { title: "Clear Search History?", toast: "Search history cleared." },
+    all: { title: "Clear All Activity?", toast: "Activity cleared successfully." },
+  };
+  const [clearTarget, setClearTarget] = useState<ClearTarget | null>(null);
+  const confirmClear = () => {
+    if (!clearTarget) return;
+    toast.success(CLEAR_LABELS[clearTarget].toast);
+    setClearTarget(null);
+  };
+
   const saveInfo = () => {
     setInfo(draft);
     setEditOpen(false);
