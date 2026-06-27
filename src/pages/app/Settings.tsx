@@ -207,6 +207,189 @@ const DownloadSettings = () => {
   );
 };
 
+const LANGUAGES = [
+  { value: "en", label: "English" },
+  { value: "fr", label: "Français" },
+  { value: "es", label: "Español" },
+  { value: "pt", label: "Português" },
+  { value: "sw", label: "Kiswahili" },
+  { value: "ar", label: "عربي (Arabic)" },
+  { value: "hi", label: "हिन्दी (Hindi)" },
+];
+
+const REGIONS: { value: string; label: string; tz: string }[] = [
+  { value: "NG", label: "Nigeria", tz: "Africa/Lagos (GMT+1)" },
+  { value: "GH", label: "Ghana", tz: "Africa/Accra (GMT+0)" },
+  { value: "KE", label: "Kenya", tz: "Africa/Nairobi (GMT+3)" },
+  { value: "ZA", label: "South Africa", tz: "Africa/Johannesburg (GMT+2)" },
+  { value: "US", label: "United States", tz: "America/New_York (GMT-5)" },
+  { value: "CA", label: "Canada", tz: "America/Toronto (GMT-5)" },
+  { value: "GB", label: "United Kingdom", tz: "Europe/London (GMT+0)" },
+  { value: "BR", label: "Brazil", tz: "America/Sao_Paulo (GMT-3)" },
+  { value: "IN", label: "India", tz: "Asia/Kolkata (GMT+5:30)" },
+];
+
+const SUBTITLES = ["English", "French", "Spanish", "Arabic", "Portuguese", "None"];
+
+const LanguageRegionSettings = () => {
+  const [language, setLanguage] = useState("en");
+  const [region, setRegion] = useState("NG");
+  const [tzOverride, setTzOverride] = useState<string | null>(null);
+  const [displayMode, setDisplayMode] = useState("original");
+  const [subtitle, setSubtitle] = useState("English");
+  const [timeFormat, setTimeFormat] = useState("12");
+  const [contentPref, setContentPref] = useState("local-global");
+
+  const detectedTz = REGIONS.find((r) => r.value === region)?.tz ?? "";
+  const timeZone = tzOverride ?? detectedTz;
+
+  const save = () => {
+    toast({
+      title: "Preferences saved",
+      description: "Your Language & Region preferences have been updated.",
+    });
+  };
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="font-display text-2xl text-foreground">Language & Region</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Personalize Nora with your preferred language, country, and regional experience.
+        </p>
+      </div>
+
+      <div
+        className="relative overflow-hidden rounded-2xl border border-gold/20 shadow-elegant"
+        style={{ background: "linear-gradient(160deg, hsl(350 30% 11%), hsl(350 22% 7%))" }}
+      >
+        <div className="absolute inset-0 pointer-events-none glow-radial opacity-30" />
+        <div className="relative divide-y divide-border/50 px-5 sm:px-6">
+          <SettingRow
+            title="Preferred Language"
+            helper="This changes the language used throughout the Nora interface where translations are available."
+          >
+            <Select value={language} onValueChange={setLanguage}>
+              <SelectTrigger className="w-[220px] border-border bg-secondary/60 focus:ring-1 focus:ring-gold">
+                <SelectValue placeholder="Select Language" />
+              </SelectTrigger>
+              <SelectContent>
+                {LANGUAGES.map((l) => (
+                  <SelectItem key={l.value} value={l.value}>{l.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </SettingRow>
+
+          <SettingRow
+            title="Region"
+            helper="Your region helps personalize featured content, live event times, and recommendations."
+          >
+            <Select
+              value={region}
+              onValueChange={(v) => {
+                setRegion(v);
+                setTzOverride(null);
+              }}
+            >
+              <SelectTrigger className="w-[220px] border-border bg-secondary/60 focus:ring-1 focus:ring-gold">
+                <SelectValue placeholder="Select Region" />
+              </SelectTrigger>
+              <SelectContent>
+                {REGIONS.map((r) => (
+                  <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </SettingRow>
+
+          <SettingRow
+            title="Time Zone"
+            helper="Detected from your region. You can override it manually."
+          >
+            <Select value={timeZone} onValueChange={(v) => setTzOverride(v)}>
+              <SelectTrigger className="w-[260px] border-border bg-secondary/60 focus:ring-1 focus:ring-gold">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {REGIONS.map((r) => (
+                  <SelectItem key={r.tz} value={r.tz}>{r.tz}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </SettingRow>
+
+          <div className="py-5">
+            <p className="font-display text-sm text-foreground">Display Language for Content</p>
+            <RadioGroup value={displayMode} onValueChange={setDisplayMode} className="mt-3 space-y-2">
+              {[
+                { v: "original", l: "Original Language" },
+                { v: "dubbed", l: "Prefer Dubbed Content" },
+                { v: "subtitles", l: "Prefer Subtitles" },
+              ].map((o) => (
+                <div key={o.v} className="flex items-center gap-3">
+                  <RadioGroupItem id={`dm-${o.v}`} value={o.v} className="border-border text-gold focus:ring-gold" />
+                  <Label htmlFor={`dm-${o.v}`} className="text-sm text-foreground/90 cursor-pointer">{o.l}</Label>
+                </div>
+              ))}
+            </RadioGroup>
+          </div>
+
+          <SettingRow title="Subtitle Language" helper="Used when subtitles are available.">
+            <Select value={subtitle} onValueChange={setSubtitle}>
+              <SelectTrigger className="w-[200px] border-border bg-secondary/60 focus:ring-1 focus:ring-gold">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {SUBTITLES.map((s) => (
+                  <SelectItem key={s} value={s}>{s}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </SettingRow>
+
+          <SettingRow title="Date & Time Format" helper="Choose how times appear across Nora.">
+            <Select value={timeFormat} onValueChange={setTimeFormat}>
+              <SelectTrigger className="w-[200px] border-border bg-secondary/60 focus:ring-1 focus:ring-gold">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="12">12-hour clock</SelectItem>
+                <SelectItem value="24">24-hour clock</SelectItem>
+              </SelectContent>
+            </Select>
+          </SettingRow>
+
+          <div className="py-5">
+            <p className="font-display text-sm text-foreground">Content Region Preference</p>
+            <p className="mt-1 text-xs text-muted-foreground">Choose how Nora prioritizes recommendations.</p>
+            <RadioGroup value={contentPref} onValueChange={setContentPref} className="mt-3 space-y-2">
+              {[
+                { v: "global", l: "Global Content" },
+                { v: "local-global", l: "Local + Global Content" },
+                { v: "local", l: "Local Content First" },
+              ].map((o) => (
+                <div key={o.v} className="flex items-center gap-3">
+                  <RadioGroupItem id={`cp-${o.v}`} value={o.v} className="border-border text-gold focus:ring-gold" />
+                  <Label htmlFor={`cp-${o.v}`} className="text-sm text-foreground/90 cursor-pointer">{o.l}</Label>
+                </div>
+              ))}
+            </RadioGroup>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex justify-end">
+        <Button onClick={save} className="bg-red-gradient text-primary-foreground hover:opacity-90 hover:shadow-glow transition-shadow">
+          Save Preferences
+        </Button>
+      </div>
+    </div>
+  );
+};
+
+
+
 const Placeholder = ({ title, message }: { title: string; message: string }) => (
   <div className="space-y-6">
     <div>
