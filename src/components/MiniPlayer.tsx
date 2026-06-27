@@ -33,6 +33,7 @@ export const MiniPlayer = () => {
         <button onClick={() => setPlaying(!playing)} className="md:hidden inline-flex h-9 w-9 items-center justify-center rounded-full bg-red-gradient text-primary-foreground shadow-red-glow">
           {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 fill-current" />}
         </button>
+        <NowPlayingMenu item={track} variant="compact" />
       </div>
     </div>
   );
