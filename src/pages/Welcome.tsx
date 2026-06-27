@@ -101,13 +101,14 @@ const Welcome = () => {
             <h1 className="mt-4 font-display text-4xl leading-tight sm:text-5xl">
               Welcome, <span className="gold-text-gradient">{firstName}</span>.
             </h1>
-            <p className="mt-3 font-display text-lg text-foreground/80">Light for Every Nation</p>
+            <p className="mt-3 text-sm text-foreground/80">We're so glad you're here.</p>
+            <p className="mt-2 font-display text-lg gold-text-gradient">Light for Every Nation</p>
 
             <p className="mt-6 text-sm leading-relaxed text-muted-foreground">
-              We're excited you've joined the NoraPlus community. Discover trusted kingdom content that helps you encounter truth, grow in faith, and live transformed.
+              Discover trusted kingdom content that helps you encounter truth, grow in faith, and live transformed.
             </p>
             <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-              Whether you're listening to worship, watching life-changing messages, joining live gatherings, or discovering new creators — your journey starts here.
+              Whether you're listening to worship, watching inspiring messages, joining live experiences, or discovering creators from around the world, your journey starts here.
             </p>
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
