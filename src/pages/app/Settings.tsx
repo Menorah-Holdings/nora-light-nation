@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Download, HardDrive, Trash2, Wifi, Sparkles, User, Bell, Shield, Globe } from "lucide-react";
+import { Download, HardDrive, Trash2, Wifi, Sparkles, User, Bell, Shield, Globe, LifeBuoy } from "lucide-react";
+import HelpSupport from "@/components/HelpSupport";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
@@ -24,7 +25,7 @@ import { toast } from "@/hooks/use-toast";
 import { useUser, CreatorStatus, MOCK_USERS } from "@/lib/user";
 import { CreatorStatusBadge } from "@/components/CreatorStatusBadge";
 
-type TabId = "profile" | "downloads" | "language" | "notifications" | "privacy";
+type TabId = "profile" | "downloads" | "language" | "notifications" | "privacy" | "help";
 
 const tabs: { id: TabId; label: string; icon: any }[] = [
   { id: "profile", label: "Profile", icon: User },
@@ -32,6 +33,7 @@ const tabs: { id: TabId; label: string; icon: any }[] = [
   { id: "language", label: "Language & Region", icon: Globe },
   { id: "notifications", label: "Notifications", icon: Bell },
   { id: "privacy", label: "Privacy", icon: Shield },
+  { id: "help", label: "Help & Support", icon: LifeBuoy },
 ];
 
 const SettingRow = ({
@@ -530,6 +532,7 @@ const Settings = () => {
           {tab === "privacy" && (
             <Placeholder title="Privacy" message="Manage data, security, and permissions." />
           )}
+          {tab === "help" && <HelpSupport />}
         </section>
       </div>
     </div>
