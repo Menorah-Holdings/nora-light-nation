@@ -515,17 +515,49 @@ const SuccessView = ({ onHome }: { onHome: () => void }) => (
   </div>
 );
 
+/* -------------------- Rejected state -------------------- */
+
+const RejectedView = ({ reason, onReapply }: { reason?: string; onReapply: () => void }) => (
+  <div className="mx-auto max-w-2xl">
+    <div className="rounded-3xl bg-card-gradient ring-1 ring-destructive/30 p-10 text-center">
+      <div className="mx-auto inline-flex items-center gap-2 rounded-full bg-destructive/15 px-4 py-1.5 text-xs uppercase tracking-[0.2em] text-destructive ring-1 ring-destructive/30">
+        <XCircle className="h-3.5 w-3.5" /> Application Not Approved
+      </div>
+      <h1 className="mt-6 font-display text-3xl md:text-4xl">We couldn't approve your application this time</h1>
+      <p className="mt-3 text-muted-foreground leading-relaxed">
+        {reason || "Thank you for your interest in creating on Nora. After reviewing your submission, our team was unable to approve it at this stage. You're welcome to update your details and reapply."}
+      </p>
+      <button
+        onClick={onReapply}
+        className="mt-8 inline-flex items-center gap-2 rounded-full bg-red-gradient px-7 py-3 text-sm font-medium text-primary-foreground shadow-red-glow"
+      >
+        Reapply
+      </button>
+    </div>
+  </div>
+);
+
 /* -------------------- Page shell -------------------- */
 
-type View = "hero" | "applying" | "success" | "pending" | "dashboard";
+type View = "hero" | "applying" | "success" | "pending" | "rejected" | "dashboard";
+
+const viewForStatus = (s: ReturnType<typeof useUser>["user"]["creator_status"]): View => {
+  switch (s) {
+    case "Approved": return "dashboard";
+    case "Under Review": return "pending";
+    case "Rejected": return "rejected";
+    default: return "hero";
+  }
+};
 
 const Admin = () => {
-  const [status, setStatus] = useCreatorStatus();
-  const [view, setView] = useState<View>(() => (status === "approved" ? "dashboard" : status === "pending" ? "pending" : "hero"));
+  const { user, setCreatorStatus } = useUser();
+  const status = user.creator_status;
+  const [view, setView] = useState<View>(() => viewForStatus(status));
 
   useEffect(() => {
-    if (status === "approved") setView("dashboard");
-    else if (status === "pending" && view !== "success" && view !== "applying") setView("pending");
+    // Snap to canonical view when status changes externally, unless mid-application or success
+    if (view !== "applying" && view !== "success") setView(viewForStatus(status));
   }, [status]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (view === "dashboard") return <CreatorDashboard />;
@@ -535,9 +567,9 @@ const Admin = () => {
       {view === "hero" && <OnboardingHero onStart={() => setView("applying")} />}
       {view === "applying" && (
         <Application
-          onCancel={() => setView(status === "pending" ? "pending" : "hero")}
+          onCancel={() => setView(viewForStatus(status))}
           onSubmit={() => {
-            setStatus("pending");
+            setCreatorStatus("Under Review");
             setView("success");
             toast({ title: "Application submitted", description: "We'll review and notify you within 24–72 hours." });
           }}
@@ -545,12 +577,15 @@ const Admin = () => {
       )}
       {view === "success" && <SuccessView onHome={() => setView("pending")} />}
       {view === "pending" && <PendingReview onView={() => setView("applying")} />}
+      {view === "rejected" && (
+        <RejectedView reason={user.rejectionReason} onReapply={() => setView("applying")} />
+      )}
 
-      {/* Dev helper: simulate approval */}
-      {status === "pending" && view === "pending" && (
+      {/* Dev helper */}
+      {status === "Under Review" && view === "pending" && (
         <div className="mx-auto max-w-2xl text-center">
           <button
-            onClick={() => setStatus("approved")}
+            onClick={() => setCreatorStatus("Approved")}
             className="text-xs text-muted-foreground hover:text-gold transition-colors"
           >
             (Demo) Simulate approval
@@ -562,3 +597,4 @@ const Admin = () => {
 };
 
 export default Admin;
+
