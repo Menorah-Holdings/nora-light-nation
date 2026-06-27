@@ -1,8 +1,8 @@
 import { useParams, Link } from "react-router-dom";
 import { getContentById, content } from "@/lib/mockData";
 import { Play, Bookmark, Share2, Pause } from "lucide-react";
-import { useState } from "react";
 import { ContentCard } from "@/components/ContentCard";
+import { NowPlayingMenu } from "@/components/NowPlayingMenu";
 
 const ContentDetail = () => {
   const { id } = useParams();
