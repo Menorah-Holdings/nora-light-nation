@@ -86,7 +86,7 @@ const plans: Plan[] = [
   },
   {
     id: "plus",
-    name: "NoraPlus Plus",
+    name: "Essential",
     price: "₦1,500",
     priceSuffix: "/month",
     description: "For consistent listeners and viewers.",
@@ -105,14 +105,14 @@ const plans: Plan[] = [
   },
   {
     id: "premium",
-    name: "NoraPlus Premium",
+    name: "Premium",
     badge: "Most Popular",
     badgeTone: "red",
     price: "₦2,500",
     priceSuffix: "/month",
     description: "The complete NoraPlus experience.",
     features: [
-      "Everything in NoraPlus Plus",
+      "Everything in Essential",
       "Offline downloads",
       "Highest audio quality",
       "Highest video quality",
@@ -146,7 +146,7 @@ const faqs = [
   },
   {
     q: "What happens after my free trial ends?",
-    a: "When your 3-month free trial ends, you'll move to the Free plan automatically. You can upgrade to NoraPlus Plus or Premium at any time to keep full access.",
+    a: "When your 3-month free trial ends, you'll move to the Free plan automatically. You can upgrade to Essential or Premium at any time to keep full access.",
   },
   {
     q: "Can I switch plans later?",

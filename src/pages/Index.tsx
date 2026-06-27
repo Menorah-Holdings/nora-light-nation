@@ -176,8 +176,8 @@ const Landing = () => {
           {[
             { name: "Free Trial", badge: "New User Offer", price: "₦0", suffix: "3 Months", desc: "Enjoy full, all-access use of NoraPlus during your first three months.", featured: true },
             { name: "Free", badge: "Always Available", price: "₦0", suffix: "", desc: "Continue exploring trusted kingdom content with selected features." },
-            { name: "NoraPlus Plus", price: "₦1,500", suffix: "/month", desc: "Unlimited streaming and an enhanced listening and viewing experience." },
-            { name: "NoraPlus Premium", badge: "Most Popular", price: "₦2,500", suffix: "/month", desc: "The complete NoraPlus experience with premium content and downloads.", popular: true },
+            { name: "Essential", price: "₦1,500", suffix: "/month", desc: "Unlimited streaming and an enhanced listening and viewing experience." },
+            { name: "Premium", badge: "Most Popular", price: "₦2,500", suffix: "/month", desc: "The complete NoraPlus experience with premium content and downloads.", popular: true },
           ].map((p) => (
             <div key={p.name} className={`relative rounded-2xl p-6 ring-1 ${p.popular ? "ring-gold/50 bg-card-gradient shadow-red-glow" : p.featured ? "ring-gold/40 bg-card-gradient shadow-elegant" : "ring-border/60 bg-card"}`}>
               {p.badge && <span className={`absolute -top-3 left-6 rounded-full px-3 py-1 text-[10px] font-medium ${p.popular ? "bg-red-gradient text-foreground" : "bg-gold-gradient text-primary-foreground"}`}>{p.badge}</span>}

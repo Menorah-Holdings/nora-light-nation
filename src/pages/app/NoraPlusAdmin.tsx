@@ -107,7 +107,7 @@ const DashboardView = () => {
   const activity = [
     { t: "Creator application", who: "Ada Okafor", time: "2m ago", tone: "gold" as const },
     { t: "Content published", who: "Sounds of Heaven · Anchored — Live Sessions", time: "18m ago", tone: "green" as const },
-    { t: "Subscription upgraded", who: "u-1842 → NoraPlus Premium", time: "1h ago", tone: "default" as const },
+    { t: "Subscription upgraded", who: "u-1842 → Premium", time: "1h ago", tone: "default" as const },
     { t: "Report filed", who: "Comment on \"The Narrow Way\"", time: "3h ago", tone: "red" as const },
     { t: "Live event started", who: "Youth Revival — Nairobi", time: "5h ago", tone: "red" as const },
   ];
@@ -338,7 +338,7 @@ const UsersView = () => (
                 </td>
                 <td className="px-5 py-3 text-muted-foreground">{u.email}</td>
                 <td className="px-5 py-3 text-muted-foreground">{creatorBadgeLabel(u.creator_status)}</td>
-                <td className="px-5 py-3"><Pill tone={i % 3 === 0 ? "gold" : i % 3 === 1 ? "muted" : "green"}>{["NoraPlus Premium", "Free", "NoraPlus Plus"][i % 3]}</Pill></td>
+                <td className="px-5 py-3"><Pill tone={i % 3 === 0 ? "gold" : i % 3 === 1 ? "muted" : "green"}>{["Premium", "Free", "Essential"][i % 3]}</Pill></td>
                 <td className="px-5 py-3">
                   <div className="flex justify-end gap-2">
                     <RowAction icon={Eye} label="View" onClick={() => toast({ title: `Viewing ${u.name}` })} />
@@ -361,8 +361,8 @@ const SubscriptionsView = () => (
     <div className="grid gap-5 md:grid-cols-4">
       <Stat label="Free Trial" value="3,210" icon={CreditCard} />
       <Stat label="Free" value="32,070" icon={CreditCard} />
-      <Stat label="NoraPlus Plus" value="8,124" icon={CreditCard} tone="gold" />
-      <Stat label="NoraPlus Premium" value="4,816" icon={CreditCard} tone="red" />
+      <Stat label="Essential" value="8,124" icon={CreditCard} tone="gold" />
+      <Stat label="Premium" value="4,816" icon={CreditCard} tone="red" />
     </div>
     <Card className="overflow-hidden p-0">
       <div className="overflow-x-auto">
@@ -379,7 +379,7 @@ const SubscriptionsView = () => (
             {MOCK_USERS.map((u, i) => (
               <tr key={u.id} className="hover:bg-secondary/30">
                 <td className="px-5 py-3">{u.name}</td>
-                <td className="px-5 py-3"><Pill tone={i % 2 ? "gold" : "muted"}>{["NoraPlus Plus", "NoraPlus Premium", "Free", "Free Trial", "NoraPlus Premium"][i % 5]}</Pill></td>
+                <td className="px-5 py-3"><Pill tone={i % 2 ? "gold" : "muted"}>{["Essential", "Premium", "Free", "Free Trial", "Premium"][i % 5]}</Pill></td>
                 <td className="px-5 py-3 text-muted-foreground">Jul {10 + i}, 2026</td>
                 <td className="px-5 py-3">
                   <div className="flex justify-end gap-2">
@@ -510,7 +510,7 @@ const AnalyticsView = () => {
 
 const SettingsView = () => {
   const groups = [
-    { title: "Subscription Plans", desc: "Free Trial, Free, NoraPlus Plus, NoraPlus Premium" },
+    { title: "Subscription Plans", desc: "Free Trial, Free, Essential, Premium" },
     { title: "Languages", desc: "Supported listener and creator languages" },
     { title: "Regions", desc: "Supported regions and localization rules" },
     { title: "Notification Templates", desc: "Email and in-app notification copy" },

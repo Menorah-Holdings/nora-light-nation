@@ -32,7 +32,7 @@ const QUICK_HELP = [
 
 const FAQS = [
   { q: "How do I download content?", a: "Open any audio, video, or devotional and tap the three-dot menu, then choose Download. Your downloads live in Library → Downloads and are available offline. Download quality is configurable under Settings → Download Settings." },
-  { q: "How does the Free Trial work?", a: "New members get a 14-day Free Trial of NoraPlus Premium. You can cancel anytime from Settings → Subscription before the trial ends and you won't be charged." },
+  { q: "How does the Free Trial work?", a: "New members get a 14-day Free Trial of Premium. You can cancel anytime from Settings → Subscription before the trial ends and you won't be charged." },
   { q: "How do I become a Creator?", a: "Open Create on NoraPlus from the sidebar and complete the creator application. The NoraPlus team reviews submissions within 3-5 business days. Once approved, Creator Studio unlocks automatically on the same account." },
   { q: "How do I cancel my subscription?", a: "Go to Settings → Subscription → Manage Plan and choose Cancel Subscription. Your benefits remain active until the end of the current billing period." },
   { q: "Can I watch NoraPlus on multiple devices?", a: "Yes. Your NoraPlus account works across web, iOS, and Android. Premium members can stream on up to 4 devices at the same time." },
