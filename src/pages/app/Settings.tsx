@@ -484,7 +484,7 @@ const Placeholder = ({ title, message }: { title: string; message: string }) => 
 );
 
 const Settings = () => {
-  const [tab, setTab] = useState<TabId>("downloads");
+  const [tab, setTab] = useState<TabId>("profile");
 
   return (
     <div className="mx-auto max-w-5xl">
