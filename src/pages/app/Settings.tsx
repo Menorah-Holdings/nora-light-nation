@@ -31,8 +31,6 @@ const tabs: { id: TabId; label: string; icon: any }[] = [
   { id: "notifications", label: "Notifications", icon: Bell },
   { id: "privacy", label: "Privacy", icon: Shield },
 ];
-  { id: "privacy", label: "Privacy", icon: Shield },
-];
 
 const SettingRow = ({
   title,
