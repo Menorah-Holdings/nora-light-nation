@@ -7,7 +7,7 @@ const Creators = () => (
     <div>
       <p className="text-xs uppercase tracking-[0.25em] text-gold">Trusted voices</p>
       <h1 className="mt-2 font-display text-4xl md:text-5xl">Creators & Ministries</h1>
-      <p className="mt-2 text-muted-foreground max-w-lg">Discover the pastors, artists, podcasters, and filmmakers shaping the Nora collective.</p>
+      <p className="mt-2 text-muted-foreground max-w-lg">Discover the pastors, artists, podcasters, and filmmakers shaping the NoraPlus collective.</p>
     </div>
     <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
       {creators.map(c => (

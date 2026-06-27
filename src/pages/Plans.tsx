@@ -43,16 +43,15 @@ const plans: Plan[] = [
     badgeTone: "gold",
     price: "₦0",
     duration: "3 Months",
-    description: "Experience everything Nora has to offer for your first three months.",
+    description: "Enjoy complete access to everything NoraPlus has to offer during your first three months.",
     features: [
-      "Full content access",
       "Unlimited audio streaming",
       "Unlimited video streaming",
       "Live events",
       "Offline downloads",
       "Premium content",
       "Ad-free experience",
-      "Personalized recommendations",
+      "Highest streaming quality",
     ],
     cta: "Start Free Trial",
     highlight: "gold",
@@ -64,62 +63,60 @@ const plans: Plan[] = [
     badge: "Always Available",
     badgeTone: "muted",
     price: "₦0",
-    description: "Continue enjoying Nora at no cost.",
+    description: "Continue enjoying trusted kingdom content with access to selected features and content.",
     features: [
-      "Access to selected content",
-      "Limited audio streaming",
-      "Selected video content",
+      "Selected audio",
+      "Selected video",
       "Selected live events",
       "Follow creators",
       "Build your library",
       "Personalized recommendations",
     ],
     limitations: [
-      "No downloads",
-      "No premium content",
-      "No exclusive events",
-      "Standard streaming quality",
+      "Downloads",
+      "Premium content",
+      "Exclusive events",
+      "Highest streaming quality",
     ],
     cta: "Current Plan",
     ctaDisabled: true,
     icon: Star,
   },
   {
-    id: "plus",
-    name: "Nora Plus",
+    id: "essential",
+    name: "Essential",
     price: "₦1,500",
     priceSuffix: "/month",
-    description: "For consistent listeners and viewers.",
+    description: "Unlimited streaming and an enhanced everyday NoraPlus experience.",
     features: [
-      "Everything in Free",
       "Unlimited audio streaming",
       "Unlimited video streaming",
       "Ad-free experience",
-      "Full live event access",
-      "Early access to selected releases",
       "Enhanced audio quality",
+      "Full live event access",
       "Continue across devices",
+      "Early access to selected releases",
     ],
-    cta: "Upgrade to Plus",
+    cta: "Upgrade to Essential",
     icon: Sparkles,
   },
   {
     id: "premium",
-    name: "Nora Premium",
+    name: "Premium",
     badge: "Most Popular",
     badgeTone: "red",
     price: "₦2,500",
     priceSuffix: "/month",
-    description: "The complete Nora experience.",
+    description: "The complete NoraPlus experience.",
     features: [
-      "Everything in Nora Plus",
+      "Everything in Essential",
       "Offline downloads",
       "Highest audio quality",
       "Highest video quality",
-      "Premium content access",
-      "Exclusive partner content",
+      "Exclusive premium content",
+      "Premium conferences and partner content",
       "Priority event registration",
-      "Premium member benefits",
+      "Future Premium member benefits",
     ],
     cta: "Upgrade to Premium",
     highlight: "premium",
@@ -128,7 +125,7 @@ const plans: Plan[] = [
 ];
 
 const comparison: { feature: string; values: (string | boolean)[] }[] = [
-  { feature: "Audio Streaming", values: ["Unlimited", "Limited", "Unlimited", "Unlimited"] },
+  { feature: "Audio Streaming", values: ["Unlimited", "Selected", "Unlimited", "Unlimited"] },
   { feature: "Video Streaming", values: ["Unlimited", "Selected", "Unlimited", "Unlimited"] },
   { feature: "Live Events", values: [true, "Selected", true, "Priority"] },
   { feature: "Downloads", values: [true, false, false, true] },
@@ -146,7 +143,7 @@ const faqs = [
   },
   {
     q: "What happens after my free trial ends?",
-    a: "When your 3-month free trial ends, you'll move to the Free plan automatically. You can upgrade to Nora Plus or Premium at any time to keep full access.",
+    a: "When your 3-month free trial ends, you'll move to the Free plan automatically. You can upgrade to Essential or Premium at any time to keep full access.",
   },
   {
     q: "Can I switch plans later?",
@@ -154,7 +151,7 @@ const faqs = [
   },
   {
     q: "Will more premium features be added?",
-    a: "Yes. Nora is continually growing — new kingdom content, live experiences, creator tools, and premium features are added regularly for our subscribers.",
+    a: "Yes. NoraPlus is continually growing — new kingdom content, live experiences, creator tools, and premium features are added regularly for our subscribers.",
   },
   {
     q: "Do I lose my library if I downgrade?",
@@ -182,7 +179,7 @@ const Plans = () => {
             to="/app"
             className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
-            <ArrowLeft className="h-4 w-4" /> Back to Nora
+            <ArrowLeft className="h-4 w-4" /> Back to NoraPlus
           </Link>
         </div>
       </header>
@@ -195,7 +192,7 @@ const Plans = () => {
             <Sparkles className="h-3.5 w-3.5" /> Subscriptions
           </span>
           <h1 className="mt-5 font-display text-4xl md:text-6xl leading-[1.05]">
-            Choose Your <span className="gold-text-gradient">Nora</span> Experience
+            Choose Your <span className="gold-text-gradient">NoraPlus</span> Experience
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-base md:text-lg text-muted-foreground">
             Trusted kingdom content for every stage of your journey.
@@ -316,7 +313,7 @@ const Plans = () => {
         <section className="mt-24">
           <div className="text-center">
             <h2 className="font-display text-3xl md:text-4xl">Compare every plan</h2>
-            <p className="mt-2 text-muted-foreground">A clear look at what's included across Nora.</p>
+            <p className="mt-2 text-muted-foreground">A clear look at what's included across NoraPlus.</p>
           </div>
 
           <div className="mt-10 overflow-hidden rounded-2xl ring-1 ring-border/60 bg-card-gradient">
@@ -402,7 +399,7 @@ const Plans = () => {
               Subscription Activated
             </DialogTitle>
             <DialogDescription className="text-center text-muted-foreground">
-              Welcome to your new Nora experience
+              Welcome to your new NoraPlus experience
               {activePlan ? ` — ${activePlan.name}.` : "."}
             </DialogDescription>
           </DialogHeader>

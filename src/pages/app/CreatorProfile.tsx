@@ -37,7 +37,7 @@ const CreatorProfile = () => {
       </div>
 
       <p className="max-w-2xl text-muted-foreground">
-        Trusted voice in the Nora collective, sharing teaching, worship and stories that anchor faith and ignite kingdom living across the nations.
+        Trusted voice in the NoraPlus collective, sharing teaching, worship and stories that anchor faith and ignite kingdom living across the nations.
       </p>
 
       {/* Analytics teaser */}

@@ -27,7 +27,7 @@ const initial: Notif[] = [
   { id: "2", type: "content", title: "New message available", message: "The Secret Place has just been released.", time: "12 min ago", unread: true, cta: "Watch" },
   { id: "3", type: "music", title: "New worship single", message: "Ascension Sessions released a new track.", time: "1 hr ago", unread: true, cta: "Listen" },
   { id: "4", type: "reminder", title: "Event starts soon", message: "Global Fire Conference begins in 30 minutes.", time: "2 hr ago", unread: false, cta: "Open" },
-  { id: "5", type: "subscription", title: "Welcome to Nora Premium", message: "Your membership is now active.", time: "Yesterday", unread: false },
+  { id: "5", type: "subscription", title: "Welcome to Premium", message: "Your membership is now active.", time: "Yesterday", unread: false },
 ];
 
 const iconFor = (t: NotifType) => {

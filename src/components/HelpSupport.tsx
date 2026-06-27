@@ -24,18 +24,18 @@ const cardStyle = {
 };
 
 const QUICK_HELP = [
-  { icon: BookOpen, title: "Getting Started", description: "Learn how to use Nora.", cta: "View Guide" },
+  { icon: BookOpen, title: "Getting Started", description: "Learn how to use NoraPlus.", cta: "View Guide" },
   { icon: Download, title: "Downloads", description: "Managing offline downloads.", cta: "Learn More" },
   { icon: CreditCard, title: "Subscriptions", description: "Questions about plans and billing.", cta: "View Plans Help" },
-  { icon: Mic2, title: "Creator Help", description: "Everything about Create on Nora and Creator Studio.", cta: "Creator Guide" },
+  { icon: Mic2, title: "Creator Help", description: "Everything about Create on NoraPlus and Creator Studio.", cta: "Creator Guide" },
 ];
 
 const FAQS = [
   { q: "How do I download content?", a: "Open any audio, video, or devotional and tap the three-dot menu, then choose Download. Your downloads live in Library → Downloads and are available offline. Download quality is configurable under Settings → Download Settings." },
-  { q: "How does the Free Trial work?", a: "New members get a 14-day Free Trial of Nora Premium. You can cancel anytime from Settings → Subscription before the trial ends and you won't be charged." },
-  { q: "How do I become a Creator?", a: "Open Create on Nora from the sidebar and complete the creator application. The Nora team reviews submissions within 3-5 business days. Once approved, Creator Studio unlocks automatically on the same account." },
+  { q: "How does the Free Trial work?", a: "New members get a 14-day Free Trial of Premium. You can cancel anytime from Settings → Subscription before the trial ends and you won't be charged." },
+  { q: "How do I become a Creator?", a: "Open Create on NoraPlus from the sidebar and complete the creator application. The NoraPlus team reviews submissions within 3-5 business days. Once approved, Creator Studio unlocks automatically on the same account." },
   { q: "How do I cancel my subscription?", a: "Go to Settings → Subscription → Manage Plan and choose Cancel Subscription. Your benefits remain active until the end of the current billing period." },
-  { q: "Can I watch Nora on multiple devices?", a: "Yes. Your Nora account works across web, iOS, and Android. Premium members can stream on up to 4 devices at the same time." },
+  { q: "Can I watch NoraPlus on multiple devices?", a: "Yes. Your NoraPlus account works across web, iOS, and Android. Premium members can stream on up to 4 devices at the same time." },
   { q: "How do I reset my password?", a: "From the sign-in screen, tap Forgot Password and enter the email tied to your account. We'll send a secure reset link that expires in 30 minutes." },
 ];
 
@@ -77,7 +77,7 @@ const HelpSupport = () => {
       <div>
         <h2 className="font-display text-2xl text-foreground">Help & Support</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          We're here to help you get the most out of your Nora experience.
+          We're here to help you get the most out of your NoraPlus experience.
         </p>
       </div>
 
@@ -149,14 +149,14 @@ const HelpSupport = () => {
               <Mail className="h-5 w-5 text-gold" />
               <div>
                 <p className="font-display text-sm">Email Support</p>
-                <p className="mt-1 text-xs text-muted-foreground">support@nora.app</p>
+                <p className="mt-1 text-xs text-muted-foreground">support@noraplus.io</p>
               </div>
               <Button
                 asChild
                 size="sm"
                 className="bg-red-gradient text-primary-foreground hover:opacity-90 hover:shadow-glow transition-shadow"
               >
-                <a href="mailto:support@nora.app">Send Email</a>
+                <a href="mailto:support@noraplus.io">Send Email</a>
               </Button>
             </div>
           </div>
@@ -230,9 +230,9 @@ const HelpSupport = () => {
         </div>
       </section>
 
-      {/* About Nora */}
+      {/* About NoraPlus */}
       <section className="space-y-4">
-        <h3 className="font-display text-sm uppercase tracking-[0.2em] text-gold">About Nora</h3>
+        <h3 className="font-display text-sm uppercase tracking-[0.2em] text-gold">About NoraPlus</h3>
         <div
           className="relative overflow-hidden rounded-2xl border border-gold/20 p-5 sm:p-6 shadow-elegant"
           style={cardStyle}
@@ -243,7 +243,7 @@ const HelpSupport = () => {
               <Sparkles className="h-4 w-4 text-gold" />
               <div>
                 <p className="text-xs uppercase tracking-widest text-muted-foreground">App Version</p>
-                <p className="font-display text-sm">Nora 1.0.0 (MVP)</p>
+                <p className="font-display text-sm">NoraPlus 1.0.0 (MVP)</p>
               </div>
             </div>
             <div className="flex items-center gap-3">

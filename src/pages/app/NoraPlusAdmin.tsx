@@ -55,7 +55,7 @@ const Stat = ({ label, value, sub, icon: Icon, tone = "gold" }: {
 
 const SectionHeader = ({ title, subtitle }: { title: string; subtitle?: string }) => (
   <div>
-    <p className="text-xs uppercase tracking-[0.25em] text-gold">Nora Admin</p>
+    <p className="text-xs uppercase tracking-[0.25em] text-gold">NoraPlus Admin</p>
     <h1 className="mt-2 font-display text-3xl md:text-4xl">{title}</h1>
     {subtitle && <p className="mt-2 text-sm text-muted-foreground max-w-2xl">{subtitle}</p>}
   </div>
@@ -107,13 +107,13 @@ const DashboardView = () => {
   const activity = [
     { t: "Creator application", who: "Ada Okafor", time: "2m ago", tone: "gold" as const },
     { t: "Content published", who: "Sounds of Heaven · Anchored — Live Sessions", time: "18m ago", tone: "green" as const },
-    { t: "Subscription upgraded", who: "u-1842 → Nora Premium", time: "1h ago", tone: "default" as const },
+    { t: "Subscription upgraded", who: "u-1842 → Premium", time: "1h ago", tone: "default" as const },
     { t: "Report filed", who: "Comment on \"The Narrow Way\"", time: "3h ago", tone: "red" as const },
     { t: "Live event started", who: "Youth Revival — Nairobi", time: "5h ago", tone: "red" as const },
   ];
   return (
     <div className="space-y-8">
-      <SectionHeader title="Platform Dashboard" subtitle="A live snapshot of activity across the Nora platform." />
+      <SectionHeader title="Platform Dashboard" subtitle="A live snapshot of activity across the NoraPlus platform." />
       <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
         <Stat label="Total Users" value="48,210" sub="+412 this week" icon={UsersIcon} />
         <Stat label="Total Creators" value="1,284" sub="+27 this week" icon={UserCog} />
@@ -165,7 +165,7 @@ const ContentView = () => {
 
   return (
     <div className="space-y-6">
-      <SectionHeader title="Content Management" subtitle="Approve, moderate, feature and manage every piece of content on Nora." />
+      <SectionHeader title="Content Management" subtitle="Approve, moderate, feature and manage every piece of content on NoraPlus." />
       <Toolbar placeholder="Search content, creators, titles…">
         {(["all", "audio", "video", "live"] as const).map(f => (
           <button
@@ -338,7 +338,7 @@ const UsersView = () => (
                 </td>
                 <td className="px-5 py-3 text-muted-foreground">{u.email}</td>
                 <td className="px-5 py-3 text-muted-foreground">{creatorBadgeLabel(u.creator_status)}</td>
-                <td className="px-5 py-3"><Pill tone={i % 3 === 0 ? "gold" : i % 3 === 1 ? "muted" : "green"}>{["Nora Premium", "Free", "Nora Plus"][i % 3]}</Pill></td>
+                <td className="px-5 py-3"><Pill tone={i % 3 === 0 ? "gold" : i % 3 === 1 ? "muted" : "green"}>{["Premium", "Free", "Essential"][i % 3]}</Pill></td>
                 <td className="px-5 py-3">
                   <div className="flex justify-end gap-2">
                     <RowAction icon={Eye} label="View" onClick={() => toast({ title: `Viewing ${u.name}` })} />
@@ -361,8 +361,8 @@ const SubscriptionsView = () => (
     <div className="grid gap-5 md:grid-cols-4">
       <Stat label="Free Trial" value="3,210" icon={CreditCard} />
       <Stat label="Free" value="32,070" icon={CreditCard} />
-      <Stat label="Nora Plus" value="8,124" icon={CreditCard} tone="gold" />
-      <Stat label="Nora Premium" value="4,816" icon={CreditCard} tone="red" />
+      <Stat label="Essential" value="8,124" icon={CreditCard} tone="gold" />
+      <Stat label="Premium" value="4,816" icon={CreditCard} tone="red" />
     </div>
     <Card className="overflow-hidden p-0">
       <div className="overflow-x-auto">
@@ -379,7 +379,7 @@ const SubscriptionsView = () => (
             {MOCK_USERS.map((u, i) => (
               <tr key={u.id} className="hover:bg-secondary/30">
                 <td className="px-5 py-3">{u.name}</td>
-                <td className="px-5 py-3"><Pill tone={i % 2 ? "gold" : "muted"}>{["Nora Plus", "Nora Premium", "Free", "Free Trial", "Nora Premium"][i % 5]}</Pill></td>
+                <td className="px-5 py-3"><Pill tone={i % 2 ? "gold" : "muted"}>{["Essential", "Premium", "Free", "Free Trial", "Premium"][i % 5]}</Pill></td>
                 <td className="px-5 py-3 text-muted-foreground">Jul {10 + i}, 2026</td>
                 <td className="px-5 py-3">
                   <div className="flex justify-end gap-2">
@@ -455,7 +455,7 @@ const AnalyticsView = () => {
   const max = Math.max(...bars);
   return (
     <div className="space-y-6">
-      <SectionHeader title="Platform Analytics" subtitle="Daily and monthly engagement, growth and revenue across Nora." />
+      <SectionHeader title="Platform Analytics" subtitle="Daily and monthly engagement, growth and revenue across NoraPlus." />
       <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
         <Stat label="Daily Active Users" value="22,418" sub="+6.4% WoW" icon={UsersIcon} />
         <Stat label="Monthly Active Users" value="184,920" sub="+11.2% MoM" icon={TrendingUp} tone="gold" />
@@ -510,19 +510,19 @@ const AnalyticsView = () => {
 
 const SettingsView = () => {
   const groups = [
-    { title: "Subscription Plans", desc: "Free Trial, Free, Nora Plus, Nora Premium" },
+    { title: "Subscription Plans", desc: "Free Trial, Free, Essential, Premium" },
     { title: "Languages", desc: "Supported listener and creator languages" },
     { title: "Regions", desc: "Supported regions and localization rules" },
     { title: "Notification Templates", desc: "Email and in-app notification copy" },
     { title: "Creator Guidelines", desc: "Eligibility, content rules, monetization terms" },
-    { title: "Community Guidelines", desc: "Behavior standards across Nora" },
+    { title: "Community Guidelines", desc: "Behavior standards across NoraPlus" },
     { title: "Content Categories", desc: "Audio, video and live taxonomies" },
     { title: "Homepage Featured Content", desc: "Hero rails and editor's picks" },
     { title: "Platform Announcements", desc: "Global in-app and email announcements" },
   ];
   return (
     <div className="space-y-6">
-      <SectionHeader title="Platform Settings" subtitle="Global Nora configuration managed by the Nora team." />
+      <SectionHeader title="Platform Settings" subtitle="Global NoraPlus configuration managed by the NoraPlus team." />
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {groups.map(g => (
           <button key={g.title} onClick={() => toast({ title: `${g.title}`, description: "Settings panel opened." })}
@@ -539,7 +539,7 @@ const SettingsView = () => {
 
 /* ---------- Page shell ---------- */
 
-const NoraAdmin = () => {
+const NoraPlusAdmin = () => {
   const { isNoraTeam } = useUser();
   const [section, setSection] = useState<Section>("dashboard");
 
@@ -549,7 +549,7 @@ const NoraAdmin = () => {
     <div className="grid gap-8 lg:grid-cols-[240px_1fr]">
       <aside className="lg:sticky lg:top-24 lg:self-start">
         <div className="rounded-2xl bg-card-gradient ring-1 ring-border/60 p-3">
-          <p className="px-3 py-2 text-[10px] uppercase tracking-[0.25em] text-gold">Nora Admin</p>
+          <p className="px-3 py-2 text-[10px] uppercase tracking-[0.25em] text-gold">NoraPlus Admin</p>
           <nav className="space-y-1">
             {nav.map(n => {
               const active = section === n.id;
@@ -585,4 +585,4 @@ const NoraAdmin = () => {
   );
 };
 
-export default NoraAdmin;
+export default NoraPlusAdmin;

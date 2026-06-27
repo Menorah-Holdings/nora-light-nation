@@ -15,11 +15,11 @@ export interface NoraUser {
 }
 
 export const MOCK_USERS: NoraUser[] = [
-  { id: "u1", name: "Nora Listener", handle: "nora_listener", email: "listener@nora.app", avatarInitial: "N", creator_status: "Not Applied", platform_role: "user" },
-  { id: "u2", name: "Ada Okafor", handle: "ada_o", email: "ada@nora.app", avatarInitial: "A", creator_status: "Under Review", platform_role: "user" },
-  { id: "u3", name: "Pastor David Adeleke", handle: "pastordavid", email: "david@nora.app", avatarInitial: "D", creator_status: "Approved", platform_role: "user" },
-  { id: "u4", name: "Joy Mwangi", handle: "joy_m", email: "joy@nora.app", avatarInitial: "J", creator_status: "Rejected", platform_role: "user", rejectionReason: "We need additional information about your content and rights ownership before approval." },
-  { id: "u5", name: "Nora Team", handle: "nora_admin", email: "team@nora.app", avatarInitial: "T", creator_status: "Approved", platform_role: "nora_team" },
+  { id: "u1", name: "NoraPlus Listener", handle: "nora_listener", email: "listener@noraplus.io", avatarInitial: "N", creator_status: "Not Applied", platform_role: "user" },
+  { id: "u2", name: "Ada Okafor", handle: "ada_o", email: "ada@noraplus.io", avatarInitial: "A", creator_status: "Under Review", platform_role: "user" },
+  { id: "u3", name: "Pastor David Adeleke", handle: "pastordavid", email: "david@noraplus.io", avatarInitial: "D", creator_status: "Approved", platform_role: "user" },
+  { id: "u4", name: "Joy Mwangi", handle: "joy_m", email: "joy@noraplus.io", avatarInitial: "J", creator_status: "Rejected", platform_role: "user", rejectionReason: "We need additional information about your content and rights ownership before approval." },
+  { id: "u5", name: "NoraPlus Team", handle: "nora_admin", email: "team@noraplus.io", avatarInitial: "T", creator_status: "Approved", platform_role: "nora_team" },
 ];
 
 const ACTIVE_USER_KEY = "nora_active_user_id";
@@ -90,6 +90,6 @@ export const creatorNavLabel = (status: CreatorStatus): string => {
     case "Approved": return "Creator Studio";
     case "Under Review": return "Application Under Review";
     case "Rejected": return "Application Declined";
-    default: return "Create on Nora";
+    default: return "Create on NoraPlus";
   }
 };

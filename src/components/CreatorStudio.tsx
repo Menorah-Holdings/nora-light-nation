@@ -419,7 +419,7 @@ const Analytics = () => {
   ];
   return (
     <div className="space-y-8">
-      <SectionHeader eyebrow="Insights" title="Analytics" subtitle="Track how your content is performing across Nora." />
+      <SectionHeader eyebrow="Insights" title="Analytics" subtitle="Track how your content is performing across NoraPlus." />
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map(s => (
           <div key={s.label} className="rounded-2xl bg-card-gradient p-6 ring-1 ring-border/60">
@@ -447,7 +447,7 @@ const CreatorProfileView = () => {
   const { user } = useUser();
   return (
     <div className="space-y-8">
-      <SectionHeader eyebrow="Public profile" title="Creator Profile" subtitle="This is how listeners see your Nora presence." />
+      <SectionHeader eyebrow="Public profile" title="Creator Profile" subtitle="This is how listeners see your NoraPlus presence." />
       <div className="rounded-3xl bg-card-gradient ring-1 ring-border/60 overflow-hidden">
         <div className="h-40 bg-gradient-to-br from-[hsl(350_55%_22%)] via-[hsl(350_45%_15%)] to-background" />
         <div className="px-8 pb-8 -mt-12 flex flex-col md:flex-row md:items-end gap-6">
@@ -456,7 +456,7 @@ const CreatorProfileView = () => {
           </div>
           <div className="flex-1">
             <h2 className="font-display text-2xl">{user.name}</h2>
-            <p className="text-sm text-muted-foreground">nora.app/@{user.handle}</p>
+            <p className="text-sm text-muted-foreground">noraplus.io/@{user.handle}</p>
           </div>
           <Link to={`/app/creators`} className="inline-flex items-center gap-2 rounded-full border border-gold/40 px-5 py-2.5 text-sm text-gold hover:bg-gold/10 transition">
             <ExternalLink className="h-4 w-4" /> View public page
@@ -508,7 +508,7 @@ const CreatorSettings = () => (
 
 const UploadLanding = ({ openUpload }: { openUpload: (k: UploadKind) => void }) => (
   <div className="space-y-8">
-    <SectionHeader eyebrow="Create" title="Upload Content" subtitle="Choose what you'd like to share with the Nora community." />
+    <SectionHeader eyebrow="Create" title="Upload Content" subtitle="Choose what you'd like to share with the NoraPlus community." />
     <div className="grid gap-5 md:grid-cols-3">
       {[
         { k: "audio" as const, icon: Headphones, title: "Upload Audio", desc: "Messages, music, podcasts, devotionals.", img: content[3].image },
@@ -666,7 +666,7 @@ const SuccessModal = ({ onClose, onAnother }: { onClose: () => void; onAnother: 
           <Check className="h-7 w-7 text-primary-foreground" />
         </div>
         <h2 className="mt-6 font-display text-2xl">Content Submitted</h2>
-        <p className="mt-3 text-sm text-muted-foreground">Your content has been uploaded successfully and is now being prepared for Nora.</p>
+        <p className="mt-3 text-sm text-muted-foreground">Your content has been uploaded successfully and is now being prepared for NoraPlus.</p>
         <div className="mt-7 flex flex-col gap-3">
           <button onClick={onClose} className="inline-flex items-center justify-center gap-2 rounded-full bg-red-gradient px-6 py-2.5 text-sm font-medium text-primary-foreground shadow-red-glow">View Content</button>
           <button onClick={onAnother} className="inline-flex items-center justify-center gap-2 rounded-full border border-gold/40 px-6 py-2.5 text-sm text-gold hover:bg-gold/10">Upload Another</button>

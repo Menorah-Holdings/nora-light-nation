@@ -44,7 +44,7 @@ export const content: ContentItem[] = [
   { id: "6", title: "Grace in the Marketplace", creator: "Kingdom Conversations", creatorId: "c3", type: "podcast-video", medium: "video", duration: "1h 02 min", description: "How faith shapes leadership in business and beyond.", image: podcast },
   { id: "7", title: "Light Bearers", creator: "Light Bearers Co.", creatorId: "c6", type: "skit", medium: "video", duration: "12 min", description: "A short series exploring everyday faith moments.", image: skit },
   { id: "8", title: "Anchored — Live Sessions", creator: "Sounds of Heaven", creatorId: "c2", type: "music-video", medium: "video", duration: "28 min", description: "Intimate live worship from the studio.", image: music },
-  { id: "9", title: "Light for Today: Encountering Truth", creator: "Pastor David Adeleke", creatorId: "c1", type: "message", medium: "video", duration: "38 min", description: "This week's signature teaching, exclusive on Nora.", image: message, tag: "Editor's Pick" },
+  { id: "9", title: "Light for Today: Encountering Truth", creator: "Pastor David Adeleke", creatorId: "c1", type: "message", medium: "video", duration: "38 min", description: "This week's signature teaching, exclusive on NoraPlus.", image: message, tag: "Editor's Pick" },
   { id: "10", title: "Stillness Before Dawn", creator: "Grace Iweka", creatorId: "c5", type: "devotional", medium: "audio", duration: "6 min", description: "A guided reflection for quiet mornings.", image: devotional },
 ];
 
@@ -53,7 +53,7 @@ export const liveEvents = [
   { id: "e2", title: "Kingdom Leadership Conference", host: "Pastor David Adeleke", date: "Jun 22, 2026", time: "9:00 AM GMT", access: "Paid" as const, status: "upcoming" as const, image: event },
   { id: "e3", title: "Youth Revival — Nairobi", host: "Generation Rising", date: "Live Now", time: "Streaming", access: "Free" as const, status: "live" as const, image: message },
   { id: "e4", title: "The Narrow Way — Premiere", host: "Lightwave Films", date: "Jul 04, 2026", time: "8:00 PM EST", access: "Paid" as const, status: "upcoming" as const, image: movie },
-  { id: "e5", title: "Global Prayer Vigil", host: "Nora Collective", date: "May 28, 2026", time: "Replay", access: "Free" as const, status: "replay" as const, image: devotional },
+  { id: "e5", title: "Global Prayer Vigil", host: "NoraPlus Collective", date: "May 28, 2026", time: "Replay", access: "Free" as const, status: "replay" as const, image: devotional },
   { id: "e6", title: "Hymns Reimagined", host: "Sounds of Heaven", date: "May 12, 2026", time: "Replay", access: "Free" as const, status: "replay" as const, image: music },
 ];
 

@@ -6,9 +6,9 @@ import { Logo } from "@/components/Logo";
 const FEATURES = [
   { icon: Headphones, emoji: "🎧", title: "Listen", desc: "Music, messages, podcasts, and devotionals." },
   { icon: Tv, emoji: "📺", title: "Watch", desc: "Teachings, worship, films, and inspiring videos." },
-  { icon: Radio, emoji: "🔴", title: "Join Live", desc: "Worship nights, conferences, vigils, and prayer gatherings." },
-  { icon: Heart, emoji: "❤️", title: "Follow", desc: "Creators, churches, ministries, and fellowships you love." },
-  { icon: Library, emoji: "📚", title: "Build Your Library", desc: "Save content and return whenever you want." },
+  { icon: Radio, emoji: "🔴", title: "Join Live", desc: "Conferences, worship nights, vigils, and prayer gatherings." },
+  { icon: Heart, emoji: "❤️", title: "Follow", desc: "Creators, ministries, churches, and fellowships." },
+  { icon: Library, emoji: "📚", title: "Build Your Library", desc: "Save content and revisit it anytime." },
 ];
 
 const Welcome = () => {
@@ -17,7 +17,7 @@ const Welcome = () => {
 
   const firstName = useMemo(() => {
     const fromState = (location.state as { fullName?: string } | null)?.fullName;
-    const stored = typeof window !== "undefined" ? localStorage.getItem("nora_welcome_name") : null;
+    const stored = typeof window !== "undefined" ? localStorage.getItem("noraplus_welcome_name") : null;
     const name = (fromState || stored || "Friend").trim();
     return name.split(/\s+/)[0] || "Friend";
   }, [location.state]);
@@ -25,7 +25,7 @@ const Welcome = () => {
   useEffect(() => {
     if (typeof window !== "undefined") {
       const fromState = (location.state as { fullName?: string } | null)?.fullName;
-      if (fromState) localStorage.setItem("nora_welcome_name", fromState);
+      if (fromState) localStorage.setItem("noraplus_welcome_name", fromState);
     }
   }, [location.state]);
 
@@ -101,13 +101,14 @@ const Welcome = () => {
             <h1 className="mt-4 font-display text-4xl leading-tight sm:text-5xl">
               Welcome, <span className="gold-text-gradient">{firstName}</span>.
             </h1>
-            <p className="mt-3 font-display text-lg text-foreground/80">Light for Every Nation</p>
+            <p className="mt-3 text-sm text-foreground/80">We're so glad you're here.</p>
+            <p className="mt-2 font-display text-lg gold-text-gradient">Light for Every Nation</p>
 
             <p className="mt-6 text-sm leading-relaxed text-muted-foreground">
-              We're excited you've joined the Nora community. Discover trusted kingdom content that helps you encounter truth, grow in faith, and live transformed.
+              Discover trusted kingdom content that helps you encounter truth, grow in faith, and live transformed.
             </p>
             <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-              Whether you're listening to worship, watching life-changing messages, joining live gatherings, or discovering new creators — your journey starts here.
+              Whether you're listening to worship, watching inspiring messages, joining live experiences, or discovering creators from around the world, your journey starts here.
             </p>
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -135,7 +136,7 @@ const Welcome = () => {
 
         {/* Feature cards */}
         <section className="mt-14 animate-fade-in">
-          <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">What you can do</p>
+          <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">Explore NoraPlus</p>
           <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
             {FEATURES.map((f, i) => {
               const Icon = f.icon;
@@ -166,7 +167,7 @@ const Welcome = () => {
         <footer className="mt-14 border-t border-border/40 pt-6 text-center animate-fade-in">
           <p className="text-sm text-muted-foreground">We're honoured to be part of your journey.</p>
           <p className="mt-1 font-display text-base">
-            Welcome to <span className="gold-text-gradient">Nora</span>.
+            Welcome to <span className="gold-text-gradient">NoraPlus</span>.
           </p>
         </footer>
       </div>

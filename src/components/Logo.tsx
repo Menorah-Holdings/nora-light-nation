@@ -8,7 +8,7 @@ export const Logo = ({ to = "/", compact = false }: { to?: string; compact?: boo
     </span>
     {!compact && (
       <span className="font-display text-xl font-medium tracking-tight">
-        Nora
+        NoraPlus
       </span>
     )}
   </Link>

@@ -77,7 +77,7 @@ const DownloadSettings = () => {
     <div className="space-y-6">
       <div>
         <h2 className="font-display text-2xl text-foreground">Download Settings</h2>
-        <p className="mt-1 text-sm text-muted-foreground">Manage how Nora saves content for offline access.</p>
+        <p className="mt-1 text-sm text-muted-foreground">Manage how NoraPlus saves content for offline access.</p>
       </div>
 
       {/* Preferences card */}
@@ -261,7 +261,7 @@ const LanguageRegionSettings = () => {
       <div>
         <h2 className="font-display text-2xl text-foreground">Language & Region</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Personalize Nora with your preferred language, country, and regional experience.
+          Personalize NoraPlus with your preferred language, country, and regional experience.
         </p>
       </div>
 
@@ -273,7 +273,7 @@ const LanguageRegionSettings = () => {
         <div className="relative divide-y divide-border/50 px-5 sm:px-6">
           <SettingRow
             title="Preferred Language"
-            helper="This changes the language used throughout the Nora interface where translations are available."
+            helper="This changes the language used throughout the NoraPlus interface where translations are available."
           >
             <Select value={language} onValueChange={setLanguage}>
               <SelectTrigger className="w-[220px] border-border bg-secondary/60 focus:ring-1 focus:ring-gold">
@@ -354,7 +354,7 @@ const LanguageRegionSettings = () => {
             </Select>
           </SettingRow>
 
-          <SettingRow title="Date & Time Format" helper="Choose how times appear across Nora.">
+          <SettingRow title="Date & Time Format" helper="Choose how times appear across NoraPlus.">
             <Select value={timeFormat} onValueChange={setTimeFormat}>
               <SelectTrigger className="w-[200px] border-border bg-secondary/60 focus:ring-1 focus:ring-gold">
                 <SelectValue />
@@ -368,7 +368,7 @@ const LanguageRegionSettings = () => {
 
           <div className="py-5">
             <p className="font-display text-sm text-foreground">Content Region Preference</p>
-            <p className="mt-1 text-xs text-muted-foreground">Choose how Nora prioritizes recommendations.</p>
+            <p className="mt-1 text-xs text-muted-foreground">Choose how NoraPlus prioritizes recommendations.</p>
             <RadioGroup value={contentPref} onValueChange={setContentPref} className="mt-3 space-y-2">
               {[
                 { v: "global", l: "Global Content" },
@@ -404,7 +404,7 @@ const ProfileSettings = () => {
     <div className="space-y-6">
       <div>
         <h2 className="font-display text-2xl text-foreground">Profile</h2>
-        <p className="mt-1 text-sm text-muted-foreground">Your Nora identity and creator status.</p>
+        <p className="mt-1 text-sm text-muted-foreground">Your NoraPlus identity and creator status.</p>
       </div>
 
       <div
@@ -495,7 +495,7 @@ const Settings = () => {
       <div className="mb-8">
         <h1 className="font-display text-3xl md:text-4xl">Profile & Settings</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Manage your Nora account, preferences, and downloads.
+          Manage your NoraPlus account, preferences, and downloads.
         </p>
       </div>
 
@@ -530,7 +530,7 @@ const Settings = () => {
           {tab === "profile" && <ProfileSettings />}
           {tab === "account" && <AccountSettings />}
           {tab === "notifications" && (
-            <Placeholder title="Notifications" message="Control how and when Nora reaches you." />
+            <Placeholder title="Notifications" message="Control how and when NoraPlus reaches you." />
           )}
           {tab === "privacy" && (
             <Placeholder title="Privacy" message="Manage data, security, and permissions." />

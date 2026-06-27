@@ -86,7 +86,7 @@ const ForgotPassword = () => {
               </p>
               <h2 className="mt-3 font-display text-3xl">Forgot Password</h2>
               <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
-                Enter the email address linked to your Nora account and we’ll
+                Enter the email address linked to your NoraPlus account and we’ll
                 send you a secure reset link.
               </p>
 
@@ -103,7 +103,7 @@ const ForgotPassword = () => {
                         if (error) setError(null);
                       }}
                       className="w-full rounded-lg border border-border bg-secondary/60 pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-gold focus:border-gold transition"
-                      placeholder="you@nora.tv"
+                      placeholder="you@noraplus.io"
                       autoFocus
                     />
                   </div>
@@ -153,7 +153,7 @@ const ForgotPassword = () => {
               <p className="mt-3 text-center text-sm text-muted-foreground leading-relaxed">
                 We’ve sent a password reset link to{" "}
                 <span className="text-foreground font-medium">{email}</span>.
-                Follow the link to create a new password and return to Nora.
+                Follow the link to create a new password and return to NoraPlus.
               </p>
 
               {resentNotice && (

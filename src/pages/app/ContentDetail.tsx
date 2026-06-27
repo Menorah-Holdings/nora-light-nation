@@ -35,7 +35,7 @@ const ContentDetail = () => {
             <h1 className="mt-3 font-display text-4xl md:text-5xl leading-tight">{item.title}</h1>
             <Link to={`/app/creators/${item.creatorId}`} className="mt-2 inline-block text-sm text-muted-foreground hover:text-gold">by {item.creator}</Link>
           </div>
-          <p className="text-foreground/85 leading-relaxed">{item.description} A deeper exploration anchored in scripture, recorded with the spiritual care and production quality the Nora community trusts.</p>
+          <p className="text-foreground/85 leading-relaxed">{item.description} A deeper exploration anchored in scripture, recorded with the spiritual care and production quality the NoraPlus community trusts.</p>
 
           <div className="flex flex-wrap gap-3">
             <button className="inline-flex items-center gap-2 rounded-full bg-red-gradient px-5 py-2.5 text-sm font-medium text-primary-foreground shadow-red-glow"><Play className="h-4 w-4 fill-current" /> Play</button>
@@ -75,7 +75,7 @@ const ContentDetail = () => {
           <div className="rounded-2xl bg-card-gradient p-6 ring-1 ring-border/60">
             <p className="text-xs uppercase tracking-widest text-gold">About this creator</p>
             <p className="mt-3 font-display text-xl">{item.creator}</p>
-            <p className="mt-2 text-sm text-muted-foreground">Trusted creator in the Nora collective.</p>
+            <p className="mt-2 text-sm text-muted-foreground">Trusted creator in the NoraPlus collective.</p>
             <Link to={`/app/creators/${item.creatorId}`} className="mt-4 inline-block text-sm text-gold hover:underline">View profile →</Link>
           </div>
         </aside>
