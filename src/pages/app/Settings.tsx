@@ -26,10 +26,11 @@ import { toast } from "@/hooks/use-toast";
 import { useUser, CreatorStatus, MOCK_USERS } from "@/lib/user";
 import { CreatorStatusBadge } from "@/components/CreatorStatusBadge";
 
-type TabId = "profile" | "downloads" | "language" | "notifications" | "privacy" | "help";
+type TabId = "profile" | "account" | "downloads" | "language" | "notifications" | "privacy" | "help";
 
 const tabs: { id: TabId; label: string; icon: any }[] = [
   { id: "profile", label: "Profile", icon: User },
+  { id: "account", label: "Account Settings", icon: ShieldCheck },
   { id: "downloads", label: "Download Settings", icon: Download },
   { id: "language", label: "Language & Region", icon: Globe },
   { id: "notifications", label: "Notifications", icon: Bell },
