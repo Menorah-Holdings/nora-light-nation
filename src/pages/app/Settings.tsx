@@ -523,9 +523,7 @@ const Settings = () => {
         <section>
           {tab === "downloads" && <DownloadSettings />}
           {tab === "language" && <LanguageRegionSettings />}
-          {tab === "profile" && (
-            <Placeholder title="Profile" message="Manage your account details and preferences." />
-          )}
+          {tab === "profile" && <ProfileSettings />}
           {tab === "notifications" && (
             <Placeholder title="Notifications" message="Control how and when Nora reaches you." />
           )}
