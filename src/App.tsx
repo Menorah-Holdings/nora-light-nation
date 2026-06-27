@@ -8,7 +8,7 @@ import NotFound from "./pages/NotFound.tsx";
 import Auth from "./pages/Auth.tsx";
 import Partner from "./pages/Partner.tsx";
 import ForgotPassword from "./pages/ForgotPassword.tsx";
-import Subscription from "./pages/Subscription.tsx";
+import Plans from "./pages/Plans.tsx";
 import { AppLayout } from "./components/AppLayout.tsx";
 import Discover from "./pages/app/Discover.tsx";
 import Listen from "./pages/app/Listen.tsx";
