@@ -148,7 +148,7 @@ interface SessionItem {
 
 const INITIAL_SESSIONS: SessionItem[] = [
   { id: "s1", device: "MacBook Pro", icon: Monitor, location: "Lagos, Nigeria", browser: "Safari", current: true, lastActive: "Active now" },
-  { id: "s2", device: "iPhone 15", icon: Smartphone, location: "Lagos, Nigeria", browser: "Nora iOS App", lastActive: "2 hours ago" },
+  { id: "s2", device: "iPhone 15", icon: Smartphone, location: "Lagos, Nigeria", browser: "NoraPlus iOS App", lastActive: "2 hours ago" },
   { id: "s3", device: "Windows PC", icon: Monitor, location: "Abuja, Nigeria", browser: "Chrome", lastActive: "Yesterday" },
 ];
 
@@ -301,7 +301,7 @@ const AccountSettings = () => {
 
       {/* Account Information */}
       <section className="space-y-4">
-        <SectionHeader title="Account Information" subtitle="Your personal Nora details." />
+        <SectionHeader title="Account Information" subtitle="Your personal NoraPlus details." />
         <div className={PANEL} style={PANEL_STYLE}>
           <div className="absolute inset-0 pointer-events-none glow-radial opacity-30" />
           <div className="relative grid gap-x-8 gap-y-0 px-5 sm:px-6 md:grid-cols-2 divide-border/40">
@@ -334,7 +334,7 @@ const AccountSettings = () => {
           <SecurityCard
             icon={KeyRound}
             title="Change Password"
-            description="Update your Nora account password."
+            description="Update your NoraPlus account password."
             action="Update"
             onClick={() => setPwdOpen(true)}
           />
@@ -411,7 +411,7 @@ const AccountSettings = () => {
 
       {/* Communication Preferences */}
       <section className="space-y-4">
-        <SectionHeader title="Communication Preferences" subtitle="Choose which emails Nora sends you." />
+        <SectionHeader title="Communication Preferences" subtitle="Choose which emails NoraPlus sends you." />
         <div className={PANEL} style={PANEL_STYLE}>
           <div className="absolute inset-0 pointer-events-none glow-radial opacity-30" />
           <div className="relative divide-y divide-border/40 px-5 sm:px-6">
@@ -441,7 +441,7 @@ const AccountSettings = () => {
             <ToggleRow title="Private Listening History" helper="Don't save what you listen to." checked={privacy.privateHistory} onChange={(v) => setPrivacy({ ...privacy, privateHistory: v })} />
             <ToggleRow title="Hide Recently Played" helper="Hide your recent activity from your profile." checked={privacy.hideRecent} onChange={(v) => setPrivacy({ ...privacy, hideRecent: v })} />
             <ToggleRow title="Personalized Recommendations" helper="Use your activity to tailor recommendations." checked={privacy.personalized} onChange={(v) => setPrivacy({ ...privacy, personalized: v })} />
-            <ToggleRow title="Data Collection Preferences" helper="Allow Nora to collect usage data to improve the platform." checked={privacy.dataCollection} onChange={(v) => setPrivacy({ ...privacy, dataCollection: v })} />
+            <ToggleRow title="Data Collection Preferences" helper="Allow NoraPlus to collect usage data to improve the platform." checked={privacy.dataCollection} onChange={(v) => setPrivacy({ ...privacy, dataCollection: v })} />
           </div>
           <div className="relative border-t border-border/40 px-5 sm:px-6 py-4 flex justify-end">
             <Button
@@ -514,7 +514,7 @@ const AccountSettings = () => {
               <div className="min-w-0 flex-1">
                 <p className="font-display text-sm text-foreground">Device History</p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  See devices that have recently accessed your Nora account.
+                  See devices that have recently accessed your NoraPlus account.
                 </p>
               </div>
             </div>
@@ -592,7 +592,7 @@ const AccountSettings = () => {
               {clearTarget ? CLEAR_LABELS[clearTarget].title : "Clear Activity?"}
             </DialogTitle>
             <DialogDescription className="text-muted-foreground">
-              This action will remove your selected activity history from your Nora account. This cannot be undone.
+              This action will remove your selected activity history from your NoraPlus account. This cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-2">
@@ -619,7 +619,7 @@ const AccountSettings = () => {
                   Deactivate Account
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Temporarily disable your Nora account. You can reactivate anytime by signing back in.
+                  Temporarily disable your NoraPlus account. You can reactivate anytime by signing back in.
                 </p>
               </div>
               <Button
@@ -637,7 +637,7 @@ const AccountSettings = () => {
                   Delete Account
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Permanently delete your Nora account and all associated data.
+                  Permanently delete your NoraPlus account and all associated data.
                 </p>
               </div>
               <Button
@@ -694,7 +694,7 @@ const AccountSettings = () => {
           <DialogHeader>
             <DialogTitle className="font-display text-xl">Change Password</DialogTitle>
             <DialogDescription className="text-muted-foreground">
-              Use a strong, unique password for your Nora account.
+              Use a strong, unique password for your NoraPlus account.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
@@ -726,7 +726,7 @@ const AccountSettings = () => {
           <DialogHeader>
             <DialogTitle className="font-display text-xl">Login Sessions</DialogTitle>
             <DialogDescription className="text-muted-foreground">
-              Devices currently signed in to your Nora account.
+              Devices currently signed in to your NoraPlus account.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 py-2 max-h-[60vh] overflow-y-auto">
@@ -777,7 +777,7 @@ const AccountSettings = () => {
           <DialogHeader>
             <DialogTitle className="font-display text-xl">Connected Devices</DialogTitle>
             <DialogDescription className="text-muted-foreground">
-              Devices authorized to stream Nora on your account.
+              Devices authorized to stream NoraPlus on your account.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 py-2">
@@ -815,7 +815,7 @@ const AccountSettings = () => {
           <DialogHeader>
             <DialogTitle className="font-display text-xl flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-red-soft" />
-              Delete Nora Account?
+              Delete NoraPlus Account?
             </DialogTitle>
             <DialogDescription className="text-muted-foreground">
               This action cannot be undone. Your profile, library, and history will be permanently removed.

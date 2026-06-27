@@ -21,7 +21,7 @@ const Landing = () => {
           <div className="flex items-center gap-3">
             <Link to="/auth" className="hidden sm:inline text-sm text-muted-foreground hover:text-foreground">Sign in</Link>
             <Link to="/app" className="inline-flex items-center gap-2 rounded-full bg-gold-gradient px-4 py-2 text-sm font-medium text-primary-foreground shadow-glow">
-              Enter Nora <ArrowRight className="h-4 w-4" />
+              Enter NoraPlus <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
         </div>
@@ -48,7 +48,7 @@ const Landing = () => {
                 Start Exploring <ArrowRight className="h-4 w-4" />
               </Link>
               <Link to="/partner" className="inline-flex items-center gap-2 rounded-full border border-border bg-background/40 backdrop-blur px-6 py-3.5 text-sm font-medium hover:border-gold/40">
-                Partner With Nora
+                Partner With NoraPlus
               </Link>
             </div>
             <div className="mt-12 flex items-center gap-8 text-xs text-muted-foreground">
@@ -96,10 +96,10 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* Why Nora */}
+      {/* Why NoraPlus */}
       <section className="container py-24">
         <div className="max-w-2xl">
-          <p className="text-xs uppercase tracking-[0.25em] text-gold">Why Nora exists</p>
+          <p className="text-xs uppercase tracking-[0.25em] text-gold">Why NoraPlus exists</p>
           <h2 className="mt-4 font-display text-4xl md:text-5xl leading-tight">
             Kingdom content shouldn't feel scattered or unsafe.
           </h2>
@@ -125,7 +125,7 @@ const Landing = () => {
         <div className="mb-8 flex items-end justify-between">
           <div>
             <p className="text-xs uppercase tracking-[0.25em] text-gold">Featured this week</p>
-            <h2 className="mt-3 font-display text-4xl">From across the Nora collective</h2>
+            <h2 className="mt-3 font-display text-4xl">From across the NoraPlus collective</h2>
           </div>
           <Link to="/app" className="text-sm text-muted-foreground hover:text-gold">Explore all →</Link>
         </div>
@@ -145,7 +145,7 @@ const Landing = () => {
                 Built for the ministries, artists, and storytellers shaping the kingdom.
               </h2>
               <p className="mt-6 text-muted-foreground max-w-lg">
-                Whether you lead a church, run a podcast, score worship, or film stories — Nora gives your work a trusted home and a global audience.
+                Whether you lead a church, run a podcast, score worship, or film stories — NoraPlus gives your work a trusted home and a global audience.
               </p>
               <Link to="/partner" className="mt-8 inline-flex items-center gap-2 rounded-full bg-gold-gradient px-6 py-3 text-sm font-medium text-primary-foreground shadow-glow">
                 Apply to Partner <ArrowRight className="h-4 w-4" />
@@ -169,15 +169,15 @@ const Landing = () => {
       <section id="plans" className="container py-24">
         <div className="text-center max-w-xl mx-auto">
           <p className="text-xs uppercase tracking-[0.25em] text-gold">Plans</p>
-          <h2 className="mt-3 font-display text-4xl md:text-5xl">Choose your Nora experience.</h2>
+          <h2 className="mt-3 font-display text-4xl md:text-5xl">Choose your NoraPlus experience.</h2>
           <p className="mt-4 text-muted-foreground">Trusted kingdom content for every stage of your journey.</p>
         </div>
         <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {[
-            { name: "Free Trial", badge: "New User Offer", price: "₦0", suffix: "3 Months", desc: "Enjoy full, all-access use of Nora during your first three months.", featured: true },
+            { name: "Free Trial", badge: "New User Offer", price: "₦0", suffix: "3 Months", desc: "Enjoy full, all-access use of NoraPlus during your first three months.", featured: true },
             { name: "Free", badge: "Always Available", price: "₦0", suffix: "", desc: "Continue exploring trusted kingdom content with selected features." },
-            { name: "Nora Plus", price: "₦1,500", suffix: "/month", desc: "Unlimited streaming and an enhanced listening and viewing experience." },
-            { name: "Nora Premium", badge: "Most Popular", price: "₦2,500", suffix: "/month", desc: "The complete Nora experience with premium content and downloads.", popular: true },
+            { name: "NoraPlus Plus", price: "₦1,500", suffix: "/month", desc: "Unlimited streaming and an enhanced listening and viewing experience." },
+            { name: "NoraPlus Premium", badge: "Most Popular", price: "₦2,500", suffix: "/month", desc: "The complete NoraPlus experience with premium content and downloads.", popular: true },
           ].map((p) => (
             <div key={p.name} className={`relative rounded-2xl p-6 ring-1 ${p.popular ? "ring-gold/50 bg-card-gradient shadow-red-glow" : p.featured ? "ring-gold/40 bg-card-gradient shadow-elegant" : "ring-border/60 bg-card"}`}>
               {p.badge && <span className={`absolute -top-3 left-6 rounded-full px-3 py-1 text-[10px] font-medium ${p.popular ? "bg-red-gradient text-foreground" : "bg-gold-gradient text-primary-foreground"}`}>{p.badge}</span>}
@@ -214,7 +214,7 @@ const Landing = () => {
             ))}
           </div>
           <div className="mt-12 flex flex-wrap items-center justify-between gap-4 border-t border-border pt-6 text-xs text-muted-foreground">
-            <p>© 2026 Nora. Light for Every Nation.</p>
+            <p>© 2026 NoraPlus. Light for Every Nation.</p>
             <p>Built for the kingdom.</p>
           </div>
         </div>

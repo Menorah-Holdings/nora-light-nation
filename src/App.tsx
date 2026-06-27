@@ -21,7 +21,7 @@ import CreatorProfile from "./pages/app/CreatorProfile.tsx";
 import Library from "./pages/app/Library.tsx";
 import ContentDetail from "./pages/app/ContentDetail.tsx";
 import Admin from "./pages/app/Admin.tsx";
-import NoraAdmin from "./pages/app/NoraAdmin.tsx";
+import NoraPlusAdmin from "./pages/app/NoraPlusAdmin.tsx";
 import Settings from "./pages/app/Settings.tsx";
 import { UserProvider } from "./lib/user";
 
@@ -53,7 +53,7 @@ const App = () => (
             <Route path="library" element={<Library />} />
             <Route path="content/:id" element={<ContentDetail />} />
             <Route path="admin" element={<Admin />} />
-            <Route path="nora-admin" element={<NoraAdmin />} />
+            <Route path="noraplus-admin" element={<NoraPlusAdmin />} />
             <Route path="settings" element={<Settings />} />
           </Route>
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

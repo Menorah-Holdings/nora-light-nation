@@ -33,7 +33,7 @@ const Auth = () => {
       <div className="flex items-center justify-center p-8 md:p-16 bg-background">
         <div className="w-full max-w-sm">
           <div className="md:hidden mb-8"><Logo /></div>
-          <p className="text-xs uppercase tracking-[0.25em] text-gold">{mode === "signin" ? "Welcome back" : "Join Nora"}</p>
+          <p className="text-xs uppercase tracking-[0.25em] text-gold">{mode === "signin" ? "Welcome back" : "Join NoraPlus"}</p>
           <h2 className="mt-3 font-display text-3xl">{mode === "signin" ? "Sign in to continue" : "Create your account"}</h2>
 
           <form className="mt-8 space-y-4" onSubmit={handleSubmit}>
@@ -50,7 +50,7 @@ const Auth = () => {
             )}
             <div>
               <label className="text-xs text-muted-foreground">Email</label>
-              <input type="email" className="mt-1 w-full rounded-lg border border-border bg-secondary/60 px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-gold" placeholder="you@nora.tv" />
+              <input type="email" className="mt-1 w-full rounded-lg border border-border bg-secondary/60 px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-gold" placeholder="you@noraplus.io" />
             </div>
             <div>
               <div className="flex items-center justify-between">
@@ -77,7 +77,7 @@ const Auth = () => {
           </div>
 
           <p className="mt-8 text-center text-sm text-muted-foreground">
-            {mode === "signin" ? "New to Nora?" : "Already have an account?"}{" "}
+            {mode === "signin" ? "New to NoraPlus?" : "Already have an account?"}{" "}
             <button onClick={() => setMode(mode === "signin" ? "signup" : "signin")} className="text-gold hover:underline">
               {mode === "signin" ? "Create an account" : "Sign in"}
             </button>

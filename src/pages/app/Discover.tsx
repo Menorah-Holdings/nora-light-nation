@@ -26,7 +26,7 @@ const Discover = () => {
         <div>
           <p className="text-sm text-muted-foreground">Welcome back to</p>
           <h1 className="font-display text-3xl md:text-4xl">
-            Nora<span className="text-gold">.</span>
+            NoraPlus<span className="text-gold">.</span>
           </h1>
         </div>
         <p className="text-xs text-muted-foreground max-w-xs">

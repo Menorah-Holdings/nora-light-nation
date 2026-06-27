@@ -25,12 +25,12 @@ const OnboardingHero = ({ onStart }: { onStart: () => void }) => (
     <div className="relative grid gap-12 md:grid-cols-[1.2fr_1fr] items-center">
       <div>
         <p className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.25em] text-gold">
-          <Sparkles className="h-3.5 w-3.5" /> Become a Nora Creator
+          <Sparkles className="h-3.5 w-3.5" /> Become a NoraPlus Creator
         </p>
-        <h1 className="mt-4 font-display text-4xl md:text-6xl leading-tight">Create on Nora</h1>
+        <h1 className="mt-4 font-display text-4xl md:text-6xl leading-tight">Create on NoraPlus</h1>
         <p className="mt-5 max-w-xl text-muted-foreground text-base md:text-lg leading-relaxed">
           Share trusted kingdom content with people around the world. Whether you're an
-          individual creator or a ministry, Nora gives you the tools to inspire, teach,
+          individual creator or a ministry, NoraPlus gives you the tools to inspire, teach,
           worship, and reach lives globally.
         </p>
         <div className="mt-8 flex flex-wrap items-center gap-4">
@@ -38,7 +38,7 @@ const OnboardingHero = ({ onStart }: { onStart: () => void }) => (
             onClick={onStart}
             className="inline-flex items-center gap-2 rounded-full bg-red-gradient px-7 py-3 text-sm font-medium text-primary-foreground shadow-red-glow hover:shadow-glow transition-shadow"
           >
-            Create on Nora <ArrowRight className="h-4 w-4" />
+            Create on NoraPlus <ArrowRight className="h-4 w-4" />
           </button>
           <Link to="/partner" className="text-sm text-gold hover:underline">Learn More →</Link>
         </div>
@@ -201,11 +201,11 @@ const Application = ({ onCancel, onSubmit }: { onCancel: () => void; onSubmit: (
             <StepHeader step={2} title="Personal Information" />
             <div className="grid gap-5 md:grid-cols-2">
               <Field label="Full Name" required><input className={inputCls} placeholder="Your full name" /></Field>
-              <Field label="Creator Display Name" required><input className={inputCls} placeholder="How it appears on Nora" /></Field>
+              <Field label="Creator Display Name" required><input className={inputCls} placeholder="How it appears on NoraPlus" /></Field>
               <Field
                 label="Creator Handle"
                 required
-                hint={<>Your creator page: <span className="text-gold">nora.app/@{handle || "yourhandle"}</span><div className="mt-1 text-muted-foreground/80">Unique · lowercase · letters, numbers, underscores</div></>}
+                hint={<>Your creator page: <span className="text-gold">noraplus.io/@{handle || "yourhandle"}</span><div className="mt-1 text-muted-foreground/80">Unique · lowercase · letters, numbers, underscores</div></>}
               >
                 <div className="flex items-center rounded-xl border border-border bg-secondary/40 focus-within:ring-1 focus-within:ring-gold focus-within:border-gold/60">
                   <span className="pl-4 text-sm text-muted-foreground">@</span>
@@ -230,11 +230,11 @@ const Application = ({ onCancel, onSubmit }: { onCancel: () => void; onSubmit: (
             <StepHeader step={2} title="Organization Information" />
             <div className="grid gap-5 md:grid-cols-2">
               <Field label="Organization Name" required><input className={inputCls} placeholder="Ministry / Organization name" /></Field>
-              <Field label="Display Name" required><input className={inputCls} placeholder="How it appears on Nora" /></Field>
+              <Field label="Display Name" required><input className={inputCls} placeholder="How it appears on NoraPlus" /></Field>
               <Field
                 label="Creator Handle"
                 required
-                hint={<>Your organization page: <span className="text-gold">nora.app/@{handle || "yourhandle"}</span></>}
+                hint={<>Your organization page: <span className="text-gold">noraplus.io/@{handle || "yourhandle"}</span></>}
               >
                 <div className="flex items-center rounded-xl border border-border bg-secondary/40 focus-within:ring-1 focus-within:ring-gold focus-within:border-gold/60">
                   <span className="pl-4 text-sm text-muted-foreground">@</span>
@@ -334,7 +334,7 @@ const Application = ({ onCancel, onSubmit }: { onCancel: () => void; onSubmit: (
             <div className="space-y-4">
               {[
                 { v: agree1, set: setAgree1, label: "I confirm that I own or have the rights to publish my content." },
-                { v: agree2, set: setAgree2, label: "I agree to Nora's Creator Guidelines." },
+                { v: agree2, set: setAgree2, label: "I agree to NoraPlus's Creator Guidelines." },
               ].map((c, i) => (
                 <label
                   key={i}
@@ -414,7 +414,7 @@ const SuccessView = ({ onHome }: { onHome: () => void }) => (
         </div>
         <h1 className="mt-6 font-display text-3xl md:text-4xl">Application Submitted</h1>
         <p className="mt-4 text-muted-foreground leading-relaxed">
-          Thank you for applying to create on Nora.<br />
+          Thank you for applying to create on NoraPlus.<br />
           Our team is reviewing your application.<br />
           Most applications are reviewed within 24–72 hours.
         </p>
@@ -439,7 +439,7 @@ const RejectedView = ({ reason, onReapply }: { reason?: string; onReapply: () =>
       </div>
       <h1 className="mt-6 font-display text-3xl md:text-4xl">We couldn't approve your application this time</h1>
       <p className="mt-3 text-muted-foreground leading-relaxed">
-        {reason || "Thank you for your interest in creating on Nora. After reviewing your submission, our team was unable to approve it at this stage. You're welcome to update your details and reapply."}
+        {reason || "Thank you for your interest in creating on NoraPlus. After reviewing your submission, our team was unable to approve it at this stage. You're welcome to update your details and reapply."}
       </p>
       <button
         onClick={onReapply}

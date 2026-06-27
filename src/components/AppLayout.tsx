@@ -25,7 +25,7 @@ export const AppLayout = () => {
   const nav = [
     ...baseNav,
     { to: "/app/admin", label: creatorNavLabel(user.creator_status), icon: LayoutDashboard },
-    ...(isNoraTeam ? [{ to: "/app/nora-admin", label: "Nora Admin", icon: Shield }] : []),
+    ...(isNoraTeam ? [{ to: "/app/noraplus-admin", label: "NoraPlus Admin", icon: Shield }] : []),
   ];
 
   return (
@@ -59,7 +59,7 @@ export const AppLayout = () => {
           ))}
         </nav>
         <div className="mt-10 rounded-xl bg-card-gradient p-4 ring-1 ring-border/60">
-          <p className="font-display text-sm leading-snug">Become a Nora Partner</p>
+          <p className="font-display text-sm leading-snug">Become a NoraPlus Partner</p>
           <p className="mt-1 text-xs text-muted-foreground">Distribute your kingdom content to a global audience.</p>
           <NavLink to="/partner" className="mt-3 inline-flex text-xs text-gold hover:underline">Learn more →</NavLink>
         </div>

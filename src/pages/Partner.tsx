@@ -16,17 +16,17 @@ const Partner = () => (
   <div className="min-h-screen bg-background">
     <header className="container flex items-center justify-between py-6">
       <Logo />
-      <Link to="/app" className="text-sm text-muted-foreground hover:text-foreground">Enter Nora →</Link>
+      <Link to="/app" className="text-sm text-muted-foreground hover:text-foreground">Enter NoraPlus →</Link>
     </header>
 
     <section className="container py-20 md:py-28">
       <div className="max-w-3xl">
-        <p className="text-xs uppercase tracking-[0.25em] text-gold">Partner with Nora</p>
+        <p className="text-xs uppercase tracking-[0.25em] text-gold">Partner with NoraPlus</p>
         <h1 className="mt-5 font-display text-5xl md:text-6xl leading-tight">
           Bring your kingdom content <span className="gold-text-gradient">home.</span>
         </h1>
         <p className="mt-6 text-lg text-muted-foreground max-w-xl">
-          Nora is built for the ministries, artists, and storytellers shaping the kingdom — with trusted distribution, global reach, and the tools you need to grow.
+          NoraPlus is built for the ministries, artists, and storytellers shaping the kingdom — with trusted distribution, global reach, and the tools you need to grow.
         </p>
       </div>
 
@@ -83,7 +83,7 @@ const Partner = () => (
     <footer className="border-t border-border">
       <div className="container py-8 flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
         <Logo />
-        <p>© 2026 Nora. Light for Every Nation.</p>
+        <p>© 2026 NoraPlus. Light for Every Nation.</p>
       </div>
     </footer>
   </div>
