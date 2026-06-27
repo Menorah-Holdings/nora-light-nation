@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { Download, HardDrive, Trash2, Wifi, Sparkles, User, Bell, Shield, Globe, LifeBuoy } from "lucide-react";
+import { Download, HardDrive, Trash2, Wifi, Sparkles, User, Bell, Shield, Globe, LifeBuoy, ShieldCheck } from "lucide-react";
 import HelpSupport from "@/components/HelpSupport";
+import AccountSettings from "@/components/AccountSettings";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
