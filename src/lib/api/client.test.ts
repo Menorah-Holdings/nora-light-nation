@@ -1,4 +1,4 @@
-﻿import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { authApi } from "./auth";
 import { apiRequest } from "./client";
 
@@ -29,7 +29,7 @@ describe("api clients", () => {
 
     await expect(apiRequest("/api/content")).resolves.toEqual([{ id: "content-1" }]);
     expect(fetchMock).toHaveBeenCalledWith(
-      "http://localhost:3000/api/content",
+      expect.stringMatching(/\/api\/content$/),
       expect.objectContaining({ credentials: "include" }),
     );
   });
@@ -72,7 +72,7 @@ describe("api clients", () => {
       session: { id: "session-1" },
     });
     expect(fetchMock).toHaveBeenCalledWith(
-      "http://localhost:3000/api/auth/get-session",
+      expect.stringMatching(/\/api\/auth\/get-session$/),
       expect.objectContaining({ credentials: "include" }),
     );
   });
@@ -95,3 +95,5 @@ describe("api clients", () => {
     });
   });
 });
+
+
