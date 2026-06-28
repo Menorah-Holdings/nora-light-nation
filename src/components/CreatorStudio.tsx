@@ -284,7 +284,7 @@ const Overview = ({
                 <img src={item.image} alt="" className="h-14 w-14 rounded-lg object-cover ring-1 ring-border/60" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium">{item.title}</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground capitalize">{item.type.replace("-", " ")} · {item.published} · {item.plays} plays</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">{formatCategory(item.categoryValue)} - {item.published} - {item.plays} plays</p>
                 </div>
                 <StatusBadge status={item.status} />
                 <div className="hidden sm:flex items-center gap-1">
@@ -739,6 +739,7 @@ const UploadModal = ({ kind, onClose, onSubmit }: { kind: UploadKind; onClose: (
   const [isPremium, setIsPremium] = useState(false);
   const [isPublished, setIsPublished] = useState(true);
   const createContent = useCreateOwnContent();
+  const updateContent = useUpdateOwnContent();
   const presignUpload = usePresignUpload();
   const confirmUpload = useConfirmUpload();
 
@@ -748,7 +749,7 @@ const UploadModal = ({ kind, onClose, onSubmit }: { kind: UploadKind; onClose: (
     video: "Upload Video",
     live: "Create Live Event",
   };
-  const isBusy = createContent.isPending || presignUpload.isPending || confirmUpload.isPending;
+  const isBusy = createContent.isPending || updateContent.isPending || presignUpload.isPending || confirmUpload.isPending;
   const contentType: ContentType = kind === "video" ? "VIDEO" : "AUDIO";
   const mediaFolder = kind === "video" ? "videos" : "audio";
   const mediaAccept = kind === "video" ? "video/mp4,video/webm,video/quicktime" : "audio/mpeg,audio/mp4,audio/wav,audio/ogg";
@@ -793,7 +794,7 @@ const UploadModal = ({ kind, onClose, onSubmit }: { kind: UploadKind; onClose: (
         category,
         thumbnailUrl,
         isPremium,
-        isPublished: publish,
+        isPublished: false,
         tags: splitTags(tags),
       });
 
@@ -806,6 +807,10 @@ const UploadModal = ({ kind, onClose, onSubmit }: { kind: UploadKind; onClose: (
         });
         await uploadFileToPresignedUrl(mediaFile, media.uploadUrl);
         await confirmUpload.mutateAsync({ key: media.key, contentId: created.id });
+      }
+
+      if (publish) {
+        await updateContent.mutateAsync({ contentId: created.id, input: { isPublished: true } });
       }
 
       onSubmit();
