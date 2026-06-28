@@ -50,6 +50,19 @@ export interface ApiCreator {
   user?: Pick<ApiUser, "id" | "name" | "image">;
 }
 
+export interface ApiCreatorApplication {
+  id: string;
+  userId: string;
+  category: ContentCategory;
+  ministryName: string;
+  websiteUrl?: string | null;
+  socialLinks?: Record<string, string> | null;
+  status: ApplicationStatus;
+  adminNotes?: string | null;
+  submittedAt: string;
+  reviewedAt?: string | null;
+}
+
 export interface ApiContent {
   id: string;
   title: string;

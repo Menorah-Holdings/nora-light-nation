@@ -2,8 +2,9 @@ import { createContext, useCallback, useContext, useMemo, useState, ReactNode } 
 import { useQueryClient } from "@tanstack/react-query";
 import { authApi } from "@/lib/api/auth";
 import { queryKeys } from "@/lib/api/queryKeys";
-import type { ApiUser, UserRole } from "@/lib/api/types";
+import type { ApiCreatorApplication, ApiUser, UserRole } from "@/lib/api/types";
 import { useSession } from "@/lib/api/hooks/useAuth";
+import { useMyCreatorApplication } from "@/lib/api/hooks/useCreators";
 import { useCurrentUser } from "@/lib/api/hooks/useUsers";
 
 export type CreatorStatus = "Not Applied" | "Under Review" | "Approved" | "Rejected";
@@ -57,6 +58,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   const sessionUser = sessionQuery.data?.user ?? null;
   const isAuthenticated = Boolean(sessionUser?.id);
   const currentUserQuery = useCurrentUser(isAuthenticated);
+  const creatorApplicationQuery = useMyCreatorApplication(isAuthenticated);
 
   const [activeId, setActiveId] = useState<string>(() => {
     if (typeof window === "undefined") return MOCK_USERS[0].id;
@@ -71,11 +73,11 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   const isPrototypeUser = !apiUser;
 
   const user = useMemo<NoraUser>(() => {
-    if (apiUser) return mapApiUser(apiUser);
+    if (apiUser) return mapApiUser(apiUser, creatorApplicationQuery.data ?? null);
 
     const base = MOCK_USERS.find((u) => u.id === activeId) || MOCK_USERS[0];
     return { ...base, creator_status: statusOverride ?? base.creator_status };
-  }, [activeId, apiUser, statusOverride]);
+  }, [activeId, apiUser, creatorApplicationQuery.data, statusOverride]);
 
   const setActiveUserId = useCallback((id: string) => {
     if (apiUser) return;
@@ -100,6 +102,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: queryKeys.auth.all }),
       queryClient.invalidateQueries({ queryKey: queryKeys.users.all }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.creators.myApplication() }),
     ]);
   }, [queryClient]);
 
@@ -116,7 +119,10 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     isApprovedCreator: user.creator_status === "Approved",
     isNoraTeam: user.platform_role === "nora_team",
     isAuthenticated,
-    isLoading: sessionQuery.isLoading || (isAuthenticated && currentUserQuery.isLoading),
+    isLoading:
+      sessionQuery.isLoading ||
+      (isAuthenticated && currentUserQuery.isLoading) ||
+      (isAuthenticated && creatorApplicationQuery.isLoading),
     isPrototypeUser,
     setActiveUserId,
     setCreatorStatus,
@@ -124,6 +130,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     signOut,
   }), [
     apiUser,
+    creatorApplicationQuery.isLoading,
     currentUserQuery.isLoading,
     isAuthenticated,
     isPrototypeUser,
@@ -162,10 +169,11 @@ export const creatorNavLabel = (status: CreatorStatus): string => {
   }
 };
 
-function mapApiUser(apiUser: ApiUser): NoraUser {
+function mapApiUser(apiUser: ApiUser, application: ApiCreatorApplication | null): NoraUser {
   const role = apiUser.role ?? "USER";
   const name = apiUser.name?.trim() || apiUser.email.split("@")[0] || "NoraPlus Listener";
   const handle = toHandle(name, apiUser.email);
+  const creatorStatus = roleToCreatorStatus(role, application);
 
   return {
     id: apiUser.id,
@@ -173,8 +181,9 @@ function mapApiUser(apiUser: ApiUser): NoraUser {
     handle,
     email: apiUser.email,
     avatarInitial: getInitial(name, apiUser.email),
-    creator_status: roleToCreatorStatus(role),
+    creator_status: creatorStatus,
     platform_role: role === "ADMIN" ? "nora_team" : "user",
+    rejectionReason: application?.status === "REJECTED" ? application.adminNotes ?? undefined : undefined,
     role,
     image: apiUser.image,
     emailVerified: apiUser.emailVerified,
@@ -182,8 +191,10 @@ function mapApiUser(apiUser: ApiUser): NoraUser {
   };
 }
 
-function roleToCreatorStatus(role: UserRole): CreatorStatus {
+function roleToCreatorStatus(role: UserRole, application: ApiCreatorApplication | null): CreatorStatus {
   if (role === "ADMIN" || role === "CREATOR") return "Approved";
+  if (application?.status === "PENDING") return "Under Review";
+  if (application?.status === "REJECTED") return "Rejected";
   return "Not Applied";
 }
 

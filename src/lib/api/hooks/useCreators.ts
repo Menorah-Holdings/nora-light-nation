@@ -4,9 +4,12 @@ import { queryKeys } from "../queryKeys";
 import type {
   ApiContent,
   ApiCreator,
+  ApiCreatorApplication,
   CreatorApplicationInput,
+  CreateContentInput,
   ListContentQuery,
   ListCreatorsQuery,
+  UpdateContentInput,
 } from "../types";
 
 export function useCreatorsList(query?: ListCreatorsQuery) {
@@ -39,6 +42,14 @@ export function useOwnCreatorContent(query?: ListContentQuery) {
   });
 }
 
+export function useMyCreatorApplication(enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.creators.myApplication(),
+    queryFn: () => apiRequest<ApiCreatorApplication | null>("/api/creators/me/application"),
+    enabled,
+  });
+}
+
 export function useSubmitCreatorApplication() {
   const queryClient = useQueryClient();
 
@@ -46,8 +57,51 @@ export function useSubmitCreatorApplication() {
     mutationFn: (input: CreatorApplicationInput) =>
       apiRequest("/api/creators/apply", { body: input }),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.creators.myApplication() });
       queryClient.invalidateQueries({ queryKey: queryKeys.creators.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.users.all });
+    },
+  });
+}
+
+export function useCreateOwnContent() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: CreateContentInput) =>
+      apiRequest<ApiContent>("/api/creators/me/content", { body: input }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.creators.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.content.all });
+    },
+  });
+}
+
+export function useUpdateOwnContent() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ contentId, input }: { contentId: string; input: UpdateContentInput }) =>
+      apiRequest<ApiContent>(`/api/creators/me/content/${contentId}`, {
+        method: "PATCH",
+        body: input,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.creators.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.content.all });
+    },
+  });
+}
+
+export function useDeleteOwnContent() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (contentId: string) =>
+      apiRequest(`/api/creators/me/content/${contentId}`, { method: "DELETE" }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.creators.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.content.all });
     },
   });
 }

@@ -9,6 +9,8 @@ import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { useUser } from "@/lib/user";
 import CreatorStudio from "@/components/CreatorStudio";
+import { useSubmitCreatorApplication } from "@/lib/api/hooks/useCreators";
+import type { ContentCategory, CreatorApplicationInput } from "@/lib/api/types";
 
 
 /* -------------------- Creator dashboard (approved) -------------------- */
@@ -122,7 +124,16 @@ const Field = ({ label, required, children, hint }: { label: string; required?: 
 
 const inputCls = "w-full rounded-xl border border-border bg-secondary/40 px-4 py-2.5 text-sm placeholder:text-muted-foreground/70 focus:outline-none focus:ring-1 focus:ring-gold focus:border-gold/60 transition";
 
-const CATEGORIES = ["Music", "Messages", "Podcasts", "Devotionals", "Live Events", "Teaching Series", "Films", "Worship"];
+const CATEGORIES: { label: string; value: ContentCategory }[] = [
+  { label: "Music", value: "MUSIC" },
+  { label: "Messages", value: "SERMON" },
+  { label: "Podcasts", value: "PODCAST" },
+  { label: "Devotionals", value: "DEVOTIONAL" },
+  { label: "Live Events", value: "WORSHIP" },
+  { label: "Teaching Series", value: "BIBLE_STUDY" },
+  { label: "Films", value: "FILM" },
+  { label: "Worship", value: "WORSHIP" },
+];
 
 const SOCIAL = [
   { key: "instagram", label: "Instagram", icon: Instagram, ph: "@yourhandle" },
@@ -132,25 +143,53 @@ const SOCIAL = [
   { key: "x", label: "X", icon: Twitter, ph: "@yourhandle" },
 ] as const;
 
-const Application = ({ onCancel, onSubmit }: { onCancel: () => void; onSubmit: () => void }) => {
+const Application = ({
+  onCancel,
+  onSubmit,
+  isSubmitting,
+}: {
+  onCancel: () => void;
+  onSubmit: (input: CreatorApplicationInput) => void;
+  isSubmitting: boolean;
+}) => {
   const [step, setStep] = useState(1);
   const [type, setType] = useState<CreatorType>(null);
   const [handle, setHandle] = useState("");
-  const [categories, setCategories] = useState<string[]>([]);
+  const [ministryName, setMinistryName] = useState("");
+  const [websiteUrl, setWebsiteUrl] = useState("");
+  const [categories, setCategories] = useState<ContentCategory[]>([]);
+  const [socialLinks, setSocialLinks] = useState<Record<string, string>>({});
   const [agree1, setAgree1] = useState(false);
   const [agree2, setAgree2] = useState(false);
 
   const canNext = useMemo(() => {
     if (step === 1) return type !== null;
+    if (step === 2) return ministryName.trim().length >= 2;
+    if (step === 4) return categories.length > 0;
     if (step === 6) return agree1 && agree2;
     return true;
-  }, [step, type, agree1, agree2]);
+  }, [step, type, ministryName, categories.length, agree1, agree2]);
 
   const next = () => setStep(s => Math.min(TOTAL_STEPS, s + 1));
   const back = () => (step === 1 ? onCancel() : setStep(s => s - 1));
 
-  const toggleCat = (c: string) =>
+  const toggleCat = (c: ContentCategory) =>
     setCategories(prev => (prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c]));
+
+  const submit = () => {
+    if (!canNext || isSubmitting) return;
+
+    const links = Object.fromEntries(
+      Object.entries(socialLinks).filter(([, value]) => value.trim().length > 0),
+    );
+
+    onSubmit({
+      ministryName: ministryName.trim(),
+      category: categories[0] ?? "OTHER",
+      ...(websiteUrl.trim() && { websiteUrl: websiteUrl.trim() }),
+      ...(Object.keys(links).length > 0 && { socialLinks: links }),
+    });
+  };
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -201,7 +240,9 @@ const Application = ({ onCancel, onSubmit }: { onCancel: () => void; onSubmit: (
             <StepHeader step={2} title="Personal Information" />
             <div className="grid gap-5 md:grid-cols-2">
               <Field label="Full Name" required><input className={inputCls} placeholder="Your full name" /></Field>
-              <Field label="Creator Display Name" required><input className={inputCls} placeholder="How it appears on NoraPlus" /></Field>
+              <Field label="Creator Display Name" required>
+                <input className={inputCls} value={ministryName} onChange={(e) => setMinistryName(e.target.value)} placeholder="How it appears on NoraPlus" />
+              </Field>
               <Field
                 label="Creator Handle"
                 required
@@ -229,7 +270,9 @@ const Application = ({ onCancel, onSubmit }: { onCancel: () => void; onSubmit: (
           <div className="space-y-8">
             <StepHeader step={2} title="Organization Information" />
             <div className="grid gap-5 md:grid-cols-2">
-              <Field label="Organization Name" required><input className={inputCls} placeholder="Ministry / Organization name" /></Field>
+              <Field label="Organization Name" required>
+                <input className={inputCls} value={ministryName} onChange={(e) => setMinistryName(e.target.value)} placeholder="Ministry / Organization name" />
+              </Field>
               <Field label="Display Name" required><input className={inputCls} placeholder="How it appears on NoraPlus" /></Field>
               <Field
                 label="Creator Handle"
@@ -278,7 +321,7 @@ const Application = ({ onCancel, onSubmit }: { onCancel: () => void; onSubmit: (
                 </Field>
               </div>
               <div className="md:col-span-2">
-                <Field label="Website (optional)"><input className={inputCls} placeholder="https://yoursite.com" /></Field>
+                <Field label="Website (optional)"><input className={inputCls} value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} placeholder="https://yoursite.com" /></Field>
               </div>
             </div>
           </div>
@@ -290,12 +333,12 @@ const Application = ({ onCancel, onSubmit }: { onCancel: () => void; onSubmit: (
             <p className="text-sm text-muted-foreground -mt-4">Select all that apply to the content you plan to share.</p>
             <div className="flex flex-wrap gap-3">
               {CATEGORIES.map(c => {
-                const active = categories.includes(c);
+                const active = categories.includes(c.value);
                 return (
                   <button
-                    key={c}
+                    key={c.value}
                     type="button"
-                    onClick={() => toggleCat(c)}
+                    onClick={() => toggleCat(c.value)}
                     className={cn(
                       "rounded-full px-5 py-2.5 text-sm transition-all border",
                       active
@@ -303,7 +346,7 @@ const Application = ({ onCancel, onSubmit }: { onCancel: () => void; onSubmit: (
                         : "border-border bg-secondary/40 text-muted-foreground hover:border-gold/40 hover:text-foreground"
                     )}
                   >
-                    {active && <Check className="inline mr-1.5 h-3.5 w-3.5" />}{c}
+                    {active && <Check className="inline mr-1.5 h-3.5 w-3.5" />}{c.label}
                   </button>
                 );
               })}
@@ -320,7 +363,12 @@ const Application = ({ onCancel, onSubmit }: { onCancel: () => void; onSubmit: (
                 <Field key={s.key} label={s.label}>
                   <div className="flex items-center rounded-xl border border-border bg-secondary/40 focus-within:ring-1 focus-within:ring-gold focus-within:border-gold/60">
                     <span className="pl-4 text-gold"><s.icon className="h-4 w-4" /></span>
-                    <input className="w-full bg-transparent px-3 py-2.5 text-sm focus:outline-none" placeholder={s.ph} />
+                    <input
+                      className="w-full bg-transparent px-3 py-2.5 text-sm focus:outline-none"
+                      value={socialLinks[s.key] ?? ""}
+                      onChange={(e) => setSocialLinks((prev) => ({ ...prev, [s.key]: e.target.value }))}
+                      placeholder={s.ph}
+                    />
                   </div>
                 </Field>
               ))}
@@ -383,16 +431,16 @@ const Application = ({ onCancel, onSubmit }: { onCancel: () => void; onSubmit: (
           ) : (
             <button
               type="button"
-              disabled={!canNext}
-              onClick={onSubmit}
+              disabled={!canNext || isSubmitting}
+              onClick={submit}
               className={cn(
                 "inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-medium transition-all",
-                canNext
+                canNext && !isSubmitting
                   ? "bg-red-gradient text-primary-foreground shadow-red-glow hover:shadow-glow"
                   : "bg-muted text-muted-foreground cursor-not-allowed"
               )}
             >
-              Submit Application <Check className="h-4 w-4" />
+              {isSubmitting ? "Submitting..." : "Submit Application"} <Check className="h-4 w-4" />
             </button>
           )}
         </div>
@@ -468,6 +516,7 @@ const Admin = () => {
   const { user, setCreatorStatus } = useUser();
   const status = user.creator_status;
   const [view, setView] = useState<View>(() => viewForStatus(status));
+  const submitApplication = useSubmitCreatorApplication();
 
   useEffect(() => {
     // Snap to canonical view when status changes externally, unless mid-application or success
@@ -482,10 +531,22 @@ const Admin = () => {
       {view === "applying" && (
         <Application
           onCancel={() => setView(viewForStatus(status))}
-          onSubmit={() => {
-            setCreatorStatus("Under Review");
-            setView("success");
-            toast({ title: "Application submitted", description: "We'll review and notify you within 24–72 hours." });
+          isSubmitting={submitApplication.isPending}
+          onSubmit={(input) => {
+            submitApplication.mutate(input, {
+              onSuccess: () => {
+                setCreatorStatus("Under Review");
+                setView("success");
+                toast({ title: "Application submitted", description: "We'll review and notify you within 24-72 hours." });
+              },
+              onError: (error) => {
+                toast({
+                  title: "Application could not be submitted",
+                  description: error instanceof Error ? error.message : "Please check your details and try again.",
+                  variant: "destructive",
+                });
+              },
+            });
           }}
         />
       )}
