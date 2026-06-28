@@ -69,8 +69,23 @@ const CreatorProfile = () => {
             </div>
             <p className="mt-1 text-sm text-muted-foreground">{creator.category} - {creator.followers} followers</p>
           </div>
-          <button type="button" className="inline-flex items-center gap-2 rounded-full bg-red-gradient px-5 py-2.5 text-sm font-medium text-primary-foreground shadow-red-glow">
-            <Plus className="h-4 w-4" /> Follow
+          <button
+            type="button"
+            disabled={followMutation.isPending || followed}
+            onClick={() =>
+              followMutation.mutate(creator.id, {
+                onSuccess: () => {
+                  setFollowed(true);
+                  toast.success(`Following ${creator.name}`);
+                },
+                onError: (error) => {
+                  toast.error(error instanceof Error ? error.message : "Could not follow creator");
+                },
+              })
+            }
+            className="inline-flex items-center gap-2 rounded-full bg-red-gradient px-5 py-2.5 text-sm font-medium text-primary-foreground shadow-red-glow disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <Plus className="h-4 w-4" /> {followed ? "Following" : "Follow"}
           </button>
         </div>
       </div>
@@ -179,4 +194,5 @@ const ContentGridSkeleton = () => (
 );
 
 export default CreatorProfile;
+
 
