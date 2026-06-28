@@ -1,29 +1,29 @@
-﻿import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { adaptContent, adaptLiveEvent, formatCompactNumber, formatDuration } from "./adapters";
 import type { ApiContent, ApiLiveEvent } from "./types";
 
+const baseContent: ApiContent = {
+  id: "content-1",
+  title: "Encountering Truth",
+  type: "AUDIO",
+  category: "SERMON",
+  description: "A message",
+  thumbnailUrl: null,
+  durationSeconds: 2520,
+  isPremium: false,
+  isFeatured: true,
+  createdAt: "2026-06-27T00:00:00.000Z",
+  creator: {
+    id: "creator-1",
+    displayName: "Pastor David",
+    avatarUrl: null,
+    isVerified: true,
+  },
+};
+
 describe("api adapters", () => {
   it("maps API content into the current ContentCard shape", () => {
-    const content: ApiContent = {
-      id: "content-1",
-      title: "Encountering Truth",
-      type: "AUDIO",
-      category: "SERMON",
-      description: "A message",
-      thumbnailUrl: null,
-      durationSeconds: 2520,
-      isPremium: false,
-      isFeatured: true,
-      createdAt: "2026-06-27T00:00:00.000Z",
-      creator: {
-        id: "creator-1",
-        displayName: "Pastor David",
-        avatarUrl: null,
-        isVerified: true,
-      },
-    };
-
-    expect(adaptContent(content)).toMatchObject({
+    expect(adaptContent(baseContent)).toMatchObject({
       id: "content-1",
       title: "Encountering Truth",
       creator: "Pastor David",
@@ -32,6 +32,24 @@ describe("api adapters", () => {
       medium: "audio",
       duration: "42 min",
       tag: "Featured",
+    });
+  });
+
+  it("uses category and tags to infer richer UI content labels", () => {
+    expect(adaptContent({ ...baseContent, type: "VIDEO", category: "OTHER", isFeatured: false, tags: ["skit"] })).toMatchObject({
+      type: "skit",
+      medium: "video",
+      tag: "Skit",
+    });
+
+    expect(adaptContent({ ...baseContent, id: "content-2", category: "WORSHIP", tags: [] })).toMatchObject({
+      type: "music",
+      medium: "audio",
+    });
+
+    expect(adaptContent({ ...baseContent, id: "content-3", type: "VIDEO", category: "PODCAST" })).toMatchObject({
+      type: "podcast-video",
+      medium: "video",
     });
   });
 
@@ -61,3 +79,4 @@ describe("api adapters", () => {
     expect(formatCompactNumber(248000)).toBe("248K");
   });
 });
+

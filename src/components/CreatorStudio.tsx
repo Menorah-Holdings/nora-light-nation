@@ -9,9 +9,49 @@ import { content } from "@/lib/mockData";
 import { useUser } from "@/lib/user";
 import { toast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
+import { adaptContent, formatCategory, formatCompactNumber } from "@/lib/api/adapters";
+import {
+  useCreateOwnContent,
+  useDeleteOwnContent,
+  useOwnCreatorContent,
+  useUpdateOwnContent,
+} from "@/lib/api/hooks/useCreators";
+import {
+  uploadFileToPresignedUrl,
+  useConfirmUpload,
+  usePresignUpload,
+} from "@/lib/api/hooks/useUpload";
+import type { ApiContent, ContentCategory, ContentType } from "@/lib/api/types";
 
 type Section = "overview" | "upload" | "audio" | "video" | "live" | "analytics" | "profile" | "settings";
 type UploadKind = "audio" | "video" | "live" | null;
+type StudioContentItem = {
+  id: string;
+  title: string;
+  image: string;
+  category: string;
+  categoryValue: ContentCategory;
+  duration: string;
+  status: "Published" | "Draft";
+  plays: string;
+  views: string;
+  published: string;
+  isPublished: boolean;
+  type: ContentType;
+};
+
+const categoryOptions: { label: string; value: ContentCategory }[] = [
+  { label: "Worship", value: "WORSHIP" },
+  { label: "Sermon", value: "SERMON" },
+  { label: "Podcast", value: "PODCAST" },
+  { label: "Film", value: "FILM" },
+  { label: "Devotional", value: "DEVOTIONAL" },
+  { label: "Music", value: "MUSIC" },
+  { label: "Prayer", value: "PRAYER" },
+  { label: "Testimony", value: "TESTIMONY" },
+  { label: "Bible Study", value: "BIBLE_STUDY" },
+  { label: "Other", value: "OTHER" },
+];
 
 const nav: { id: Section; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "overview", label: "Overview", icon: LayoutDashboard },
@@ -104,17 +144,67 @@ const liveItems = [
   { id: "le3", title: "Kingdom Conference Replay", banner: content[3].image, type: "Conference", date: "May 12, 2026", status: "Ended" as const, regs: "4,128", viewers: "9,401" },
 ];
 
+function toStudioContentItem(item: ApiContent): StudioContentItem {
+  const adapted = adaptContent(item);
+  const count = formatCompactNumber(item.viewCount ?? 0);
+
+  return {
+    id: item.id,
+    title: item.title,
+    image: adapted.image,
+    category: formatCategory(item.category),
+    categoryValue: item.category,
+    duration: adapted.duration,
+    status: item.isPublished ? "Published" : "Draft",
+    plays: count,
+    views: count,
+    published: item.isPublished ? formatStudioDate(item.createdAt) : "Draft",
+    isPublished: Boolean(item.isPublished),
+    type: item.type,
+  };
+}
+
+function formatStudioDate(value?: string) {
+  if (!value) return "Draft";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Draft";
+
+  return new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "2-digit",
+    year: "numeric",
+  }).format(date);
+}
+
+function splitTags(value: string) {
+  return value
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter(Boolean);
+}
+
 /* ---------- Overview ---------- */
 
-const Overview = ({ goto, openUpload }: { goto: (s: Section) => void; openUpload: (k: UploadKind) => void }) => {
+const Overview = ({
+  goto,
+  openUpload,
+  items,
+}: {
+  goto: (s: Section) => void;
+  openUpload: (k: UploadKind) => void;
+  items: StudioContentItem[];
+}) => {
   const { user } = useUser();
+  const publishedCount = items.filter((item) => item.isPublished).length;
+  const draftCount = items.length - publishedCount;
+  const recentItems = items.slice(0, 4);
   const summary = [
-    { label: "Uploads", value: "48" },
-    { label: "Published", value: "39" },
-    { label: "Drafts", value: "6" },
-    { label: "Followers", value: "248K" },
-    { label: "Total Plays", value: "1.24M" },
-    { label: "Upcoming Live", value: "3" },
+    { label: "Uploads", value: String(items.length) },
+    { label: "Published", value: String(publishedCount) },
+    { label: "Drafts", value: String(draftCount) },
+    { label: "Followers", value: "0" },
+    { label: "Total Plays", value: "0" },
+    { label: "Upcoming Live", value: "0" },
   ];
   const activity = [
     { t: "Published “Encountering Truth”", at: "2h ago" },
@@ -184,18 +274,21 @@ const Overview = ({ goto, openUpload }: { goto: (s: Section) => void; openUpload
             <button onClick={() => goto("audio")} className="text-xs text-gold hover:underline">View library</button>
           </div>
           <div className="divide-y divide-border/60">
-            {audioItems.slice(0, 4).map(item => (
+            {recentItems.length === 0 && (
+              <div className="px-6 py-8 text-sm text-muted-foreground">
+                Your uploaded content will appear here.
+              </div>
+            )}
+            {recentItems.map(item => (
               <div key={item.id} className="flex items-center gap-4 px-6 py-4">
                 <img src={item.image} alt="" className="h-14 w-14 rounded-lg object-cover ring-1 ring-border/60" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium">{item.title}</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground capitalize">{item.type.replace("-", " ")} · {item.published} · {item.plays} plays</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">{formatCategory(item.categoryValue)} - {item.published} - {item.plays} plays</p>
                 </div>
                 <StatusBadge status={item.status} />
                 <div className="hidden sm:flex items-center gap-1">
-                  <button className="h-8 w-8 grid place-items-center rounded-full hover:bg-secondary/60" title="View"><Eye className="h-4 w-4 text-muted-foreground" /></button>
-                  <button className="h-8 w-8 grid place-items-center rounded-full hover:bg-secondary/60" title="Edit"><Pencil className="h-4 w-4 text-muted-foreground" /></button>
-                  <button className="h-8 w-8 grid place-items-center rounded-full hover:bg-secondary/60" title="Delete"><Trash2 className="h-4 w-4 text-muted-foreground" /></button>
+                  <RowActions item={item} />
                 </div>
               </div>
             ))}
@@ -239,16 +332,55 @@ const Toolbar = ({ placeholder, filters }: { placeholder: string; filters: strin
   </div>
 );
 
-const RowActions = () => (
-  <div className="flex items-center justify-end gap-1">
-    <button title="View" className="h-8 w-8 grid place-items-center rounded-full hover:bg-secondary/60"><Eye className="h-4 w-4 text-muted-foreground" /></button>
-    <button title="Edit" className="h-8 w-8 grid place-items-center rounded-full hover:bg-secondary/60"><Pencil className="h-4 w-4 text-muted-foreground" /></button>
-    <button title="More" className="h-8 w-8 grid place-items-center rounded-full hover:bg-secondary/60"><MoreHorizontal className="h-4 w-4 text-muted-foreground" /></button>
-  </div>
-);
+const RowActions = ({ item }: { item: StudioContentItem }) => {
+  const updateContent = useUpdateOwnContent();
+  const deleteContent = useDeleteOwnContent();
+  const pending = updateContent.isPending || deleteContent.isPending;
 
-const AudioLibrary = ({ openUpload }: { openUpload: (k: UploadKind) => void }) => {
-  if (audioItems.length === 0) {
+  const togglePublished = () => {
+    updateContent.mutate(
+      { contentId: item.id, input: { isPublished: !item.isPublished } },
+      {
+        onSuccess: () => toast({ title: item.isPublished ? "Moved to drafts" : "Published" }),
+        onError: (error) =>
+          toast({
+            title: "Could not update content",
+            description: error instanceof Error ? error.message : "Please try again.",
+            variant: "destructive",
+          }),
+      },
+    );
+  };
+
+  const remove = () => {
+    deleteContent.mutate(item.id, {
+      onSuccess: () => toast({ title: "Content deleted" }),
+      onError: (error) =>
+        toast({
+          title: "Could not delete content",
+          description: error instanceof Error ? error.message : "Please try again.",
+          variant: "destructive",
+        }),
+    });
+  };
+
+  return (
+    <div className="flex items-center justify-end gap-1">
+      <Link title="View" to={`/app/content/${item.id}`} className="h-8 w-8 grid place-items-center rounded-full hover:bg-secondary/60">
+        <Eye className="h-4 w-4 text-muted-foreground" />
+      </Link>
+      <button disabled={pending} onClick={togglePublished} title={item.isPublished ? "Move to draft" : "Publish"} className="h-8 w-8 grid place-items-center rounded-full hover:bg-secondary/60 disabled:opacity-50">
+        <Pencil className="h-4 w-4 text-muted-foreground" />
+      </button>
+      <button disabled={pending} onClick={remove} title="Delete" className="h-8 w-8 grid place-items-center rounded-full hover:bg-secondary/60 disabled:opacity-50">
+        <Trash2 className="h-4 w-4 text-muted-foreground" />
+      </button>
+    </div>
+  );
+};
+
+const AudioLibrary = ({ openUpload, items }: { openUpload: (k: UploadKind) => void; items: StudioContentItem[] }) => {
+  if (items.length === 0) {
     return <EmptyState icon={Headphones} title="No audio uploaded yet." cta="Upload Audio" onCta={() => openUpload("audio")} />;
   }
   return (
@@ -272,7 +404,7 @@ const AudioLibrary = ({ openUpload }: { openUpload: (k: UploadKind) => void }) =
               </tr>
             </thead>
             <tbody>
-              {audioItems.map(item => (
+              {items.map(item => (
                 <tr key={item.id} className="border-t border-border/60 hover:bg-background/40">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
@@ -285,7 +417,7 @@ const AudioLibrary = ({ openUpload }: { openUpload: (k: UploadKind) => void }) =
                   <td className="px-6 py-4"><StatusBadge status={item.status} /></td>
                   <td className="px-6 py-4 text-muted-foreground">{item.plays}</td>
                   <td className="px-6 py-4 text-muted-foreground">{item.published}</td>
-                  <td className="px-6 py-4"><RowActions /></td>
+                  <td className="px-6 py-4"><RowActions item={item} /></td>
                 </tr>
               ))}
             </tbody>
@@ -296,8 +428,8 @@ const AudioLibrary = ({ openUpload }: { openUpload: (k: UploadKind) => void }) =
   );
 };
 
-const VideoLibrary = ({ openUpload }: { openUpload: (k: UploadKind) => void }) => {
-  if (videoItems.length === 0) {
+const VideoLibrary = ({ openUpload, items }: { openUpload: (k: UploadKind) => void; items: StudioContentItem[] }) => {
+  if (items.length === 0) {
     return <EmptyState icon={Play} title="No videos uploaded yet." cta="Upload Video" onCta={() => openUpload("video")} />;
   }
   return (
@@ -321,7 +453,7 @@ const VideoLibrary = ({ openUpload }: { openUpload: (k: UploadKind) => void }) =
               </tr>
             </thead>
             <tbody>
-              {videoItems.map(item => (
+              {items.map(item => (
                 <tr key={item.id} className="border-t border-border/60 hover:bg-background/40">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
@@ -334,7 +466,7 @@ const VideoLibrary = ({ openUpload }: { openUpload: (k: UploadKind) => void }) =
                   <td className="px-6 py-4"><StatusBadge status={item.status} /></td>
                   <td className="px-6 py-4 text-muted-foreground">{item.views}</td>
                   <td className="px-6 py-4 text-muted-foreground">{item.published}</td>
-                  <td className="px-6 py-4"><RowActions /></td>
+                  <td className="px-6 py-4"><RowActions item={item} /></td>
                 </tr>
               ))}
             </tbody>
@@ -395,7 +527,7 @@ const LiveManager = ({ openUpload }: { openUpload: (k: UploadKind) => void }) =>
                           End Event
                         </button>
                       )}
-                      <RowActions />
+                      <button title="More" className="h-8 w-8 grid place-items-center rounded-full hover:bg-secondary/60"><MoreHorizontal className="h-4 w-4 text-muted-foreground" /></button>
                     </div>
                   </td>
                 </tr>
@@ -536,24 +668,46 @@ const UploadLanding = ({ openUpload }: { openUpload: (k: UploadKind) => void }) 
   </div>
 );
 
-const FileDrop = ({ label, icon: Icon, tall }: { label: string; icon: typeof Upload; tall?: boolean }) => (
-  <div className={cn("flex items-center justify-center rounded-2xl border border-dashed border-gold/40 bg-secondary/30 hover:border-gold transition-colors cursor-pointer", tall ? "h-44" : "h-28")}>
+const FileDrop = ({
+  label,
+  icon: Icon,
+  tall,
+  accept,
+  file,
+  onFile,
+}: {
+  label: string;
+  icon: typeof Upload;
+  tall?: boolean;
+  accept?: string;
+  file?: File | null;
+  onFile?: (file: File | null) => void;
+}) => (
+  <label className={cn("flex items-center justify-center rounded-2xl border border-dashed border-gold/40 bg-secondary/30 hover:border-gold transition-colors cursor-pointer", tall ? "h-44" : "h-28")}>
+    {onFile && (
+      <input
+        type="file"
+        accept={accept}
+        className="sr-only"
+        onChange={(event) => onFile(event.target.files?.[0] ?? null)}
+      />
+    )}
     <div className="text-center">
       <Icon className="mx-auto h-6 w-6 text-gold" />
-      <p className="mt-2 text-xs text-muted-foreground">{label}</p>
+      <p className="mt-2 text-xs text-muted-foreground">{file?.name ?? label}</p>
     </div>
-  </div>
+  </label>
 );
 
-const VisibilityField = () => (
+const VisibilityField = ({ isPremium, onChange }: { isPremium: boolean; onChange: (value: boolean) => void }) => (
   <Field label="Visibility" required>
     <div className="grid grid-cols-3 gap-2">
       {[
-        { v: "Public", icon: Globe },
-        { v: "Subscribers Only", icon: Star },
-        { v: "Premium Only", icon: Lock },
-      ].map((o, i) => (
-        <button key={o.v} type="button" className={cn("inline-flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2 text-xs transition", i === 0 ? "border-gold bg-gold/10 text-gold" : "border-border bg-secondary/40 text-muted-foreground hover:border-gold/40")}>
+        { v: "Public", icon: Globe, premium: false },
+        { v: "Subscribers Only", icon: Star, premium: false },
+        { v: "Premium Only", icon: Lock, premium: true },
+      ].map((o) => (
+        <button key={o.v} type="button" onClick={() => onChange(o.premium)} className={cn("inline-flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2 text-xs transition", isPremium === o.premium ? "border-gold bg-gold/10 text-gold" : "border-border bg-secondary/40 text-muted-foreground hover:border-gold/40")}>
           <o.icon className="h-3.5 w-3.5" /> {o.v}
         </button>
       ))}
@@ -561,23 +715,114 @@ const VisibilityField = () => (
   </Field>
 );
 
-const ReleaseField = () => (
+const ReleaseField = ({ isPublished, onChange }: { isPublished: boolean; onChange: (value: boolean) => void }) => (
   <Field label="Release option" required>
     <div className="grid grid-cols-3 gap-2">
-      {["Publish Now", "Save Draft", "Schedule Release"].map((o, i) => (
-        <button key={o} type="button" className={cn("rounded-xl border px-3 py-2 text-xs transition", i === 0 ? "border-gold bg-gold/10 text-gold" : "border-border bg-secondary/40 text-muted-foreground hover:border-gold/40")}>{o}</button>
+      {[
+        { label: "Publish Now", value: true },
+        { label: "Save Draft", value: false },
+        { label: "Schedule Release", value: false },
+      ].map((o) => (
+        <button key={o.label} type="button" onClick={() => onChange(o.value)} className={cn("rounded-xl border px-3 py-2 text-xs transition", isPublished === o.value ? "border-gold bg-gold/10 text-gold" : "border-border bg-secondary/40 text-muted-foreground hover:border-gold/40")}>{o.label}</button>
       ))}
     </div>
   </Field>
 );
 
 const UploadModal = ({ kind, onClose, onSubmit }: { kind: UploadKind; onClose: () => void; onSubmit: () => void }) => {
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [category, setCategory] = useState<ContentCategory>("SERMON");
+  const [tags, setTags] = useState("");
+  const [mediaFile, setMediaFile] = useState<File | null>(null);
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+  const [isPremium, setIsPremium] = useState(false);
+  const [isPublished, setIsPublished] = useState(true);
+  const createContent = useCreateOwnContent();
+  const updateContent = useUpdateOwnContent();
+  const presignUpload = usePresignUpload();
+  const confirmUpload = useConfirmUpload();
+
   if (!kind) return null;
   const titles: Record<Exclude<UploadKind, null>, string> = {
     audio: "Upload Audio",
     video: "Upload Video",
     live: "Create Live Event",
   };
+  const isBusy = createContent.isPending || updateContent.isPending || presignUpload.isPending || confirmUpload.isPending;
+  const contentType: ContentType = kind === "video" ? "VIDEO" : "AUDIO";
+  const mediaFolder = kind === "video" ? "videos" : "audio";
+  const mediaAccept = kind === "video" ? "video/mp4,video/webm,video/quicktime" : "audio/mpeg,audio/mp4,audio/wav,audio/ogg";
+
+  const submitContent = async (publish: boolean) => {
+    if (kind === "live") {
+      toast({
+        title: "Live events are not wired yet",
+        description: "Creator live-event endpoints are still tracked as backend work.",
+      });
+      return;
+    }
+
+    if (!title.trim()) {
+      toast({ title: "Title is required", variant: "destructive" });
+      return;
+    }
+
+    if (publish && !mediaFile) {
+      toast({ title: "Choose a media file before publishing", variant: "destructive" });
+      return;
+    }
+
+    try {
+      let thumbnailUrl: string | undefined;
+
+      if (thumbnailFile) {
+        const thumbnail = await presignUpload.mutateAsync({
+          fileName: thumbnailFile.name,
+          contentType: thumbnailFile.type,
+          fileSize: thumbnailFile.size,
+          folder: "thumbnails",
+        });
+        await uploadFileToPresignedUrl(thumbnailFile, thumbnail.uploadUrl);
+        thumbnailUrl = thumbnail.publicUrl;
+      }
+
+      const created = await createContent.mutateAsync({
+        title: title.trim(),
+        description: description.trim() || undefined,
+        type: contentType,
+        category,
+        thumbnailUrl,
+        isPremium,
+        isPublished: false,
+        tags: splitTags(tags),
+      });
+
+      if (mediaFile) {
+        const media = await presignUpload.mutateAsync({
+          fileName: mediaFile.name,
+          contentType: mediaFile.type,
+          fileSize: mediaFile.size,
+          folder: mediaFolder,
+        });
+        await uploadFileToPresignedUrl(mediaFile, media.uploadUrl);
+        await confirmUpload.mutateAsync({ key: media.key, contentId: created.id });
+      }
+
+      if (publish) {
+        await updateContent.mutateAsync({ contentId: created.id, input: { isPublished: true } });
+      }
+
+      onSubmit();
+    } catch (error) {
+      toast({
+        title: "Upload failed",
+        description: error instanceof Error ? error.message : "Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-background/80 backdrop-blur-xl p-4 animate-fade-in">
       <div className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-3xl bg-card-gradient ring-1 ring-gold/30 p-6 md:p-10 shadow-glow">
@@ -587,30 +832,38 @@ const UploadModal = ({ kind, onClose, onSubmit }: { kind: UploadKind; onClose: (
 
         {kind === "audio" && (
           <div className="mt-8 grid gap-5 md:grid-cols-2">
-            <div className="md:col-span-2"><Field label="Audio file" required><FileDrop label="Drop your audio or click to browse · MP3, WAV, AAC" icon={MusicIcon} tall /></Field></div>
-            <Field label="Cover art" required><FileDrop label="Upload cover art · 1:1 recommended" icon={ImageIcon} /></Field>
-            <Field label="Title" required><input className={inputCls} placeholder="Encountering Truth" /></Field>
-            <div className="md:col-span-2"><Field label="Description"><textarea rows={3} className={cn(inputCls, "resize-none")} placeholder="What is this audio about?" /></Field></div>
-            <Field label="Category" required><input className={inputCls} placeholder="Message · Music · Podcast · Devotional" /></Field>
-            <Field label="Tags"><input className={inputCls} placeholder="worship, faith, prayer" /></Field>
+            <div className="md:col-span-2"><Field label="Audio file" required><FileDrop label="Drop your audio or click to browse - MP3, WAV, AAC" icon={MusicIcon} tall accept={mediaAccept} file={mediaFile} onFile={setMediaFile} /></Field></div>
+            <Field label="Cover art"><FileDrop label="Upload cover art - 1:1 recommended" icon={ImageIcon} accept="image/jpeg,image/png,image/webp" file={thumbnailFile} onFile={setThumbnailFile} /></Field>
+            <Field label="Title" required><input className={inputCls} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Encountering Truth" /></Field>
+            <div className="md:col-span-2"><Field label="Description"><textarea rows={3} className={cn(inputCls, "resize-none")} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What is this audio about?" /></Field></div>
+            <Field label="Category" required>
+              <select className={inputCls} value={category} onChange={(e) => setCategory(e.target.value as ContentCategory)}>
+                {categoryOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+              </select>
+            </Field>
+            <Field label="Tags"><input className={inputCls} value={tags} onChange={(e) => setTags(e.target.value)} placeholder="worship, faith, prayer" /></Field>
             <Field label="Language" required><input className={inputCls} placeholder="English" /></Field>
-            <div className="md:col-span-2"><VisibilityField /></div>
-            <div className="md:col-span-2"><ReleaseField /></div>
+            <div className="md:col-span-2"><VisibilityField isPremium={isPremium} onChange={setIsPremium} /></div>
+            <div className="md:col-span-2"><ReleaseField isPublished={isPublished} onChange={setIsPublished} /></div>
           </div>
         )}
 
         {kind === "video" && (
           <div className="mt-8 grid gap-5 md:grid-cols-2">
-            <div className="md:col-span-2"><Field label="Video file" required><FileDrop label="Drop your video or click to browse · MP4, MOV" icon={Film} tall /></Field></div>
-            <Field label="Thumbnail" required><FileDrop label="Upload thumbnail · 16:9" icon={ImageIcon} /></Field>
+            <div className="md:col-span-2"><Field label="Video file" required><FileDrop label="Drop your video or click to browse - MP4, MOV" icon={Film} tall accept={mediaAccept} file={mediaFile} onFile={setMediaFile} /></Field></div>
+            <Field label="Thumbnail"><FileDrop label="Upload thumbnail - 16:9" icon={ImageIcon} accept="image/jpeg,image/png,image/webp" file={thumbnailFile} onFile={setThumbnailFile} /></Field>
             <Field label="Trailer (optional)"><FileDrop label="Upload short trailer" icon={Film} /></Field>
-            <Field label="Title" required><input className={inputCls} placeholder="The Narrow Way" /></Field>
-            <Field label="Category" required><input className={inputCls} placeholder="Film · Music Video · Podcast · Skit" /></Field>
-            <div className="md:col-span-2"><Field label="Description"><textarea rows={3} className={cn(inputCls, "resize-none")} placeholder="What is this video about?" /></Field></div>
-            <Field label="Tags"><input className={inputCls} placeholder="kingdom, story, film" /></Field>
+            <Field label="Title" required><input className={inputCls} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="The Narrow Way" /></Field>
+            <Field label="Category" required>
+              <select className={inputCls} value={category} onChange={(e) => setCategory(e.target.value as ContentCategory)}>
+                {categoryOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+              </select>
+            </Field>
+            <div className="md:col-span-2"><Field label="Description"><textarea rows={3} className={cn(inputCls, "resize-none")} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What is this video about?" /></Field></div>
+            <Field label="Tags"><input className={inputCls} value={tags} onChange={(e) => setTags(e.target.value)} placeholder="kingdom, story, film" /></Field>
             <Field label="Language" required><input className={inputCls} placeholder="English" /></Field>
-            <div className="md:col-span-2"><VisibilityField /></div>
-            <div className="md:col-span-2"><ReleaseField /></div>
+            <div className="md:col-span-2"><VisibilityField isPremium={isPremium} onChange={setIsPremium} /></div>
+            <div className="md:col-span-2"><ReleaseField isPublished={isPublished} onChange={setIsPublished} /></div>
           </div>
         )}
 
@@ -636,18 +889,18 @@ const UploadModal = ({ kind, onClose, onSubmit }: { kind: UploadKind; onClose: (
                 </span>
               </label>
             </div>
-            <div className="md:col-span-2"><VisibilityField /></div>
+            <div className="md:col-span-2"><VisibilityField isPremium={isPremium} onChange={setIsPremium} /></div>
           </div>
         )}
 
         <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-6">
           <button onClick={onClose} className="rounded-full px-5 py-2.5 text-sm text-muted-foreground hover:text-foreground">Cancel</button>
           <div className="flex gap-3">
-            <button onClick={onSubmit} className="inline-flex items-center gap-2 rounded-full border border-gold/40 px-5 py-2.5 text-sm text-gold hover:bg-gold/10">
-              Save Draft
+            <button disabled={isBusy} onClick={() => submitContent(false)} className="inline-flex items-center gap-2 rounded-full border border-gold/40 px-5 py-2.5 text-sm text-gold hover:bg-gold/10 disabled:opacity-50">
+              {isBusy ? "Working..." : "Save Draft"}
             </button>
-            <button onClick={onSubmit} className="inline-flex items-center gap-2 rounded-full bg-red-gradient px-6 py-2.5 text-sm font-medium text-primary-foreground shadow-red-glow">
-              {kind === "live" ? <><Calendar className="h-4 w-4" /> Schedule Event</> : <><Sparkles className="h-4 w-4" /> Publish</>}
+            <button disabled={isBusy} onClick={() => submitContent(isPublished)} className="inline-flex items-center gap-2 rounded-full bg-red-gradient px-6 py-2.5 text-sm font-medium text-primary-foreground shadow-red-glow disabled:opacity-50">
+              {kind === "live" ? <><Calendar className="h-4 w-4" /> Schedule Event</> : <><Sparkles className="h-4 w-4" /> {isPublished ? "Publish" : "Save Draft"}</>}
             </button>
           </div>
         </div>
@@ -682,22 +935,29 @@ export const CreatorStudio = () => {
   const [section, setSection] = useState<Section>("overview");
   const [upload, setUpload] = useState<UploadKind>(null);
   const [success, setSuccess] = useState(false);
+  const ownContentQuery = useOwnCreatorContent({ limit: 100 });
+  const studioItems = useMemo(
+    () => (ownContentQuery.data ?? []).map(toStudioContentItem),
+    [ownContentQuery.data],
+  );
+  const audioItemsForStudio = studioItems.filter((item) => item.type !== "VIDEO");
+  const videoItemsForStudio = studioItems.filter((item) => item.type === "VIDEO");
 
   const openUpload = (k: UploadKind) => setUpload(k);
   const finishUpload = () => { setUpload(null); setSuccess(true); };
 
   const body = useMemo(() => {
     switch (section) {
-      case "overview": return <Overview goto={setSection} openUpload={openUpload} />;
+      case "overview": return <Overview goto={setSection} openUpload={openUpload} items={studioItems} />;
       case "upload": return <UploadLanding openUpload={openUpload} />;
-      case "audio": return <AudioLibrary openUpload={openUpload} />;
-      case "video": return <VideoLibrary openUpload={openUpload} />;
+      case "audio": return <AudioLibrary openUpload={openUpload} items={audioItemsForStudio} />;
+      case "video": return <VideoLibrary openUpload={openUpload} items={videoItemsForStudio} />;
       case "live": return <LiveManager openUpload={openUpload} />;
       case "analytics": return <Analytics />;
       case "profile": return <CreatorProfileView />;
       case "settings": return <CreatorSettings />;
     }
-  }, [section]);
+  }, [audioItemsForStudio, section, studioItems, videoItemsForStudio]);
 
   return (
     <div className="grid gap-8 lg:grid-cols-[240px_1fr]">

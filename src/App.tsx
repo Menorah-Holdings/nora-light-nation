@@ -1,4 +1,4 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+﻿import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
@@ -9,8 +9,10 @@ import Auth from "./pages/Auth.tsx";
 import Welcome from "./pages/Welcome.tsx";
 import Partner from "./pages/Partner.tsx";
 import ForgotPassword from "./pages/ForgotPassword.tsx";
+import ResetPassword from "./pages/ResetPassword.tsx";
 import Plans from "./pages/Plans.tsx";
 import { AppLayout } from "./components/AppLayout.tsx";
+import RequireAuth from "./components/RequireAuth.tsx";
 import Discover from "./pages/app/Discover.tsx";
 import Listen from "./pages/app/Listen.tsx";
 import Watch from "./pages/app/Watch.tsx";
@@ -34,32 +36,35 @@ const App = () => (
       <Sonner />
       <UserProvider>
         <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/auth" element={<Auth />} />
-          <Route path="/welcome" element={<Welcome />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/plans" element={<Plans />} />
-          <Route path="/subscription" element={<Plans />} />
-          <Route path="/partner" element={<Partner />} />
-          <Route path="/app" element={<AppLayout />}>
-            <Route index element={<Discover />} />
-            <Route path="listen" element={<Listen />} />
-            <Route path="watch" element={<Watch />} />
-            <Route path="live" element={<Live />} />
-            <Route path="devotionals" element={<Devotionals />} />
-            <Route path="creators" element={<Creators />} />
-            <Route path="creators/:id" element={<CreatorProfile />} />
-            <Route path="library" element={<Library />} />
-            <Route path="content/:id" element={<ContentDetail />} />
-            <Route path="admin" element={<Admin />} />
-            <Route path="noraplus-admin" element={<NoraPlusAdmin />} />
-            <Route path="settings" element={<Settings />} />
-          </Route>
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/welcome" element={<Welcome />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/plans" element={<Plans />} />
+            <Route path="/subscription" element={<Plans />} />
+            <Route path="/partner" element={<Partner />} />
+            <Route element={<RequireAuth />}>
+              <Route path="/app" element={<AppLayout />}>
+                <Route index element={<Discover />} />
+                <Route path="listen" element={<Listen />} />
+                <Route path="watch" element={<Watch />} />
+                <Route path="live" element={<Live />} />
+                <Route path="devotionals" element={<Devotionals />} />
+                <Route path="creators" element={<Creators />} />
+                <Route path="creators/:id" element={<CreatorProfile />} />
+                <Route path="library" element={<Library />} />
+                <Route path="content/:id" element={<ContentDetail />} />
+                <Route path="admin" element={<Admin />} />
+                <Route path="noraplus-admin" element={<NoraPlusAdmin />} />
+                <Route path="settings" element={<Settings />} />
+              </Route>
+            </Route>
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
       </UserProvider>
     </TooltipProvider>
   </QueryClientProvider>

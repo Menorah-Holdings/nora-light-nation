@@ -22,6 +22,7 @@ export const queryKeys = {
     detail: (id: string) => [...queryKeys.creators.all, "detail", id] as const,
     content: (id: string, query?: ListContentQuery) =>
       [...queryKeys.creators.all, "content", id, query ?? {}] as const,
+    myApplication: () => [...queryKeys.creators.all, "me", "application"] as const,
     ownContent: (query?: ListContentQuery) =>
       [...queryKeys.creators.all, "me", "content", query ?? {}] as const,
   },

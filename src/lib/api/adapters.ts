@@ -1,4 +1,4 @@
-﻿import { images, type ContentItem, type ContentType as UiContentType } from "@/lib/mockData";
+import { images, type ContentItem, type ContentType as UiContentType } from "@/lib/mockData";
 import type { ApiContent, ApiCreator, ApiLiveEvent, ContentCategory, ContentType } from "./types";
 
 export interface UiCreator {
@@ -17,6 +17,7 @@ export interface UiLiveEvent {
   id: string;
   title: string;
   host: string;
+  hostId?: string;
   date: string;
   time: string;
   access: "Free" | "Paid";
@@ -28,7 +29,7 @@ export interface UiLiveEvent {
 }
 
 export function adaptContent(item: ApiContent): ContentItem {
-  const uiType = mapContentType(item.type, item.category);
+  const uiType = mapContentType(item.type, item.category, item.tags);
 
   return {
     id: item.id,
@@ -40,7 +41,7 @@ export function adaptContent(item: ApiContent): ContentItem {
     duration: formatDuration(item.durationSeconds),
     description: item.description ?? "",
     image: item.thumbnailUrl || fallbackContentImage(uiType, item.category),
-    tag: item.isFeatured ? "Featured" : item.isPremium ? "Premium" : undefined,
+    tag: item.isFeatured ? "Featured" : item.isPremium ? "Premium" : primaryDisplayTag(item.tags),
     date: item.createdAt,
   };
 }
@@ -66,8 +67,9 @@ export function adaptLiveEvent(event: ApiLiveEvent): UiLiveEvent {
     id: event.id,
     title: event.title,
     host: event.creator?.displayName ?? "NoraPlus",
+    hostId: event.creator?.id,
     date: formatDate(scheduled),
-    time: event.status === "LIVE" ? "Streaming" : formatTime(scheduled),
+    time: event.status === "LIVE" ? "Streaming" : event.status === "ENDED" ? "Replay" : formatTime(scheduled),
     access: event.isPremium ? "Paid" : "Free",
     status: mapLiveStatus(event.status),
     image: event.thumbnailUrl || images.event,
@@ -106,25 +108,44 @@ export function formatCompactNumber(value?: number | null): string {
   return String(count);
 }
 
+export function contentTypeLabel(type: UiContentType): string {
+  const labels: Record<UiContentType, string> = {
+    message: "Message",
+    music: "Music",
+    podcast: "Podcast",
+    devotional: "Devotional",
+    movie: "Movie",
+    skit: "Skit",
+    "podcast-video": "Podcast Video",
+    "music-video": "Music Video",
+    event: "Live Event",
+  };
+
+  return labels[type];
+}
+
 function mapContentMedium(type: ContentType): ContentItem["medium"] {
   return type === "VIDEO" ? "video" : "audio";
 }
 
-function mapContentType(type: ContentType, category: ContentCategory): UiContentType {
+function mapContentType(type: ContentType, category: ContentCategory, tags: string[] = []): UiContentType {
+  const normalizedTags = tags.map((tag) => tag.toLowerCase());
+  const hasTag = (...needles: string[]) => normalizedTags.some((tag) => needles.some((needle) => tag.includes(needle)));
+
   if (type === "DEVOTIONAL") return "devotional";
   if (type === "PODCAST") return "podcast";
 
   if (type === "VIDEO") {
-    if (category === "FILM") return "movie";
-    if (category === "MUSIC" || category === "WORSHIP") return "music-video";
-    if (category === "PODCAST") return "podcast-video";
-    if (category === "OTHER") return "skit";
+    if (category === "FILM" || hasTag("film", "movie")) return "movie";
+    if (hasTag("skit", "short", "comedy")) return "skit";
+    if (category === "MUSIC" || category === "WORSHIP" || hasTag("music", "worship")) return "music-video";
+    if (category === "PODCAST" || hasTag("podcast", "conversation")) return "podcast-video";
     return "message";
   }
 
-  if (category === "MUSIC" || category === "WORSHIP") return "music";
-  if (category === "PODCAST") return "podcast";
-  if (category === "DEVOTIONAL") return "devotional";
+  if (category === "MUSIC" || category === "WORSHIP" || hasTag("music", "worship")) return "music";
+  if (category === "PODCAST" || hasTag("podcast", "conversation")) return "podcast";
+  if (category === "DEVOTIONAL" || hasTag("devotional", "daily")) return "devotional";
   return "message";
 }
 
@@ -135,6 +156,14 @@ function fallbackContentImage(type: UiContentType, category: ContentCategory): s
   if (type === "music" || type === "music-video" || category === "WORSHIP") return images.music;
   if (type === "devotional") return images.devotional;
   return images.message;
+}
+
+function primaryDisplayTag(tags?: string[]): string | undefined {
+  const tag = tags?.find((value) => value.trim().length > 0);
+  if (!tag) return undefined;
+
+  const normalized = tag.trim().replace(/[-_]+/g, " ");
+  return normalized.charAt(0).toUpperCase() + normalized.slice(1);
 }
 
 function mapLiveStatus(status: ApiLiveEvent["status"]): UiLiveEvent["status"] {

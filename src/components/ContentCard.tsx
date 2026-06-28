@@ -1,15 +1,13 @@
-import { Bookmark, Play } from "lucide-react";
+import { Play } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { ContentItem } from "@/lib/mockData";
+import { contentTypeLabel } from "@/lib/api/adapters";
+import { SaveToLibraryButton } from "./SaveToLibraryButton";
 import { cn } from "@/lib/utils";
-
-const typeLabel: Record<string, string> = {
-  message: "Message", music: "Music", podcast: "Podcast", devotional: "Devotional",
-  movie: "Movie", skit: "Skit", "podcast-video": "Podcast Video", "music-video": "Music Video", event: "Live Event",
-};
 
 export const ContentCard = ({ item, size = "md" }: { item: ContentItem; size?: "sm" | "md" | "lg" }) => {
   const w = { sm: "w-44", md: "w-56", lg: "w-72" }[size];
+
   return (
     <Link
       to={`/app/content/${item.id}`}
@@ -25,14 +23,15 @@ export const ContentCard = ({ item, size = "md" }: { item: ContentItem; size?: "
             {item.tag}
           </span>
         )}
-        <button className="absolute top-3 right-3 inline-flex h-8 w-8 items-center justify-center rounded-full bg-background/70 backdrop-blur text-foreground opacity-0 transition-opacity group-hover:opacity-100">
-          <Bookmark className="h-4 w-4" />
-        </button>
-        <button className="absolute bottom-14 right-3 inline-flex h-11 w-11 items-center justify-center rounded-full bg-red-gradient text-primary-foreground shadow-red-glow opacity-0 translate-y-2 transition-all duration-300 group-hover:opacity-100 group-hover:translate-y-0">
+        <SaveToLibraryButton
+          contentId={item.id}
+          className="absolute top-3 right-3 h-8 w-8 bg-background/70 backdrop-blur text-foreground opacity-0 transition-opacity group-hover:opacity-100"
+        />
+        <button type="button" className="absolute bottom-14 right-3 inline-flex h-11 w-11 items-center justify-center rounded-full bg-red-gradient text-primary-foreground shadow-red-glow opacity-0 translate-y-2 transition-all duration-300 group-hover:opacity-100 group-hover:translate-y-0">
           <Play className="h-5 w-5 fill-current" />
         </button>
         <div className="absolute bottom-0 left-0 right-0 p-4">
-          <p className="text-[10px] uppercase tracking-widest text-gold/80">{typeLabel[item.type]} · {item.duration}</p>
+          <p className="text-[10px] uppercase tracking-widest text-gold/80">{contentTypeLabel(item.type)} - {item.duration}</p>
           <h3 className="mt-1 line-clamp-2 font-display text-base leading-snug">{item.title}</h3>
           <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">{item.creator}</p>
         </div>
@@ -40,3 +39,4 @@ export const ContentCard = ({ item, size = "md" }: { item: ContentItem; size?: "
     </Link>
   );
 };
+

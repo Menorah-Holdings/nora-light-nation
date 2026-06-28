@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
-import { useUser, CreatorStatus, MOCK_USERS } from "@/lib/user";
+import { useUser, CreatorStatus } from "@/lib/user";
 import { CreatorStatusBadge } from "@/components/CreatorStatusBadge";
 
 type TabId = "profile" | "account" | "downloads" | "language" | "notifications" | "privacy" | "help";
@@ -397,7 +397,7 @@ const LanguageRegionSettings = () => {
 
 
 const ProfileSettings = () => {
-  const { user, users, setActiveUserId, setCreatorStatus } = useUser();
+  const { user, users, isPrototypeUser, setActiveUserId, setCreatorStatus } = useUser();
   const statuses: CreatorStatus[] = ["Not Applied", "Under Review", "Approved", "Rejected"];
 
   return (
@@ -421,52 +421,54 @@ const ProfileSettings = () => {
               <p className="font-display text-2xl truncate">{user.name}</p>
             </div>
             <div className="mt-2"><CreatorStatusBadge status={user.creator_status} /></div>
-            <p className="mt-3 text-xs text-muted-foreground">@{user.handle} · {user.email}</p>
+            <p className="mt-3 text-xs text-muted-foreground">@{user.handle} - {user.email}</p>
           </div>
         </div>
       </div>
 
-      <div
-        className="relative overflow-hidden rounded-2xl border border-gold/20 p-5 sm:p-6 shadow-elegant"
-        style={{ background: "linear-gradient(160deg, hsl(350 30% 11%), hsl(350 22% 7%))" }}
-      >
-        <div className="absolute inset-0 pointer-events-none glow-radial opacity-30" />
-        <div className="relative space-y-5">
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-gold" />
-            <h3 className="font-display text-sm text-foreground">Prototype Controls</h3>
+      {isPrototypeUser && (
+        <div
+          className="relative overflow-hidden rounded-2xl border border-gold/20 p-5 sm:p-6 shadow-elegant"
+          style={{ background: "linear-gradient(160deg, hsl(350 30% 11%), hsl(350 22% 7%))" }}
+        >
+          <div className="absolute inset-0 pointer-events-none glow-radial opacity-30" />
+          <div className="relative space-y-5">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-gold" />
+              <h3 className="font-display text-sm text-foreground">Prototype Controls</h3>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Switch between mock users to preview each creator state across the app.
+            </p>
+
+            <SettingRow title="Active Mock User" helper="Each user has its own creator_status.">
+              <Select value={user.id} onValueChange={setActiveUserId}>
+                <SelectTrigger className="w-[240px] border-border bg-secondary/60 focus:ring-1 focus:ring-gold">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {users.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </SettingRow>
+
+            <SettingRow title="Creator Status" helper="Override creator_status for the active user.">
+              <Select value={user.creator_status} onValueChange={(v) => setCreatorStatus(v as CreatorStatus)}>
+                <SelectTrigger className="w-[240px] border-border bg-secondary/60 focus:ring-1 focus:ring-gold">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {statuses.map((s) => (
+                    <SelectItem key={s} value={s}>{s}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </SettingRow>
           </div>
-          <p className="text-xs text-muted-foreground">
-            Switch between mock users to preview each creator state across the app.
-          </p>
-
-          <SettingRow title="Active Mock User" helper="Each user has its own creator_status.">
-            <Select value={user.id} onValueChange={setActiveUserId}>
-              <SelectTrigger className="w-[240px] border-border bg-secondary/60 focus:ring-1 focus:ring-gold">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {users.map((u) => (
-                  <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </SettingRow>
-
-          <SettingRow title="Creator Status" helper="Override creator_status for the active user.">
-            <Select value={user.creator_status} onValueChange={(v) => setCreatorStatus(v as CreatorStatus)}>
-              <SelectTrigger className="w-[240px] border-border bg-secondary/60 focus:ring-1 focus:ring-gold">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {statuses.map((s) => (
-                  <SelectItem key={s} value={s}>{s}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </SettingRow>
         </div>
-      </div>
+      )}
     </div>
   );
 };
@@ -543,3 +545,5 @@ const Settings = () => {
 };
 
 export default Settings;
+
+
