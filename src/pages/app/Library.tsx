@@ -1,13 +1,18 @@
 import { useState } from "react";
-import { content, creators } from "@/lib/mockData";
 import { ContentCard } from "@/components/ContentCard";
 import { cn } from "@/lib/utils";
-import { Link } from "react-router-dom";
+import { adaptContent } from "@/lib/api/adapters";
+import { useLibrary } from "@/lib/api/hooks/useLibrary";
 
 const tabs = ["Saved", "Continue", "Playlists", "Recently played", "Following"] as const;
 
 const Library = () => {
   const [tab, setTab] = useState<(typeof tabs)[number]>("Saved");
+  const libraryQuery = useLibrary();
+  const savedItems = (libraryQuery.data?.saved ?? []).map((entry) => adaptContent(entry.content));
+  const continueItems = (libraryQuery.data?.inProgress ?? [])
+    .filter((entry) => entry.content)
+    .map((entry) => adaptContent(entry.content!));
 
   return (
     <div className="space-y-8">
@@ -16,50 +21,68 @@ const Library = () => {
         <h1 className="mt-2 font-display text-4xl md:text-5xl">Library</h1>
       </div>
 
+      {libraryQuery.isError && (
+        <div className="rounded-2xl border border-gold/30 bg-card-gradient p-4 text-sm text-muted-foreground">
+          Your library could not refresh. Try again in a moment.
+        </div>
+      )}
+
       <div className="flex flex-wrap gap-1 border-y border-border py-4">
-        {tabs.map(t => (
-          <button key={t} onClick={() => setTab(t)} className={cn(
+        {tabs.map((t) => (
+          <button key={t} type="button" onClick={() => setTab(t)} className={cn(
             "rounded-full px-4 py-1.5 text-sm transition-colors",
-            tab === t ? "bg-red-gradient text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+            tab === t ? "bg-red-gradient text-primary-foreground" : "text-muted-foreground hover:text-foreground",
           )}>{t}</button>
         ))}
       </div>
 
-      {tab === "Following" ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {creators.slice(0, 4).map(c => (
-            <Link key={c.id} to={`/app/creators/${c.id}`} className="flex items-center gap-4 rounded-2xl bg-card-gradient p-4 ring-1 ring-border/60 hover:ring-gold/40">
-              <img src={c.image} alt="" className="h-14 w-14 rounded-full object-cover" />
-              <div className="flex-1 min-w-0">
-                <p className="font-display truncate">{c.name}</p>
-                <p className="text-xs text-muted-foreground">{c.category}</p>
-              </div>
-            </Link>
-          ))}
-        </div>
+      {libraryQuery.isLoading ? (
+        <GridSkeleton />
+      ) : tab === "Saved" ? (
+        <ContentGrid items={savedItems} empty="Saved content will appear here." />
+      ) : tab === "Continue" ? (
+        <ContentGrid items={continueItems} empty="Start listening or watching, and progress will appear here." />
+      ) : tab === "Recently played" ? (
+        <ContentGrid items={continueItems} empty="Recently played history will appear here once playback history is available." />
       ) : tab === "Playlists" ? (
-        <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-          {[
-            { name: "Sunday Morning Worship", count: 24 },
-            { name: "Long Drive Devotionals", count: 18 },
-            { name: "Sermons that anchor me", count: 12 },
-          ].map(p => (
-            <div key={p.name} className="rounded-2xl bg-card-gradient p-6 ring-1 ring-border/60">
-              <div className="aspect-square rounded-xl bg-gold-gradient/20 mb-4 grid grid-cols-2 overflow-hidden">
-                {content.slice(0, 4).map((c, i) => <img key={i} src={c.image} className="h-full w-full object-cover" alt="" />)}
-              </div>
-              <p className="font-display text-lg">{p.name}</p>
-              <p className="text-xs text-muted-foreground mt-1">{p.count} tracks</p>
-            </div>
-          ))}
-        </div>
+        <DeferredPanel title="Playlists are not backed by the API yet" message="Saved content is real now. Persistent playlists remain tracked as backend gap LIB-003." />
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-          {content.slice(0, 8).map(i => <ContentCard key={i.id} item={i} />)}
-        </div>
+        <DeferredPanel title="Following list is not backed by the API yet" message="Creator follow actions are available, but the API does not yet expose a current user's following list." />
       )}
     </div>
   );
 };
+
+const ContentGrid = ({ items, empty }: { items: ReturnType<typeof adaptContent>[]; empty: string }) => {
+  if (items.length === 0) {
+    return (
+      <div className="rounded-2xl border border-dashed border-border p-12 text-center">
+        <p className="font-display text-xl">Nothing here yet</p>
+        <p className="mt-2 text-sm text-muted-foreground">{empty}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+      {items.map((item) => <ContentCard key={item.id} item={item} />)}
+    </div>
+  );
+};
+
+const DeferredPanel = ({ title, message }: { title: string; message: string }) => (
+  <div className="rounded-2xl border border-dashed border-border p-12 text-center">
+    <p className="font-display text-xl">{title}</p>
+    <p className="mt-2 text-sm text-muted-foreground">{message}</p>
+  </div>
+);
+
+const GridSkeleton = () => (
+  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+    {Array.from({ length: 8 }).map((_, index) => (
+      <div key={index} className="h-80 animate-pulse rounded-xl bg-secondary/50 ring-1 ring-border/60" />
+    ))}
+  </div>
+);
 
 export default Library;

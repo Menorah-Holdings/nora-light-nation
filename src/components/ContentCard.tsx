@@ -1,7 +1,8 @@
-import { Bookmark, Play } from "lucide-react";
+import { Play } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { ContentItem } from "@/lib/mockData";
 import { contentTypeLabel } from "@/lib/api/adapters";
+import { SaveToLibraryButton } from "./SaveToLibraryButton";
 import { cn } from "@/lib/utils";
 
 export const ContentCard = ({ item, size = "md" }: { item: ContentItem; size?: "sm" | "md" | "lg" }) => {
@@ -22,9 +23,10 @@ export const ContentCard = ({ item, size = "md" }: { item: ContentItem; size?: "
             {item.tag}
           </span>
         )}
-        <button type="button" className="absolute top-3 right-3 inline-flex h-8 w-8 items-center justify-center rounded-full bg-background/70 backdrop-blur text-foreground opacity-0 transition-opacity group-hover:opacity-100">
-          <Bookmark className="h-4 w-4" />
-        </button>
+        <SaveToLibraryButton
+          contentId={item.id}
+          className="absolute top-3 right-3 h-8 w-8 bg-background/70 backdrop-blur text-foreground opacity-0 transition-opacity group-hover:opacity-100"
+        />
         <button type="button" className="absolute bottom-14 right-3 inline-flex h-11 w-11 items-center justify-center rounded-full bg-red-gradient text-primary-foreground shadow-red-glow opacity-0 translate-y-2 transition-all duration-300 group-hover:opacity-100 group-hover:translate-y-0">
           <Play className="h-5 w-5 fill-current" />
         </button>
@@ -37,3 +39,4 @@ export const ContentCard = ({ item, size = "md" }: { item: ContentItem; size?: "
     </Link>
   );
 };
+

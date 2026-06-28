@@ -15,6 +15,7 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
+import { useLibrary, useSaveContent, useUnsaveContent } from "@/lib/api/hooks/useLibrary";
 import type { ContentItem } from "@/lib/mockData";
 
 interface Props {
@@ -44,7 +45,10 @@ export const NowPlayingMenu = ({ item, variant = "default", canDownload = false,
     try { return JSON.parse(localStorage.getItem(storageKey) || "{}"); } catch { return {}; }
   };
   const initial = readState();
-  const [saved, setSaved] = useState<boolean>(!!initial.saved);
+  const libraryQuery = useLibrary();
+  const saveMutation = useSaveContent();
+  const unsaveMutation = useUnsaveContent();
+  const saved = Boolean(libraryQuery.data?.saved.some((entry) => entry.contentId === item.id)) || (!libraryQuery.data && Boolean(initial.saved));
   const [downloaded, setDownloaded] = useState<boolean>(!!initial.downloaded);
   const [playlistOpen, setPlaylistOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
@@ -267,3 +271,4 @@ export const NowPlayingMenu = ({ item, variant = "default", canDownload = false,
 };
 
 export default NowPlayingMenu;
+

@@ -1,22 +1,37 @@
+import { useEffect, useRef, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { Play, Bookmark, Share2, Pause } from "lucide-react";
-import { useState } from "react";
+import { Play, Share2, Pause } from "lucide-react";
 import { ContentCard } from "@/components/ContentCard";
 import { NowPlayingMenu } from "@/components/NowPlayingMenu";
+import { SaveToLibraryButton } from "@/components/SaveToLibraryButton";
 import { adaptContent, contentTypeLabel } from "@/lib/api/adapters";
+import { ApiClientError } from "@/lib/api/client";
 import { useContentDetail, useContentList, useContentPlayback } from "@/lib/api/hooks/useContent";
+import { usePlaybackProgress, useUpdateProgress } from "@/lib/api/hooks/useLibrary";
+
+const PROGRESS_WRITE_INTERVAL_SECONDS = 15;
 
 const ContentDetail = () => {
   const { id } = useParams();
   const [playing, setPlaying] = useState(false);
+  const progressAppliedRef = useRef(false);
+  const lastProgressWriteRef = useRef(0);
   const detailQuery = useContentDetail(id);
   const relatedQuery = useContentList({ limit: 12 });
   const playbackQuery = useContentPlayback(id);
+  const progressQuery = usePlaybackProgress(id);
+  const updateProgress = useUpdateProgress();
   const item = detailQuery.data ? adaptContent(detailQuery.data) : null;
   const related = (relatedQuery.data ?? [])
     .filter((content) => content.id !== id)
     .map(adaptContent)
     .slice(0, 6);
+
+  useEffect(() => {
+    progressAppliedRef.current = false;
+    lastProgressWriteRef.current = 0;
+    setPlaying(false);
+  }, [id]);
 
   if (detailQuery.isLoading && !item) {
     return <DetailSkeleton />;
@@ -28,6 +43,26 @@ const ContentDetail = () => {
 
   const isVideo = item.medium === "video";
   const playbackUrl = playbackQuery.data?.url ?? null;
+  const premiumDenied = playbackQuery.error instanceof ApiClientError && playbackQuery.error.status === 403;
+
+  const applySavedProgress = (media: HTMLMediaElement) => {
+    if (progressAppliedRef.current) return;
+    const seconds = progressQuery.data?.progressSeconds ?? 0;
+    if (seconds > 0 && Number.isFinite(media.duration) && seconds < media.duration - 3) {
+      media.currentTime = seconds;
+    }
+    progressAppliedRef.current = true;
+  };
+
+  const writeProgress = (media: HTMLMediaElement, completed = false) => {
+    if (!id || !Number.isFinite(media.currentTime)) return;
+
+    const progressSeconds = Math.floor(media.currentTime);
+    if (!completed && progressSeconds - lastProgressWriteRef.current < PROGRESS_WRITE_INTERVAL_SECONDS) return;
+
+    lastProgressWriteRef.current = progressSeconds;
+    updateProgress.mutate({ contentId: id, progressSeconds, completed });
+  };
 
   return (
     <div className="space-y-12">
@@ -67,7 +102,7 @@ const ContentDetail = () => {
 
           <div className="flex flex-wrap gap-3">
             <button type="button" onClick={() => setPlaying(!playing)} className="inline-flex items-center gap-2 rounded-full bg-red-gradient px-5 py-2.5 text-sm font-medium text-primary-foreground shadow-red-glow"><Play className="h-4 w-4 fill-current" /> Play</button>
-            <button type="button" className="inline-flex items-center gap-2 rounded-full border border-border px-5 py-2.5 text-sm"><Bookmark className="h-4 w-4" /> Save</button>
+            <SaveToLibraryButton contentId={item.id} showLabel className="border border-border px-5 py-2.5 text-sm text-foreground" />
             <button type="button" className="inline-flex items-center gap-2 rounded-full border border-border px-5 py-2.5 text-sm"><Share2 className="h-4 w-4" /> Share</button>
           </div>
 
@@ -75,15 +110,40 @@ const ContentDetail = () => {
             <div className="rounded-2xl bg-card-gradient p-6 ring-1 ring-border/60">
               <p className="text-xs uppercase tracking-widest text-gold mb-3">Video player</p>
               {playbackUrl ? (
-                <video controls poster={item.image} className="aspect-video w-full rounded-lg bg-background/60" src={playbackUrl} />
+                <video
+                  controls
+                  poster={item.image}
+                  className="aspect-video w-full rounded-lg bg-background/60"
+                  src={playbackUrl}
+                  onLoadedMetadata={(event) => applySavedProgress(event.currentTarget)}
+                  onPlay={() => setPlaying(true)}
+                  onPause={(event) => {
+                    setPlaying(false);
+                    writeProgress(event.currentTarget);
+                  }}
+                  onTimeUpdate={(event) => writeProgress(event.currentTarget)}
+                  onEnded={(event) => writeProgress(event.currentTarget, true)}
+                />
               ) : (
-                <PlayerUnavailable isLoading={playbackQuery.isLoading} isError={playbackQuery.isError} />
+                <PlayerUnavailable isLoading={playbackQuery.isLoading} isError={playbackQuery.isError} premiumDenied={premiumDenied} />
               )}
             </div>
           ) : (
             <div className="rounded-2xl bg-card-gradient p-6 ring-1 ring-border/60">
               {playbackUrl ? (
-                <audio controls className="w-full" src={playbackUrl} />
+                <audio
+                  controls
+                  className="w-full"
+                  src={playbackUrl}
+                  onLoadedMetadata={(event) => applySavedProgress(event.currentTarget)}
+                  onPlay={() => setPlaying(true)}
+                  onPause={(event) => {
+                    setPlaying(false);
+                    writeProgress(event.currentTarget);
+                  }}
+                  onTimeUpdate={(event) => writeProgress(event.currentTarget)}
+                  onEnded={(event) => writeProgress(event.currentTarget, true)}
+                />
               ) : (
                 <>
                   <div className="flex items-center gap-3 text-xs text-muted-foreground mb-3">
@@ -100,7 +160,7 @@ const ContentDetail = () => {
                     </button>
                     <button type="button" className="text-muted-foreground">+15s</button>
                   </div>
-                  <PlayerUnavailable isLoading={playbackQuery.isLoading} isError={playbackQuery.isError} />
+                  <PlayerUnavailable isLoading={playbackQuery.isLoading} isError={playbackQuery.isError} premiumDenied={premiumDenied} />
                 </>
               )}
             </div>
@@ -135,10 +195,27 @@ const ContentDetail = () => {
   );
 };
 
-const PlayerUnavailable = ({ isLoading, isError }: { isLoading: boolean; isError: boolean }) => (
-  <p className="mt-4 text-center text-xs text-muted-foreground">
-    {isLoading ? "Preparing playback..." : isError ? "Playback is not available for this item right now." : "Playback media is not available yet."}
-  </p>
+const PlayerUnavailable = ({
+  isLoading,
+  isError,
+  premiumDenied,
+}: {
+  isLoading: boolean;
+  isError: boolean;
+  premiumDenied: boolean;
+}) => (
+  <div className="mt-4 text-center text-xs text-muted-foreground">
+    <p>
+      {isLoading
+        ? "Preparing playback..."
+        : premiumDenied
+          ? "A premium subscription is required to play this content."
+          : isError
+            ? "Playback is not available for this item right now."
+            : "Playback media is not available yet."}
+    </p>
+    {premiumDenied && <Link to="/plans" className="mt-3 inline-flex text-gold hover:underline">View plans</Link>}
+  </div>
 );
 
 const DetailSkeleton = () => (
