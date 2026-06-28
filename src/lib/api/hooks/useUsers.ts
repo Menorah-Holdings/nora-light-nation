@@ -1,12 +1,13 @@
-﻿import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "../client";
 import { queryKeys } from "../queryKeys";
 import type { ApiUser, UpdateCurrentUserInput } from "../types";
 
-export function useCurrentUser() {
+export function useCurrentUser(enabled = true) {
   return useQuery({
     queryKey: queryKeys.users.me(),
     queryFn: () => apiRequest<ApiUser>("/api/users/me"),
+    enabled,
     retry: false,
   });
 }
