@@ -935,7 +935,7 @@ export const CreatorStudio = () => {
   const [section, setSection] = useState<Section>("overview");
   const [upload, setUpload] = useState<UploadKind>(null);
   const [success, setSuccess] = useState(false);
-  const ownContentQuery = useOwnCreatorContent({ limit: 100 });
+  const ownContentQuery = useOwnCreatorContent({ limit: 50 });
   const studioItems = useMemo(
     () => (ownContentQuery.data ?? []).map(toStudioContentItem),
     [ownContentQuery.data],
