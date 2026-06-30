@@ -61,6 +61,7 @@ export interface ApiCreatorApplication {
   adminNotes?: string | null;
   submittedAt: string;
   reviewedAt?: string | null;
+  user?: { id: string; name: string | null; email: string } | null;
 }
 
 export interface ApiContent {

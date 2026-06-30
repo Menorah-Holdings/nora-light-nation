@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { Navigate } from "react-router-dom";
 import {
   LayoutDashboard, FileVideo, UserCog, Radio, Users as UsersIcon,
@@ -7,9 +7,19 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
-import { useUser, MOCK_USERS, creatorBadgeLabel } from "@/lib/user";
-import { CreatorStatusBadge } from "@/components/CreatorStatusBadge";
-import { content as mockContent, liveEvents } from "@/lib/mockData";
+import { useUser, MOCK_USERS } from "@/lib/user";
+import { content as mockContent } from "@/lib/mockData";
+import {
+  useAdminStats,
+  useAdminContent,
+  useDeleteAdminContent,
+  useAdminUsers,
+  useAdminApplications,
+  useReviewApplication,
+  useUpdateAdminUser,
+  useUpdateAdminLiveEvent,
+} from "@/lib/api/hooks/useAdmin";
+import { useLiveEvents } from "@/lib/api/hooks/useLive";
 
 type Section =
   | "dashboard" | "content" | "creators" | "live" | "users"
@@ -100,10 +110,14 @@ const RowAction = ({ icon: Icon, label, onClick, tone = "default" }: { icon: any
   </button>
 );
 
+const EmptyRow = ({ colSpan, message = "Loading…" }: { colSpan: number; message?: string }) => (
+  <tr><td colSpan={colSpan} className="px-5 py-8 text-center text-sm text-muted-foreground">{message}</td></tr>
+);
+
 /* ---------- Sections ---------- */
 
 const DashboardView = () => {
-  const pendingApps = MOCK_USERS.filter(u => u.creator_status === "Under Review");
+  const { data: stats } = useAdminStats();
   const activity = [
     { t: "Creator application", who: "Ada Okafor", time: "2m ago", tone: "gold" as const },
     { t: "Content published", who: "Sounds of Heaven · Anchored — Live Sessions", time: "18m ago", tone: "green" as const },
@@ -115,13 +129,13 @@ const DashboardView = () => {
     <div className="space-y-8">
       <SectionHeader title="Platform Dashboard" subtitle="A live snapshot of activity across the NoraPlus platform." />
       <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label="Total Users" value="48,210" sub="+412 this week" icon={UsersIcon} />
-        <Stat label="Total Creators" value="1,284" sub="+27 this week" icon={UserCog} />
-        <Stat label="Active Subscribers" value="12,940" sub="78% retention" icon={CreditCard} tone="red" />
+        <Stat label="Total Users" value={stats ? stats.users.total.toLocaleString() : "—"} sub="+412 this week" icon={UsersIcon} />
+        <Stat label="Total Creators" value={stats ? stats.creators.total.toLocaleString() : "—"} sub="+27 this week" icon={UserCog} />
+        <Stat label="Active Subscribers" value={stats ? stats.users.premium.toLocaleString() : "—"} sub="78% retention" icon={CreditCard} tone="red" />
         <Stat label="Revenue (MTD)" value="$184,250" sub="+12.4% MoM" icon={DollarSign} tone="gold" />
-        <Stat label="Live Events" value="6" sub="2 streaming now" icon={Radio} tone="red" />
-        <Stat label="Published Content" value="9,418" sub="audio · video · live" icon={FileVideo} />
-        <Stat label="Pending Applications" value={String(pendingApps.length)} sub="awaiting review" icon={UserCog} tone="gold" />
+        <Stat label="Live Events" value={stats ? String(stats.live.active) : "—"} sub="streaming now" icon={Radio} tone="red" />
+        <Stat label="Published Content" value={stats ? stats.content.published.toLocaleString() : "—"} sub="audio · video · live" icon={FileVideo} />
+        <Stat label="Pending Applications" value={stats ? String(stats.applications.pending) : "—"} sub="awaiting review" icon={UserCog} tone="gold" />
         <Stat label="Pending Content Reviews" value="14" sub="moderation queue" icon={ShieldAlert} tone="red" />
       </div>
       <Card>
@@ -156,12 +170,9 @@ const DashboardView = () => {
 
 const ContentView = () => {
   const [filter, setFilter] = useState<"all" | "audio" | "video" | "live">("all");
-  const items = useMemo(() => {
-    if (filter === "all") return mockContent;
-    if (filter === "live") return mockContent.filter(c => c.medium === "live");
-    return mockContent.filter(c => c.medium === filter);
-  }, [filter]);
-  const act = (label: string, title: string) => toast({ title: label, description: title });
+  const typeQuery = filter === "audio" ? { type: "AUDIO" } : filter === "video" ? { type: "VIDEO" } : undefined;
+  const { data: items = [], isLoading } = useAdminContent(typeQuery);
+  const deleteContent = useDeleteAdminContent();
 
   return (
     <div className="space-y-6">
@@ -193,24 +204,37 @@ const ContentView = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-border/60">
-              {items.map(c => (
+              {isLoading ? (
+                <EmptyRow colSpan={5} />
+              ) : items.length === 0 ? (
+                <EmptyRow colSpan={5} message="No content found." />
+              ) : items.map(c => (
                 <tr key={c.id} className="hover:bg-secondary/30">
                   <td className="px-5 py-3">
                     <div className="flex items-center gap-3">
-                      <img src={c.image} alt="" className="h-10 w-10 rounded-lg object-cover" />
+                      {c.thumbnailUrl && <img src={c.thumbnailUrl} alt="" className="h-10 w-10 rounded-lg object-cover" />}
                       <span className="font-medium">{c.title}</span>
                     </div>
                   </td>
-                  <td className="px-5 py-3 text-muted-foreground">{c.creator}</td>
+                  <td className="px-5 py-3 text-muted-foreground">{c.creator?.displayName ?? "—"}</td>
                   <td className="px-5 py-3"><Pill tone="muted">{c.type}</Pill></td>
-                  <td className="px-5 py-3"><Pill tone="green">Published</Pill></td>
+                  <td className="px-5 py-3">
+                    <Pill tone={c.isPublished ? "green" : "muted"}>{c.isPublished ? "Published" : "Draft"}</Pill>
+                  </td>
                   <td className="px-5 py-3">
                     <div className="flex justify-end gap-2">
-                      <RowAction icon={Eye} label="View" onClick={() => act("Viewing", c.title)} />
-                      <RowAction icon={Star} label="Feature" tone="gold" onClick={() => act("Featured", c.title)} />
-                      <RowAction icon={Check} label="Approve" onClick={() => act("Approved", c.title)} />
-                      <RowAction icon={X} label="Reject" tone="red" onClick={() => act("Rejected", c.title)} />
-                      <RowAction icon={Trash2} label="Delete" tone="red" onClick={() => act("Deleted", c.title)} />
+                      <RowAction icon={Eye} label="View" onClick={() => toast({ title: "Viewing", description: c.title })} />
+                      <RowAction icon={Star} label="Feature" tone="gold" onClick={() => toast({ title: "Featured", description: c.title })} />
+                      <RowAction
+                        icon={Trash2}
+                        label="Delete"
+                        tone="red"
+                        onClick={() =>
+                          deleteContent.mutate(c.id, {
+                            onSuccess: () => toast({ title: "Deleted", description: c.title }),
+                          })
+                        }
+                      />
                     </div>
                   </td>
                 </tr>
@@ -224,14 +248,20 @@ const ContentView = () => {
 };
 
 const CreatorsView = () => {
-  const { setCreatorStatus, setActiveUserId, user } = useUser();
-  const act = (id: string, label: string, status?: "Approved" | "Rejected") => {
-    if (status) {
-      setActiveUserId(id);
-      setTimeout(() => setCreatorStatus(status), 0);
-    }
-    toast({ title: label });
-  };
+  const { data: applications = [], isLoading } = useAdminApplications();
+  const reviewApp = useReviewApplication();
+
+  const approve = (id: string, name: string, ministryName: string) =>
+    reviewApp.mutate(
+      { id, input: { status: "APPROVED", displayName: ministryName } },
+      { onSuccess: () => toast({ title: `${name} approved` }) },
+    );
+  const decline = (id: string, name: string) =>
+    reviewApp.mutate(
+      { id, input: { status: "REJECTED" } },
+      { onSuccess: () => toast({ title: `${name} declined` }) },
+    );
+
   return (
     <div className="space-y-6">
       <SectionHeader title="Creator Management" subtitle="Review applications, approve creators, and manage verified status." />
@@ -242,35 +272,46 @@ const CreatorsView = () => {
             <thead className="bg-secondary/40 text-xs uppercase tracking-wider text-muted-foreground">
               <tr>
                 <th className="px-5 py-3 text-left">Name</th>
-                <th className="px-5 py-3 text-left">Handle</th>
+                <th className="px-5 py-3 text-left">Ministry</th>
                 <th className="px-5 py-3 text-left">Status</th>
                 <th className="px-5 py-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/60">
-              {MOCK_USERS.filter(u => u.platform_role === "user").map(u => (
-                <tr key={u.id} className="hover:bg-secondary/30">
-                  <td className="px-5 py-3">
-                    <div className="flex items-center gap-3">
-                      <div className="h-9 w-9 rounded-full bg-gold-gradient grid place-items-center text-xs font-semibold text-primary-foreground">{u.avatarInitial}</div>
-                      <div>
-                        <p className="font-medium">{u.name}{u.id === user.id && <span className="ml-2 text-xs text-gold">(active)</span>}</p>
-                        <p className="text-xs text-muted-foreground">{u.email}</p>
+              {isLoading ? (
+                <EmptyRow colSpan={4} />
+              ) : applications.length === 0 ? (
+                <EmptyRow colSpan={4} message="No applications found." />
+              ) : applications.map(app => {
+                const name = app.user?.name ?? app.ministryName;
+                const initial = (name[0] ?? "A").toUpperCase();
+                return (
+                  <tr key={app.id} className="hover:bg-secondary/30">
+                    <td className="px-5 py-3">
+                      <div className="flex items-center gap-3">
+                        <div className="h-9 w-9 rounded-full bg-gold-gradient grid place-items-center text-xs font-semibold text-primary-foreground">{initial}</div>
+                        <div>
+                          <p className="font-medium">{name}</p>
+                          <p className="text-xs text-muted-foreground">{app.user?.email ?? ""}</p>
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-5 py-3 text-muted-foreground">@{u.handle}</td>
-                  <td className="px-5 py-3"><CreatorStatusBadge status={u.creator_status} /></td>
-                  <td className="px-5 py-3">
-                    <div className="flex justify-end gap-2">
-                      <RowAction icon={Eye} label="View profile" onClick={() => act(u.id, `Viewing ${u.name}`)} />
-                      <RowAction icon={Check} label="Approve" tone="gold" onClick={() => act(u.id, `${u.name} approved`, "Approved")} />
-                      <RowAction icon={X} label="Decline" tone="red" onClick={() => act(u.id, `${u.name} declined`, "Rejected")} />
-                      <RowAction icon={Pause} label="Suspend" onClick={() => act(u.id, `${u.name} suspended`)} />
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td className="px-5 py-3 text-muted-foreground">{app.ministryName}</td>
+                    <td className="px-5 py-3">
+                      <Pill tone={app.status === "APPROVED" ? "green" : app.status === "REJECTED" ? "red" : "gold"}>
+                        {app.status}
+                      </Pill>
+                    </td>
+                    <td className="px-5 py-3">
+                      <div className="flex justify-end gap-2">
+                        <RowAction icon={Eye} label="View profile" onClick={() => toast({ title: `Viewing ${name}` })} />
+                        <RowAction icon={Check} label="Approve" tone="gold" onClick={() => approve(app.id, name, app.ministryName)} />
+                        <RowAction icon={X} label="Decline" tone="red" onClick={() => decline(app.id, name)} />
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -279,81 +320,134 @@ const CreatorsView = () => {
   );
 };
 
-const LiveView = () => (
-  <div className="space-y-6">
-    <SectionHeader title="Live Event Management" subtitle="Approve, monitor and moderate scheduled and active live events." />
-    <Toolbar placeholder="Search live events…" />
-    <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-      {liveEvents.map(e => (
-        <Card key={e.id} className="p-0 overflow-hidden">
-          <img src={e.image} alt="" className="h-40 w-full object-cover" />
-          <div className="p-5 space-y-3">
-            <div className="flex items-center justify-between">
-              <Pill tone={e.status === "live" ? "red" : e.status === "replay" ? "muted" : "gold"}>
-                {e.status === "live" ? "● Live now" : e.status === "replay" ? "Replay" : "Scheduled"}
-              </Pill>
-              <Pill tone={e.access === "Paid" ? "gold" : "muted"}>{e.access}</Pill>
-            </div>
-            <div>
-              <p className="font-display text-lg">{e.title}</p>
-              <p className="text-xs text-muted-foreground mt-1">{e.host} · {e.date} · {e.time}</p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <RowAction icon={Check} label="Approve" tone="gold" onClick={() => toast({ title: `${e.title} approved` })} />
-              <RowAction icon={Star} label="Feature" tone="gold" onClick={() => toast({ title: `${e.title} featured` })} />
-              <RowAction icon={Eye} label="Monitor" onClick={() => toast({ title: `Monitoring ${e.title}` })} />
-              <RowAction icon={X} label="End / Cancel" tone="red" onClick={() => toast({ title: `${e.title} ended` })} />
-            </div>
-          </div>
-        </Card>
-      ))}
-    </div>
-  </div>
-);
+const LiveView = () => {
+  const { data: events = [], isLoading } = useLiveEvents();
+  const updateEvent = useUpdateAdminLiveEvent();
 
-const UsersView = () => (
-  <div className="space-y-6">
-    <SectionHeader title="User Management" subtitle="Search, suspend, reactivate and manage listener accounts." />
-    <Toolbar placeholder="Search users by name, email or ID…" />
-    <Card className="overflow-hidden p-0">
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="bg-secondary/40 text-xs uppercase tracking-wider text-muted-foreground">
-            <tr>
-              <th className="px-5 py-3 text-left">User</th>
-              <th className="px-5 py-3 text-left">Email</th>
-              <th className="px-5 py-3 text-left">Creator Status</th>
-              <th className="px-5 py-3 text-left">Subscription</th>
-              <th className="px-5 py-3 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border/60">
-            {MOCK_USERS.map((u, i) => (
-              <tr key={u.id} className="hover:bg-secondary/30">
-                <td className="px-5 py-3">
-                  <div className="flex items-center gap-3">
-                    <div className="h-9 w-9 rounded-full bg-gold-gradient grid place-items-center text-xs font-semibold text-primary-foreground">{u.avatarInitial}</div>
-                    <span className="font-medium">{u.name}</span>
-                  </div>
-                </td>
-                <td className="px-5 py-3 text-muted-foreground">{u.email}</td>
-                <td className="px-5 py-3 text-muted-foreground">{creatorBadgeLabel(u.creator_status)}</td>
-                <td className="px-5 py-3"><Pill tone={i % 3 === 0 ? "gold" : i % 3 === 1 ? "muted" : "green"}>{["Premium", "Free", "Essential"][i % 3]}</Pill></td>
-                <td className="px-5 py-3">
-                  <div className="flex justify-end gap-2">
-                    <RowAction icon={Eye} label="View" onClick={() => toast({ title: `Viewing ${u.name}` })} />
-                    <RowAction icon={Pause} label="Suspend" tone="red" onClick={() => toast({ title: `${u.name} suspended` })} />
-                    <RowAction icon={Play} label="Reactivate" tone="gold" onClick={() => toast({ title: `${u.name} reactivated` })} />
-                  </div>
-                </td>
+  const statusTone = (s: string) =>
+    s === "LIVE" ? "red" : s === "ENDED" ? "muted" : "gold";
+  const statusLabel = (s: string) =>
+    s === "LIVE" ? "● Live now" : s === "ENDED" ? "Replay" : "Scheduled";
+
+  return (
+    <div className="space-y-6">
+      <SectionHeader title="Live Event Management" subtitle="Approve, monitor and moderate scheduled and active live events." />
+      <Toolbar placeholder="Search live events…" />
+      {isLoading ? (
+        <p className="py-8 text-center text-sm text-muted-foreground">Loading…</p>
+      ) : events.length === 0 ? (
+        <p className="py-8 text-center text-sm text-muted-foreground">No live events found.</p>
+      ) : (
+        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+          {events.map(e => (
+            <Card key={e.id} className="p-0 overflow-hidden">
+              {e.thumbnailUrl && <img src={e.thumbnailUrl} alt="" className="h-40 w-full object-cover" />}
+              <div className="p-5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <Pill tone={statusTone(e.status) as any}>{statusLabel(e.status)}</Pill>
+                  <Pill tone={e.isPremium ? "gold" : "muted"}>{e.isPremium ? "Paid" : "Free"}</Pill>
+                </div>
+                <div>
+                  <p className="font-display text-lg">{e.title}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {e.creator?.displayName ?? "—"} · {new Date(e.scheduledAt).toLocaleDateString()}
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <RowAction icon={Star} label="Feature" tone="gold" onClick={() => toast({ title: `${e.title} featured` })} />
+                  <RowAction icon={Eye} label="Monitor" onClick={() => toast({ title: `Monitoring ${e.title}` })} />
+                  <RowAction
+                    icon={X}
+                    label="End / Cancel"
+                    tone="red"
+                    onClick={() =>
+                      updateEvent.mutate(
+                        { id: e.id, input: { status: "ENDED" } },
+                        { onSuccess: () => toast({ title: `${e.title} ended` }) },
+                      )
+                    }
+                  />
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const UsersView = () => {
+  const { data: users = [], isLoading } = useAdminUsers();
+  const updateUser = useUpdateAdminUser();
+
+  const suspend = (id: string, name: string) =>
+    updateUser.mutate(
+      { id, input: { isActive: false } },
+      { onSuccess: () => toast({ title: `${name} suspended` }) },
+    );
+  const reactivate = (id: string, name: string) =>
+    updateUser.mutate(
+      { id, input: { isActive: true } },
+      { onSuccess: () => toast({ title: `${name} reactivated` }) },
+    );
+
+  return (
+    <div className="space-y-6">
+      <SectionHeader title="User Management" subtitle="Search, suspend, reactivate and manage listener accounts." />
+      <Toolbar placeholder="Search users by name, email or ID…" />
+      <Card className="overflow-hidden p-0">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-secondary/40 text-xs uppercase tracking-wider text-muted-foreground">
+              <tr>
+                <th className="px-5 py-3 text-left">User</th>
+                <th className="px-5 py-3 text-left">Email</th>
+                <th className="px-5 py-3 text-left">Role</th>
+                <th className="px-5 py-3 text-left">Subscription</th>
+                <th className="px-5 py-3 text-right">Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </Card>
-  </div>
-);
+            </thead>
+            <tbody className="divide-y divide-border/60">
+              {isLoading ? (
+                <EmptyRow colSpan={5} />
+              ) : users.length === 0 ? (
+                <EmptyRow colSpan={5} message="No users found." />
+              ) : users.map(u => {
+                const name = u.name ?? u.email;
+                const initial = (name[0] ?? "U").toUpperCase();
+                return (
+                  <tr key={u.id} className="hover:bg-secondary/30">
+                    <td className="px-5 py-3">
+                      <div className="flex items-center gap-3">
+                        <div className="h-9 w-9 rounded-full bg-gold-gradient grid place-items-center text-xs font-semibold text-primary-foreground">{initial}</div>
+                        <span className="font-medium">{name}</span>
+                      </div>
+                    </td>
+                    <td className="px-5 py-3 text-muted-foreground">{u.email}</td>
+                    <td className="px-5 py-3 text-muted-foreground capitalize">{u.role?.toLowerCase() ?? "user"}</td>
+                    <td className="px-5 py-3">
+                      <Pill tone={u.subscriptionTier === "PREMIUM" ? "gold" : "muted"}>
+                        {u.subscriptionTier ?? "FREE"}
+                      </Pill>
+                    </td>
+                    <td className="px-5 py-3">
+                      <div className="flex justify-end gap-2">
+                        <RowAction icon={Eye} label="View" onClick={() => toast({ title: `Viewing ${name}` })} />
+                        <RowAction icon={Pause} label="Suspend" tone="red" onClick={() => suspend(u.id, name)} />
+                        <RowAction icon={Play} label="Reactivate" tone="gold" onClick={() => reactivate(u.id, name)} />
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+    </div>
+  );
+};
 
 const SubscriptionsView = () => (
   <div className="space-y-6">
