@@ -21,6 +21,12 @@ import {
   useConfirmUpload,
   usePresignUpload,
 } from "@/lib/api/hooks/useUpload";
+import {
+  useCreateAdminLiveEvent,
+  useUpdateAdminLiveEvent,
+} from "@/lib/api/hooks/useAdmin";
+import { useLiveEvents } from "@/lib/api/hooks/useLive";
+import { useUpdateCurrentUser } from "@/lib/api/hooks/useUsers";
 import type { ApiContent, ContentCategory, ContentType } from "@/lib/api/types";
 
 type Section = "overview" | "upload" | "audio" | "video" | "live" | "analytics" | "profile" | "settings";
@@ -138,11 +144,13 @@ const videoItems = content.filter(c => c.medium === "video").slice(0, 5).map((c,
   category: ["Film", "Worship", "Podcast", "Teaching", "Skit"][i],
 }));
 
-const liveItems = [
-  { id: "le1", title: "Worship Night Lagos", banner: content[2].image, type: "Worship", date: "Jun 28, 2026 · 7:00 PM", status: "Scheduled" as const, regs: "1,204", viewers: "—" },
-  { id: "le2", title: "Sunday Service Live", banner: content[0].image, type: "Service", date: "Live now", status: "Live" as const, regs: "8,420", viewers: "12,894" },
-  { id: "le3", title: "Kingdom Conference Replay", banner: content[3].image, type: "Conference", date: "May 12, 2026", status: "Ended" as const, regs: "4,128", viewers: "9,401" },
-];
+function formatEventDate(scheduledAt: string, status: string) {
+  if (status === "LIVE") return "Live now";
+  const d = new Date(scheduledAt);
+  return Number.isNaN(d.getTime())
+    ? "—"
+    : new Intl.DateTimeFormat(undefined, { month: "short", day: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(d);
+}
 
 function toStudioContentItem(item: ApiContent): StudioContentItem {
   const adapted = adaptContent(item);
@@ -478,9 +486,29 @@ const VideoLibrary = ({ openUpload, items }: { openUpload: (k: UploadKind) => vo
 };
 
 const LiveManager = ({ openUpload }: { openUpload: (k: UploadKind) => void }) => {
-  if (liveItems.length === 0) {
+  const liveQuery = useLiveEvents({ limit: 50 });
+  const updateEvent = useUpdateAdminLiveEvent();
+  const events = liveQuery.data ?? [];
+
+  const goLive = (id: string, title: string) =>
+    updateEvent.mutate(
+      { id, input: { status: "LIVE" } },
+      { onSuccess: () => toast({ title: `${title} is now live` }) },
+    );
+  const endEvent = (id: string, title: string) =>
+    updateEvent.mutate(
+      { id, input: { status: "ENDED" } },
+      { onSuccess: () => toast({ title: `${title} ended` }) },
+    );
+
+  if (liveQuery.isLoading && events.length === 0) {
+    return <div className="h-44 animate-pulse rounded-2xl bg-secondary/50 ring-1 ring-border/60" />;
+  }
+
+  if (events.length === 0) {
     return <EmptyState icon={Radio} title="No live events scheduled." cta="Create Live Event" onCta={() => openUpload("live")} />;
   }
+
   return (
     <div className="space-y-6">
       <SectionHeader eyebrow="Manager" title="Live Events" subtitle="Schedule, stream and review your live experiences."
@@ -493,45 +521,55 @@ const LiveManager = ({ openUpload }: { openUpload: (k: UploadKind) => void }) =>
             <thead className="text-left text-xs uppercase tracking-wider text-muted-foreground bg-background/40">
               <tr>
                 <th className="px-6 py-3 font-normal">Event</th>
-                <th className="px-6 py-3 font-normal">Type</th>
                 <th className="px-6 py-3 font-normal">Date</th>
                 <th className="px-6 py-3 font-normal">Status</th>
-                <th className="px-6 py-3 font-normal">Registrations</th>
                 <th className="px-6 py-3 font-normal">Viewers</th>
                 <th className="px-6 py-3 text-right font-normal">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {liveItems.map(e => (
-                <tr key={e.id} className="border-t border-border/60 hover:bg-background/40">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <img src={e.banner} alt="" className="h-10 w-16 rounded object-cover" />
-                      <span className="font-medium">{e.title}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-muted-foreground">{e.type}</td>
-                  <td className="px-6 py-4 text-muted-foreground">{e.date}</td>
-                  <td className="px-6 py-4"><StatusBadge status={e.status} /></td>
-                  <td className="px-6 py-4 text-muted-foreground">{e.regs}</td>
-                  <td className="px-6 py-4 text-muted-foreground">{e.viewers}</td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center justify-end gap-1">
-                      {e.status === "Scheduled" && (
-                        <button title="Go Live" className="inline-flex items-center gap-1 rounded-full bg-red-gradient px-3 py-1 text-[11px] font-medium text-primary-foreground shadow-red-glow">
-                          <Radio className="h-3 w-3" /> Go Live
-                        </button>
-                      )}
-                      {e.status === "Live" && (
-                        <button title="End Event" className="inline-flex items-center gap-1 rounded-full border border-destructive/40 px-3 py-1 text-[11px] text-destructive hover:bg-destructive/10">
-                          End Event
-                        </button>
-                      )}
-                      <button title="More" className="h-8 w-8 grid place-items-center rounded-full hover:bg-secondary/60"><MoreHorizontal className="h-4 w-4 text-muted-foreground" /></button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+              {events.map(e => {
+                const displayStatus = e.status === "LIVE" ? "Live" : e.status === "ENDED" ? "Ended" : "Scheduled";
+                return (
+                  <tr key={e.id} className="border-t border-border/60 hover:bg-background/40">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        {e.thumbnailUrl
+                          ? <img src={e.thumbnailUrl} alt="" className="h-10 w-16 rounded object-cover" />
+                          : <div className="h-10 w-16 rounded bg-secondary/60 grid place-items-center"><Radio className="h-4 w-4 text-muted-foreground" /></div>
+                        }
+                        <span className="font-medium">{e.title}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-muted-foreground">{formatEventDate(e.scheduledAt, e.status)}</td>
+                    <td className="px-6 py-4"><StatusBadge status={displayStatus} /></td>
+                    <td className="px-6 py-4 text-muted-foreground">{e.viewerCount.toLocaleString()}</td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center justify-end gap-1">
+                        {displayStatus === "Scheduled" && (
+                          <button
+                            disabled={updateEvent.isPending}
+                            onClick={() => goLive(e.id, e.title)}
+                            className="inline-flex items-center gap-1 rounded-full bg-red-gradient px-3 py-1 text-[11px] font-medium text-primary-foreground shadow-red-glow disabled:opacity-50"
+                          >
+                            <Radio className="h-3 w-3" /> Go Live
+                          </button>
+                        )}
+                        {displayStatus === "Live" && (
+                          <button
+                            disabled={updateEvent.isPending}
+                            onClick={() => endEvent(e.id, e.title)}
+                            className="inline-flex items-center gap-1 rounded-full border border-destructive/40 px-3 py-1 text-[11px] text-destructive hover:bg-destructive/10 disabled:opacity-50"
+                          >
+                            End Event
+                          </button>
+                        )}
+                        <button title="More" className="h-8 w-8 grid place-items-center rounded-full hover:bg-secondary/60"><MoreHorizontal className="h-4 w-4 text-muted-foreground" /></button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -577,6 +615,25 @@ const Analytics = () => {
 
 const CreatorProfileView = () => {
   const { user } = useUser();
+  const [displayName, setDisplayName] = useState(user.name);
+  const [bio, setBio] = useState("");
+  const updateUser = useUpdateCurrentUser();
+
+  const save = () => {
+    updateUser.mutate(
+      { name: displayName.trim() || user.name },
+      {
+        onSuccess: () => toast({ title: "Profile saved" }),
+        onError: (error) =>
+          toast({
+            title: "Could not save profile",
+            description: error instanceof Error ? error.message : "Please try again.",
+            variant: "destructive",
+          }),
+      },
+    );
+  };
+
   return (
     <div className="space-y-8">
       <SectionHeader eyebrow="Public profile" title="Creator Profile" subtitle="This is how listeners see your NoraPlus presence." />
@@ -587,7 +644,7 @@ const CreatorProfileView = () => {
             {user.avatarInitial}
           </div>
           <div className="flex-1">
-            <h2 className="font-display text-2xl">{user.name}</h2>
+            <h2 className="font-display text-2xl">{displayName || user.name}</h2>
             <p className="text-sm text-muted-foreground">noraplus.io/@{user.handle}</p>
           </div>
           <Link to={`/app/creators`} className="inline-flex items-center gap-2 rounded-full border border-gold/40 px-5 py-2.5 text-sm text-gold hover:bg-gold/10 transition">
@@ -598,14 +655,37 @@ const CreatorProfileView = () => {
       <div className="rounded-2xl bg-card-gradient ring-1 ring-border/60 p-6">
         <h3 className="font-display text-lg">Edit profile</h3>
         <div className="mt-5 grid gap-5 md:grid-cols-2">
-          <Field label="Display Name"><input className={inputCls} defaultValue={user.name} /></Field>
-          <Field label="Handle"><input className={inputCls} defaultValue={user.handle} /></Field>
+          <Field label="Display Name">
+            <input
+              className={inputCls}
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              placeholder={user.name}
+            />
+          </Field>
+          <Field label="Handle">
+            <input className={inputCls} defaultValue={user.handle} disabled title="Handle cannot be changed here" />
+          </Field>
           <div className="md:col-span-2">
-            <Field label="Bio"><textarea rows={4} className={cn(inputCls, "resize-none")} placeholder="Tell your audience about your ministry or creative work…" /></Field>
+            <Field label="Bio">
+              <textarea
+                rows={4}
+                className={cn(inputCls, "resize-none")}
+                value={bio}
+                onChange={(e) => setBio(e.target.value)}
+                placeholder="Tell your audience about your ministry or creative work…"
+              />
+            </Field>
           </div>
         </div>
         <div className="mt-6 flex justify-end">
-          <button onClick={() => toast({ title: "Profile saved" })} className="inline-flex items-center gap-2 rounded-full bg-red-gradient px-6 py-2.5 text-sm font-medium text-primary-foreground shadow-red-glow">Save changes</button>
+          <button
+            disabled={updateUser.isPending}
+            onClick={save}
+            className="inline-flex items-center gap-2 rounded-full bg-red-gradient px-6 py-2.5 text-sm font-medium text-primary-foreground shadow-red-glow disabled:opacity-60"
+          >
+            {updateUser.isPending ? "Saving…" : "Save changes"}
+          </button>
         </div>
       </div>
     </div>
@@ -738,10 +818,16 @@ const UploadModal = ({ kind, onClose, onSubmit }: { kind: UploadKind; onClose: (
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [isPremium, setIsPremium] = useState(false);
   const [isPublished, setIsPublished] = useState(true);
+  // live event fields
+  const [eventDate, setEventDate] = useState("");
+  const [eventStartTime, setEventStartTime] = useState("");
+  const [eventStreamingUrl, setEventStreamingUrl] = useState("");
+  const [requireRegistration, setRequireRegistration] = useState(false);
   const createContent = useCreateOwnContent();
   const updateContent = useUpdateOwnContent();
   const presignUpload = usePresignUpload();
   const confirmUpload = useConfirmUpload();
+  const createLiveEvent = useCreateAdminLiveEvent();
 
   if (!kind) return null;
   const titles: Record<Exclude<UploadKind, null>, string> = {
@@ -749,17 +835,38 @@ const UploadModal = ({ kind, onClose, onSubmit }: { kind: UploadKind; onClose: (
     video: "Upload Video",
     live: "Create Live Event",
   };
-  const isBusy = createContent.isPending || updateContent.isPending || presignUpload.isPending || confirmUpload.isPending;
+  const isBusy = createContent.isPending || updateContent.isPending || presignUpload.isPending || confirmUpload.isPending || createLiveEvent.isPending;
   const contentType: ContentType = kind === "video" ? "VIDEO" : "AUDIO";
   const mediaFolder = kind === "video" ? "videos" : "audio";
   const mediaAccept = kind === "video" ? "video/mp4,video/webm,video/quicktime" : "audio/mpeg,audio/mp4,audio/wav,audio/ogg";
 
   const submitContent = async (publish: boolean) => {
     if (kind === "live") {
-      toast({
-        title: "Live events are not wired yet",
-        description: "Creator live-event endpoints are still tracked as backend work.",
-      });
+      if (!title.trim()) {
+        toast({ title: "Event title is required", variant: "destructive" });
+        return;
+      }
+      if (!eventDate || !eventStartTime) {
+        toast({ title: "Date and start time are required", variant: "destructive" });
+        return;
+      }
+      try {
+        const scheduledAt = new Date(`${eventDate}T${eventStartTime}`).toISOString();
+        await createLiveEvent.mutateAsync({
+          title: title.trim(),
+          description: description.trim() || undefined,
+          scheduledAt,
+          youtubeUrl: eventStreamingUrl.trim() || undefined,
+          isPremium,
+        });
+        onSubmit();
+      } catch (error) {
+        toast({
+          title: "Could not create live event",
+          description: error instanceof Error ? error.message : "Please try again.",
+          variant: "destructive",
+        });
+      }
       return;
     }
 
@@ -869,23 +976,24 @@ const UploadModal = ({ kind, onClose, onSubmit }: { kind: UploadKind; onClose: (
 
         {kind === "live" && (
           <div className="mt-8 grid gap-5 md:grid-cols-2">
-            <div className="md:col-span-2"><Field label="Event banner" required><FileDrop label="Upload event banner · 16:9" icon={ImageIcon} tall /></Field></div>
-            <Field label="Event title" required><input className={inputCls} placeholder="Worship Night Lagos" /></Field>
-            <Field label="Event type" required><input className={inputCls} placeholder="Worship · Service · Conference" /></Field>
-            <div className="md:col-span-2"><Field label="Description"><textarea rows={3} className={cn(inputCls, "resize-none")} placeholder="What can guests expect?" /></Field></div>
-            <Field label="Date" required><input type="date" className={inputCls} /></Field>
-            <Field label="Time zone" required><input className={inputCls} placeholder="WAT · GMT+1" /></Field>
-            <Field label="Start time" required><input type="time" className={inputCls} /></Field>
-            <Field label="End time" required><input type="time" className={inputCls} /></Field>
-            <div className="md:col-span-2"><Field label="Streaming URL"><input className={inputCls} placeholder="rtmp:// or https://" /></Field></div>
+            <div className="md:col-span-2"><Field label="Event banner"><FileDrop label="Upload event banner · 16:9" icon={ImageIcon} tall /></Field></div>
+            <Field label="Event title" required><input className={inputCls} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Worship Night Lagos" /></Field>
+            <Field label="Event type"><input className={inputCls} placeholder="Worship · Service · Conference" /></Field>
+            <div className="md:col-span-2"><Field label="Description"><textarea rows={3} className={cn(inputCls, "resize-none")} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What can guests expect?" /></Field></div>
+            <Field label="Date" required><input type="date" className={inputCls} value={eventDate} onChange={(e) => setEventDate(e.target.value)} /></Field>
+            <Field label="Start time" required><input type="time" className={inputCls} value={eventStartTime} onChange={(e) => setEventStartTime(e.target.value)} /></Field>
+            <div className="md:col-span-2"><Field label="Streaming URL"><input className={inputCls} value={eventStreamingUrl} onChange={(e) => setEventStreamingUrl(e.target.value)} placeholder="rtmp:// or https://" /></Field></div>
             <div className="md:col-span-2">
-              <label className="flex items-center justify-between rounded-2xl border border-border bg-secondary/30 p-4">
+              <label className="flex items-center justify-between rounded-2xl border border-border bg-secondary/30 p-4 cursor-pointer">
                 <div>
                   <p className="text-sm font-medium">Require registration</p>
                   <p className="text-xs text-muted-foreground">Guests register to receive a reminder and link.</p>
                 </div>
-                <span className="relative h-6 w-11 rounded-full bg-gold-gradient">
-                  <span className="absolute right-0.5 top-0.5 h-5 w-5 rounded-full bg-background" />
+                <span
+                  onClick={() => setRequireRegistration(r => !r)}
+                  className={cn("relative h-6 w-11 rounded-full transition-colors", requireRegistration ? "bg-gold-gradient" : "bg-secondary")}
+                >
+                  <span className={cn("absolute top-0.5 h-5 w-5 rounded-full bg-background transition-all", requireRegistration ? "right-0.5" : "left-0.5")} />
                 </span>
               </label>
             </div>
