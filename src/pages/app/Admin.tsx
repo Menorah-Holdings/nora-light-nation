@@ -10,7 +10,7 @@ import { toast } from "@/hooks/use-toast";
 import { useUser } from "@/lib/user";
 import CreatorStudio from "@/components/CreatorStudio";
 import { useSubmitCreatorApplication } from "@/lib/api/hooks/useCreators";
-import type { ContentCategory, CreatorApplicationInput } from "@/lib/api/types";
+import type { ContentCategory, CreatorApplicationInput, CreatorSocialPlatform } from "@/lib/api/types";
 
 
 /* -------------------- Creator dashboard (approved) -------------------- */
@@ -135,13 +135,13 @@ const CATEGORIES: { label: string; value: ContentCategory }[] = [
   { label: "Worship", value: "WORSHIP" },
 ];
 
-const SOCIAL = [
-  { key: "instagram", label: "Instagram", icon: Instagram, ph: "@yourhandle" },
-  { key: "facebook", label: "Facebook", icon: Facebook, ph: "facebook.com/your-page" },
-  { key: "youtube", label: "YouTube", icon: Youtube, ph: "youtube.com/@channel" },
-  { key: "tiktok", label: "TikTok", icon: Music2, ph: "@yourhandle" },
-  { key: "x", label: "X", icon: Twitter, ph: "@yourhandle" },
-] as const;
+const SOCIAL: { key: CreatorSocialPlatform; label: string; icon: typeof Instagram; ph: string }[] = [
+  { key: "INSTAGRAM", label: "Instagram", icon: Instagram, ph: "https://instagram.com/yourhandle" },
+  { key: "FACEBOOK", label: "Facebook", icon: Facebook, ph: "https://facebook.com/your-page" },
+  { key: "YOUTUBE", label: "YouTube", icon: Youtube, ph: "https://youtube.com/@channel" },
+  { key: "TIKTOK", label: "TikTok", icon: Music2, ph: "https://tiktok.com/@yourhandle" },
+  { key: "X", label: "X", icon: Twitter, ph: "https://x.com/yourhandle" },
+];
 
 const Application = ({
   onCancel,
@@ -155,20 +155,20 @@ const Application = ({
   const [step, setStep] = useState(1);
   const [type, setType] = useState<CreatorType>(null);
   const [handle, setHandle] = useState("");
-  const [ministryName, setMinistryName] = useState("");
+  const [applicationName, setApplicationName] = useState("");
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [categories, setCategories] = useState<ContentCategory[]>([]);
-  const [socialLinks, setSocialLinks] = useState<Record<string, string>>({});
+  const [socialLinks, setSocialLinks] = useState<Partial<Record<CreatorSocialPlatform, string>>>({});
   const [agree1, setAgree1] = useState(false);
   const [agree2, setAgree2] = useState(false);
 
   const canNext = useMemo(() => {
     if (step === 1) return type !== null;
-    if (step === 2) return ministryName.trim().length >= 2;
+    if (step === 2) return applicationName.trim().length >= 2;
     if (step === 4) return categories.length > 0;
     if (step === 6) return agree1 && agree2;
     return true;
-  }, [step, type, ministryName, categories.length, agree1, agree2]);
+  }, [step, type, applicationName, categories.length, agree1, agree2]);
 
   const next = () => setStep(s => Math.min(TOTAL_STEPS, s + 1));
   const back = () => (step === 1 ? onCancel() : setStep(s => s - 1));
@@ -180,11 +180,15 @@ const Application = ({
     if (!canNext || isSubmitting) return;
 
     const links = Object.fromEntries(
-      Object.entries(socialLinks).filter(([, value]) => value.trim().length > 0),
-    );
+      Object.entries(socialLinks).filter(([, value]) => typeof value === "string" && value.trim().length > 0),
+    ) as Partial<Record<CreatorSocialPlatform, string>>;
 
     onSubmit({
-      ministryName: ministryName.trim(),
+      creatorType: type === "individual" ? "INDIVIDUAL" : "MINISTRY_ORGANIZATION",
+      ...(type === "individual"
+        ? { displayName: applicationName.trim() }
+        : { organizationName: applicationName.trim() }),
+      ...(handle.trim() && { handle: handle.trim() }),
       category: categories[0] ?? "OTHER",
       ...(websiteUrl.trim() && { websiteUrl: websiteUrl.trim() }),
       ...(Object.keys(links).length > 0 && { socialLinks: links }),
@@ -241,19 +245,19 @@ const Application = ({
             <div className="grid gap-5 md:grid-cols-2">
               <Field label="Full Name" required><input className={inputCls} placeholder="Your full name" /></Field>
               <Field label="Creator Display Name" required>
-                <input className={inputCls} value={ministryName} onChange={(e) => setMinistryName(e.target.value)} placeholder="How it appears on NoraPlus" />
+                <input className={inputCls} value={applicationName} onChange={(e) => setApplicationName(e.target.value)} placeholder="How it appears on NoraPlus" />
               </Field>
               <Field
                 label="Creator Handle"
                 required
-                hint={<>Your creator page: <span className="text-gold">noraplus.io/@{handle || "yourhandle"}</span><div className="mt-1 text-muted-foreground/80">Unique · lowercase · letters, numbers, underscores</div></>}
+                hint={<>Your creator page: <span className="text-gold">noraplus.io/@{handle || "yourhandle"}</span><div className="mt-1 text-muted-foreground/80">Unique · lowercase · letters, numbers, hyphens</div></>}
               >
                 <div className="flex items-center rounded-xl border border-border bg-secondary/40 focus-within:ring-1 focus-within:ring-gold focus-within:border-gold/60">
                   <span className="pl-4 text-sm text-muted-foreground">@</span>
                   <input
                     className="w-full bg-transparent px-2 py-2.5 text-sm focus:outline-none"
                     value={handle}
-                    onChange={e => setHandle(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))}
+                    onChange={e => setHandle(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
                     placeholder="yourhandle"
                   />
                 </div>
@@ -271,7 +275,7 @@ const Application = ({
             <StepHeader step={2} title="Organization Information" />
             <div className="grid gap-5 md:grid-cols-2">
               <Field label="Organization Name" required>
-                <input className={inputCls} value={ministryName} onChange={(e) => setMinistryName(e.target.value)} placeholder="Ministry / Organization name" />
+                <input className={inputCls} value={applicationName} onChange={(e) => setApplicationName(e.target.value)} placeholder="Ministry / Organization name" />
               </Field>
               <Field label="Display Name" required><input className={inputCls} placeholder="How it appears on NoraPlus" /></Field>
               <Field
@@ -284,7 +288,7 @@ const Application = ({
                   <input
                     className="w-full bg-transparent px-2 py-2.5 text-sm focus:outline-none"
                     value={handle}
-                    onChange={e => setHandle(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))}
+                    onChange={e => setHandle(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
                     placeholder="yourhandle"
                   />
                 </div>

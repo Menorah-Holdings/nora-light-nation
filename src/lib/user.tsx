@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useMemo, useState, ReactNode } 
 import { useQueryClient } from "@tanstack/react-query";
 import { authApi } from "@/lib/api/auth";
 import { queryKeys } from "@/lib/api/queryKeys";
-import type { ApiCreatorApplication, ApiUser, UserRole } from "@/lib/api/types";
+import type { ApiCreatorApplication, ApiUser, UserCreatorStatus, UserRole } from "@/lib/api/types";
 import { useSession } from "@/lib/api/hooks/useAuth";
 import { useMyCreatorApplication } from "@/lib/api/hooks/useCreators";
 import { useCurrentUser } from "@/lib/api/hooks/useUsers";
@@ -169,11 +169,13 @@ export const creatorNavLabel = (status: CreatorStatus): string => {
   }
 };
 
-function mapApiUser(apiUser: ApiUser, application: ApiCreatorApplication | null): NoraUser {
+export function mapApiUser(apiUser: ApiUser, application: ApiCreatorApplication | null): NoraUser {
   const role = apiUser.role ?? "USER";
   const name = apiUser.name?.trim() || apiUser.email.split("@")[0] || "NoraPlus Listener";
   const handle = toHandle(name, apiUser.email);
-  const creatorStatus = roleToCreatorStatus(role, application);
+  const creatorStatus = apiUser.creatorStatus
+    ? mapCreatorStatus(apiUser.creatorStatus)
+    : roleToCreatorStatus(role, application);
 
   return {
     id: apiUser.id,
@@ -183,12 +185,21 @@ function mapApiUser(apiUser: ApiUser, application: ApiCreatorApplication | null)
     avatarInitial: getInitial(name, apiUser.email),
     creator_status: creatorStatus,
     platform_role: role === "ADMIN" ? "nora_team" : "user",
-    rejectionReason: application?.status === "REJECTED" ? application.adminNotes ?? undefined : undefined,
+    rejectionReason: application?.status === "REJECTED" ? application.declineReason ?? application.adminNotes ?? undefined : undefined,
     role,
     image: apiUser.image,
     emailVerified: apiUser.emailVerified,
     subscriptionTier: apiUser.subscriptionTier,
   };
+}
+
+function mapCreatorStatus(status: UserCreatorStatus): CreatorStatus {
+  switch (status) {
+    case "APPROVED": return "Approved";
+    case "PENDING": return "Under Review";
+    case "DECLINED": return "Rejected";
+    case "NOT_APPLIED": return "Not Applied";
+  }
 }
 
 function roleToCreatorStatus(role: UserRole, application: ApiCreatorApplication | null): CreatorStatus {

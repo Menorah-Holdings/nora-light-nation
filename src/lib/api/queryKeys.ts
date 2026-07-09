@@ -20,17 +20,23 @@ export const queryKeys = {
     all: ["creators"] as const,
     list: (query?: ListCreatorsQuery) => [...queryKeys.creators.all, "list", query ?? {}] as const,
     detail: (id: string) => [...queryKeys.creators.all, "detail", id] as const,
+    handle: (handle: string) => [...queryKeys.creators.all, "handle", handle] as const,
     content: (id: string, query?: ListContentQuery) =>
       [...queryKeys.creators.all, "content", id, query ?? {}] as const,
     myApplication: () => [...queryKeys.creators.all, "me", "application"] as const,
+    myProfile: () => [...queryKeys.creators.all, "me", "profile"] as const,
+    myAnalytics: () => [...queryKeys.creators.all, "me", "analytics"] as const,
     ownContent: (query?: ListContentQuery) =>
       [...queryKeys.creators.all, "me", "content", query ?? {}] as const,
+    ownLive: (query?: ListLiveEventsQuery) =>
+      [...queryKeys.creators.all, "me", "live", query ?? {}] as const,
   },
   live: {
     all: ["live"] as const,
     list: (query?: ListLiveEventsQuery) => [...queryKeys.live.all, "list", query ?? {}] as const,
     active: () => [...queryKeys.live.all, "active"] as const,
     detail: (id: string) => [...queryKeys.live.all, "detail", id] as const,
+    join: (id: string) => [...queryKeys.live.all, "join", id] as const,
   },
   library: {
     all: ["library"] as const,
@@ -44,5 +50,6 @@ export const queryKeys = {
     content: (query?: Record<string, unknown>) => [...queryKeys.admin.all, "content", query ?? {}] as const,
     applications: (query?: Record<string, unknown>) =>
       [...queryKeys.admin.all, "applications", query ?? {}] as const,
+    analytics: () => [...queryKeys.admin.all, "analytics"] as const,
   },
 };

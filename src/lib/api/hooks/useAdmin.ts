@@ -3,7 +3,13 @@ import { apiRequest } from "../client";
 import { queryKeys } from "../queryKeys";
 import type {
   AdminStats,
+  AdminAnalyticsRefreshResponse,
+  AdminCreatorActivationInput,
+  AdminReviewApplicationInput,
+  AdminReviewApplicationResponse,
   ApiContent,
+  ApiCreator,
+  ApiCreatorApplication,
   ApiLiveEvent,
   ApiUser,
   CreateContentInput,
@@ -30,6 +36,64 @@ export function useAdminContent(query?: ApiQuery) {
   return useQuery({
     queryKey: queryKeys.admin.content(query),
     queryFn: () => apiRequest<ApiContent[]>("/api/admin/content", { query }),
+  });
+}
+
+export function useAdminApplications(query?: ApiQuery) {
+  return useQuery({
+    queryKey: queryKeys.admin.applications(query),
+    queryFn: () => apiRequest<ApiCreatorApplication[]>("/api/admin/applications", { query }),
+  });
+}
+
+export function useReviewAdminApplication() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: AdminReviewApplicationInput }) =>
+      apiRequest<AdminReviewApplicationResponse>(`/api/admin/applications/${id}`, {
+        method: "PATCH",
+        body: input,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.applications() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.stats() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.creators.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.users.all });
+    },
+  });
+}
+
+export function useUpdateAdminCreatorStatus() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: AdminCreatorActivationInput }) =>
+      apiRequest<ApiCreator>(`/api/admin/creators/${id}/status`, {
+        method: "PATCH",
+        body: input,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.stats() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.creators.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.content.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.live.all });
+    },
+  });
+}
+
+export function useRefreshAdminAnalytics() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () =>
+      apiRequest<AdminAnalyticsRefreshResponse>("/api/admin/analytics/refresh", {
+        body: {},
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.analytics() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.creators.all });
+    },
   });
 }
 

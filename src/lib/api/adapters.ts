@@ -1,9 +1,10 @@
 import { images, type ContentItem, type ContentType as UiContentType } from "@/lib/mockData";
-import type { ApiContent, ApiCreator, ApiLiveEvent, ContentCategory, ContentType } from "./types";
+import type { ApiContent, ApiCreator, ApiCreatorAnalytics, ApiLiveEvent, ContentCategory, ContentMediaType, ContentType } from "./types";
 
 export interface UiCreator {
   id: string;
   name: string;
+  handle?: string | null;
   category: string;
   verified: boolean;
   followers: string;
@@ -24,8 +25,13 @@ export interface UiLiveEvent {
   status: "upcoming" | "live" | "replay";
   image: string;
   description?: string | null;
-  youtubeUrl?: string | null;
   viewerCount: number;
+}
+
+export interface UiAnalyticsStat {
+  label: string;
+  value: string;
+  trend: string;
 }
 
 export function adaptContent(item: ApiContent): ContentItem {
@@ -37,11 +43,11 @@ export function adaptContent(item: ApiContent): ContentItem {
     creator: item.creator?.displayName ?? "NoraPlus",
     creatorId: item.creator?.id ?? "",
     type: uiType,
-    medium: mapContentMedium(item.type),
+    medium: mapContentMedium(item.mediaType, item.type),
     duration: formatDuration(item.durationSeconds),
     description: item.description ?? "",
     image: item.thumbnailUrl || fallbackContentImage(uiType, item.category),
-    tag: item.isFeatured ? "Featured" : item.isPremium ? "Premium" : primaryDisplayTag(item.tags),
+    tag: item.isFeatured ? "Featured" : item.visibility === "PREMIUM_ONLY" ? "Premium" : primaryDisplayTag(item.tags),
     date: item.createdAt,
   };
 }
@@ -50,6 +56,7 @@ export function adaptCreator(creator: ApiCreator): UiCreator {
   return {
     id: creator.id,
     name: creator.displayName,
+    handle: creator.handle,
     category: formatCategory(creator.category),
     verified: creator.isVerified,
     followers: formatCompactNumber(creator.followerCount),
@@ -70,13 +77,25 @@ export function adaptLiveEvent(event: ApiLiveEvent): UiLiveEvent {
     hostId: event.creator?.id,
     date: formatDate(scheduled),
     time: event.status === "LIVE" ? "Streaming" : event.status === "ENDED" ? "Replay" : formatTime(scheduled),
-    access: event.isPremium ? "Paid" : "Free",
+    access: event.visibility === "PREMIUM_ONLY" ? "Paid" : "Free",
     status: mapLiveStatus(event.status),
-    image: event.thumbnailUrl || images.event,
+    image: event.thumbnailUrl || event.bannerUrl || images.event,
     description: event.description,
-    youtubeUrl: event.youtubeUrl,
     viewerCount: event.viewerCount,
   };
+}
+
+export function adaptCreatorAnalytics(analytics?: ApiCreatorAnalytics): UiAnalyticsStat[] {
+  return [
+    { label: "Uploads", value: formatCompactNumber(analytics?.totalUploads ?? 0), trend: "Total" },
+    { label: "Published", value: formatCompactNumber(analytics?.publishedContent ?? 0), trend: "Live catalog" },
+    { label: "Drafts", value: formatCompactNumber(analytics?.drafts ?? 0), trend: "In progress" },
+    { label: "Followers", value: formatCompactNumber(analytics?.followersCount ?? 0), trend: "Audience" },
+    { label: "Total plays", value: formatCompactNumber(analytics?.totalPlays ?? 0), trend: "All time" },
+    { label: "Total views", value: formatCompactNumber(analytics?.totalViews ?? 0), trend: "All time" },
+    { label: "Upcoming live", value: formatCompactNumber(analytics?.upcomingLiveEvents ?? 0), trend: "Scheduled" },
+    { label: "Updated", value: analytics?.updatedAt ? formatDate(new Date(analytics.updatedAt)) : "-", trend: "Snapshot" },
+  ];
 }
 
 export function formatDuration(seconds?: number | null): string {
@@ -124,7 +143,9 @@ export function contentTypeLabel(type: UiContentType): string {
   return labels[type];
 }
 
-function mapContentMedium(type: ContentType): ContentItem["medium"] {
+function mapContentMedium(mediaType: ContentMediaType | undefined, type: ContentType): ContentItem["medium"] {
+  if (mediaType === "VIDEO") return "video";
+  if (mediaType === "AUDIO") return "audio";
   return type === "VIDEO" ? "video" : "audio";
 }
 

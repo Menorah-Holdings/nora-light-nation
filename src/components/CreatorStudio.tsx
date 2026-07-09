@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   LayoutDashboard, Upload, Headphones, Play, Radio, BarChart3, UserCircle, Settings as SettingsIcon,
   ArrowUpRight, Eye, Pencil, Trash2, Search, Plus, Calendar, Image as ImageIcon, Music as MusicIcon,
@@ -9,19 +9,26 @@ import { content } from "@/lib/mockData";
 import { useUser } from "@/lib/user";
 import { toast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
-import { adaptContent, formatCategory, formatCompactNumber } from "@/lib/api/adapters";
+import { adaptContent, adaptCreatorAnalytics, formatCategory, formatCompactNumber } from "@/lib/api/adapters";
 import {
   useCreateOwnContent,
+  useCreateOwnLiveEvent,
+  useDeleteOwnLiveEvent,
+  useMyCreatorAnalytics,
+  useMyCreatorProfile,
   useDeleteOwnContent,
   useOwnCreatorContent,
+  useOwnCreatorLiveEvents,
+  useUpdateMyCreatorProfile,
   useUpdateOwnContent,
+  useUpdateOwnLiveEvent,
 } from "@/lib/api/hooks/useCreators";
 import {
   uploadFileToPresignedUrl,
   useConfirmUpload,
   usePresignUpload,
 } from "@/lib/api/hooks/useUpload";
-import type { ApiContent, ContentCategory, ContentType } from "@/lib/api/types";
+import type { ApiContent, ApiLiveEvent, ContentCategory, ContentStatus, ContentType, ContentVisibility, CreatorSocialPlatform, LiveEventType, UploadAssetRole } from "@/lib/api/types";
 
 type Section = "overview" | "upload" | "audio" | "video" | "live" | "analytics" | "profile" | "settings";
 type UploadKind = "audio" | "video" | "live" | null;
@@ -33,11 +40,22 @@ type StudioContentItem = {
   categoryValue: ContentCategory;
   duration: string;
   status: "Published" | "Draft";
+  contentStatus: ContentStatus;
   plays: string;
   views: string;
   published: string;
-  isPublished: boolean;
   type: ContentType;
+};
+
+type StudioLiveItem = {
+  id: string;
+  title: string;
+  banner: string;
+  type: string;
+  date: string;
+  status: "Scheduled" | "Live" | "Ended" | "Draft" | "Cancelled" | "Review" | "Rejected";
+  regs: string;
+  viewers: string;
 };
 
 const categoryOptions: { label: string; value: ContentCategory }[] = [
@@ -51,6 +69,26 @@ const categoryOptions: { label: string; value: ContentCategory }[] = [
   { label: "Testimony", value: "TESTIMONY" },
   { label: "Bible Study", value: "BIBLE_STUDY" },
   { label: "Other", value: "OTHER" },
+];
+
+const socialPlatforms: { key: CreatorSocialPlatform; label: string; placeholder: string }[] = [
+  { key: "WEBSITE", label: "Website", placeholder: "https://yoursite.com" },
+  { key: "YOUTUBE", label: "YouTube", placeholder: "https://youtube.com/@yourhandle" },
+  { key: "INSTAGRAM", label: "Instagram", placeholder: "https://instagram.com/yourhandle" },
+  { key: "FACEBOOK", label: "Facebook", placeholder: "https://facebook.com/yourpage" },
+  { key: "TIKTOK", label: "TikTok", placeholder: "https://tiktok.com/@yourhandle" },
+  { key: "X", label: "X", placeholder: "https://x.com/yourhandle" },
+];
+
+const liveEventTypeOptions: { label: string; value: LiveEventType }[] = [
+  { label: "Worship night", value: "WORSHIP_NIGHT" },
+  { label: "Conference", value: "CONFERENCE" },
+  { label: "Vigil", value: "VIGIL" },
+  { label: "Concert", value: "CONCERT" },
+  { label: "Prayer meeting", value: "PRAYER_MEETING" },
+  { label: "Premiere", value: "PREMIERE" },
+  { label: "Retreat", value: "RETREAT" },
+  { label: "Church event", value: "CHURCH_EVENT" },
 ];
 
 const nav: { id: Section; label: string; icon: typeof LayoutDashboard }[] = [
@@ -77,7 +115,7 @@ const Field = ({ label, required, children, hint }: { label: string; required?: 
   </label>
 );
 
-const StatusBadge = ({ status }: { status: "Published" | "Draft" | "Scheduled" | "Review" | "Live" | "Ended" }) => {
+const StatusBadge = ({ status }: { status: "Published" | "Draft" | "Scheduled" | "Review" | "Live" | "Ended" | "Cancelled" | "Rejected" }) => {
   const map: Record<string, string> = {
     Published: "bg-gold/15 text-gold ring-gold/30",
     Draft: "bg-muted text-muted-foreground ring-border",
@@ -85,6 +123,8 @@ const StatusBadge = ({ status }: { status: "Published" | "Draft" | "Scheduled" |
     Review: "bg-secondary text-muted-foreground ring-border",
     Live: "bg-red-gradient text-primary-foreground ring-red/40 shadow-red-glow",
     Ended: "bg-muted text-muted-foreground ring-border",
+    Cancelled: "bg-muted text-muted-foreground ring-border",
+    Rejected: "bg-destructive/15 text-destructive ring-destructive/30",
   };
   return (
     <span className={cn("inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-medium uppercase tracking-wider ring-1", map[status])}>
@@ -122,28 +162,6 @@ const EmptyState = ({ icon: Icon, title, cta, onCta }: { icon: typeof Upload; ti
 
 /* ---------- Mock data ---------- */
 
-const audioItems = content.filter(c => c.medium === "audio").slice(0, 6).map((c, i) => ({
-  ...c,
-  status: (["Published", "Draft", "Scheduled", "Published", "Review", "Published"] as const)[i],
-  plays: ["48,210", "—", "—", "12,894", "—", "92,401"][i],
-  published: ["May 12, 2026", "—", "Jun 30, 2026", "Apr 02, 2026", "—", "Mar 18, 2026"][i],
-  category: ["Worship", "Teaching", "Devotional", "Worship", "Podcast", "Teaching"][i],
-}));
-
-const videoItems = content.filter(c => c.medium === "video").slice(0, 5).map((c, i) => ({
-  ...c,
-  status: (["Published", "Draft", "Published", "Scheduled", "Published"] as const)[i],
-  views: ["128K", "—", "84K", "—", "212K"][i],
-  published: ["May 04, 2026", "—", "Apr 18, 2026", "Jul 04, 2026", "Feb 22, 2026"][i],
-  category: ["Film", "Worship", "Podcast", "Teaching", "Skit"][i],
-}));
-
-const liveItems = [
-  { id: "le1", title: "Worship Night Lagos", banner: content[2].image, type: "Worship", date: "Jun 28, 2026 · 7:00 PM", status: "Scheduled" as const, regs: "1,204", viewers: "—" },
-  { id: "le2", title: "Sunday Service Live", banner: content[0].image, type: "Service", date: "Live now", status: "Live" as const, regs: "8,420", viewers: "12,894" },
-  { id: "le3", title: "Kingdom Conference Replay", banner: content[3].image, type: "Conference", date: "May 12, 2026", status: "Ended" as const, regs: "4,128", viewers: "9,401" },
-];
-
 function toStudioContentItem(item: ApiContent): StudioContentItem {
   const adapted = adaptContent(item);
   const count = formatCompactNumber(item.viewCount ?? 0);
@@ -155,11 +173,11 @@ function toStudioContentItem(item: ApiContent): StudioContentItem {
     category: formatCategory(item.category),
     categoryValue: item.category,
     duration: adapted.duration,
-    status: item.isPublished ? "Published" : "Draft",
+    status: item.status === "PUBLISHED" ? "Published" : "Draft",
+    contentStatus: item.status,
     plays: count,
     views: count,
-    published: item.isPublished ? formatStudioDate(item.createdAt) : "Draft",
-    isPublished: Boolean(item.isPublished),
+    published: item.status === "PUBLISHED" ? formatStudioDate(item.publishedAt ?? item.createdAt) : "Draft",
     type: item.type,
   };
 }
@@ -183,6 +201,58 @@ function splitTags(value: string) {
     .filter(Boolean);
 }
 
+function compactStringRecord<T extends string>(record: Partial<Record<T, string>>) {
+  return Object.fromEntries(
+    Object.entries(record).filter(([, value]) => typeof value === "string" && value.trim().length > 0),
+  ) as Partial<Record<T, string>>;
+}
+
+function toStudioLiveItem(event: ApiLiveEvent): StudioLiveItem {
+  return {
+    id: event.id,
+    title: event.title,
+    banner: event.bannerUrl || event.thumbnailUrl || content[2].image,
+    type: formatLiveEventType(event.eventType),
+    date: formatLiveDate(event.startTime ?? event.scheduledAt),
+    status: mapStudioLiveStatus(event.status),
+    regs: event.registrationRequired ? "Required" : "Open",
+    viewers: formatCompactNumber(event.viewerCount ?? 0),
+  };
+}
+
+function mapStudioLiveStatus(status: ApiLiveEvent["status"]): StudioLiveItem["status"] {
+  if (status === "LIVE") return "Live";
+  if (status === "ENDED") return "Ended";
+  if (status === "DRAFT") return "Draft";
+  if (status === "CANCELLED") return "Cancelled";
+  if (status === "REJECTED") return "Rejected";
+  if (status === "UNDER_REVIEW") return "Review";
+  return "Scheduled";
+}
+
+function formatLiveDate(value?: string | null) {
+  if (!value) return "Date TBD";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Date TBD";
+
+  return new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "2-digit",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function formatLiveEventType(type?: LiveEventType | null) {
+  if (!type) return "Live Event";
+  return type
+    .toLowerCase()
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
 /* ---------- Overview ---------- */
 
 const Overview = ({
@@ -195,7 +265,7 @@ const Overview = ({
   items: StudioContentItem[];
 }) => {
   const { user } = useUser();
-  const publishedCount = items.filter((item) => item.isPublished).length;
+  const publishedCount = items.filter((item) => item.contentStatus === "PUBLISHED").length;
   const draftCount = items.length - publishedCount;
   const recentItems = items.slice(0, 4);
   const summary = [
@@ -339,9 +409,9 @@ const RowActions = ({ item }: { item: StudioContentItem }) => {
 
   const togglePublished = () => {
     updateContent.mutate(
-      { contentId: item.id, input: { isPublished: !item.isPublished } },
+      { contentId: item.id, input: { status: item.contentStatus === "PUBLISHED" ? "DRAFT" : "PUBLISHED" } },
       {
-        onSuccess: () => toast({ title: item.isPublished ? "Moved to drafts" : "Published" }),
+        onSuccess: () => toast({ title: item.contentStatus === "PUBLISHED" ? "Moved to drafts" : "Published" }),
         onError: (error) =>
           toast({
             title: "Could not update content",
@@ -369,7 +439,7 @@ const RowActions = ({ item }: { item: StudioContentItem }) => {
       <Link title="View" to={`/app/content/${item.id}`} className="h-8 w-8 grid place-items-center rounded-full hover:bg-secondary/60">
         <Eye className="h-4 w-4 text-muted-foreground" />
       </Link>
-      <button disabled={pending} onClick={togglePublished} title={item.isPublished ? "Move to draft" : "Publish"} className="h-8 w-8 grid place-items-center rounded-full hover:bg-secondary/60 disabled:opacity-50">
+      <button disabled={pending} onClick={togglePublished} title={item.contentStatus === "PUBLISHED" ? "Move to draft" : "Publish"} className="h-8 w-8 grid place-items-center rounded-full hover:bg-secondary/60 disabled:opacity-50">
         <Pencil className="h-4 w-4 text-muted-foreground" />
       </button>
       <button disabled={pending} onClick={remove} title="Delete" className="h-8 w-8 grid place-items-center rounded-full hover:bg-secondary/60 disabled:opacity-50">
@@ -478,7 +548,42 @@ const VideoLibrary = ({ openUpload, items }: { openUpload: (k: UploadKind) => vo
 };
 
 const LiveManager = ({ openUpload }: { openUpload: (k: UploadKind) => void }) => {
-  if (liveItems.length === 0) {
+  const liveQuery = useOwnCreatorLiveEvents({ limit: 50 });
+  const deleteLive = useDeleteOwnLiveEvent();
+  const updateLive = useUpdateOwnLiveEvent();
+  const items = useMemo(() => (liveQuery.data ?? []).map(toStudioLiveItem), [liveQuery.data]);
+
+  const editEvent = (event: StudioLiveItem) => {
+    const title = window.prompt("Event title", event.title)?.trim();
+    if (!title || title === event.title) return;
+
+    updateLive.mutate(
+      { id: event.id, input: { title } },
+      {
+        onSuccess: () => toast({ title: "Live event updated", description: title }),
+        onError: (error) =>
+          toast({
+            title: "Could not update event",
+            description: error instanceof Error ? error.message : "Please try again.",
+            variant: "destructive",
+          }),
+      },
+    );
+  };
+
+  const cancelEvent = (event: StudioLiveItem) => {
+    deleteLive.mutate(event.id, {
+      onSuccess: () => toast({ title: "Live event cancelled", description: event.title }),
+      onError: (error) =>
+        toast({
+          title: "Could not cancel event",
+          description: error instanceof Error ? error.message : "Please try again.",
+          variant: "destructive",
+        }),
+    });
+  };
+
+  if (!liveQuery.isLoading && items.length === 0) {
     return <EmptyState icon={Radio} title="No live events scheduled." cta="Create Live Event" onCta={() => openUpload("live")} />;
   }
   return (
@@ -502,7 +607,12 @@ const LiveManager = ({ openUpload }: { openUpload: (k: UploadKind) => void }) =>
               </tr>
             </thead>
             <tbody>
-              {liveItems.map(e => (
+              {liveQuery.isLoading && (
+                <tr>
+                  <td colSpan={7} className="px-6 py-8 text-center text-muted-foreground">Loading live events...</td>
+                </tr>
+              )}
+              {items.map(e => (
                 <tr key={e.id} className="border-t border-border/60 hover:bg-background/40">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
@@ -517,17 +627,19 @@ const LiveManager = ({ openUpload }: { openUpload: (k: UploadKind) => void }) =>
                   <td className="px-6 py-4 text-muted-foreground">{e.viewers}</td>
                   <td className="px-6 py-4">
                     <div className="flex items-center justify-end gap-1">
-                      {e.status === "Scheduled" && (
-                        <button title="Go Live" className="inline-flex items-center gap-1 rounded-full bg-red-gradient px-3 py-1 text-[11px] font-medium text-primary-foreground shadow-red-glow">
-                          <Radio className="h-3 w-3" /> Go Live
+                      {e.status !== "Ended" && e.status !== "Cancelled" && (
+                        <button title="Edit event" onClick={() => editEvent(e)} disabled={updateLive.isPending} className="inline-flex items-center gap-1 rounded-full border border-gold/40 px-3 py-1 text-[11px] text-gold hover:bg-gold/10 disabled:opacity-50">
+                          <Pencil className="h-3 w-3" /> Edit
                         </button>
                       )}
                       {e.status === "Live" && (
-                        <button title="End Event" className="inline-flex items-center gap-1 rounded-full border border-destructive/40 px-3 py-1 text-[11px] text-destructive hover:bg-destructive/10">
-                          End Event
+                        <button title="Cancel event" onClick={() => cancelEvent(e)} disabled={deleteLive.isPending} className="inline-flex items-center gap-1 rounded-full border border-destructive/40 px-3 py-1 text-[11px] text-destructive hover:bg-destructive/10 disabled:opacity-50">
+                          Cancel Event
                         </button>
                       )}
-                      <button title="More" className="h-8 w-8 grid place-items-center rounded-full hover:bg-secondary/60"><MoreHorizontal className="h-4 w-4 text-muted-foreground" /></button>
+                      {e.status !== "Live" && e.status !== "Cancelled" && e.status !== "Ended" && (
+                        <button title="Cancel event" onClick={() => cancelEvent(e)} disabled={deleteLive.isPending} className="h-8 w-8 grid place-items-center rounded-full hover:bg-secondary/60 disabled:opacity-50"><Trash2 className="h-4 w-4 text-muted-foreground" /></button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -543,15 +655,17 @@ const LiveManager = ({ openUpload }: { openUpload: (k: UploadKind) => void }) =>
 /* ---------- Analytics ---------- */
 
 const Analytics = () => {
-  const stats = [
-    { label: "Total plays", value: "1.24M", trend: "+12.4%" },
-    { label: "Watch time", value: "84,210 hr", trend: "+8.2%" },
-    { label: "Avg. completion", value: "72%", trend: "+3.1%" },
-    { label: "New followers", value: "12,406", trend: "+24%" },
-  ];
+  const analyticsQuery = useMyCreatorAnalytics();
+  const analytics = analyticsQuery.data;
+  const stats = adaptCreatorAnalytics(analytics);
   return (
     <div className="space-y-8">
       <SectionHeader eyebrow="Insights" title="Analytics" subtitle="Track how your content is performing across NoraPlus." />
+      {analyticsQuery.isError && (
+        <div className="rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          Analytics could not be loaded right now.
+        </div>
+      )}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map(s => (
           <div key={s.label} className="rounded-2xl bg-card-gradient p-6 ring-1 ring-border/60">
@@ -577,6 +691,71 @@ const Analytics = () => {
 
 const CreatorProfileView = () => {
   const { user } = useUser();
+  const profileQuery = useMyCreatorProfile();
+  const updateProfile = useUpdateMyCreatorProfile();
+  const profile = profileQuery.data;
+  const [socialLinks, setSocialLinks] = useState<Partial<Record<CreatorSocialPlatform, string>>>({});
+  const [selectedCategories, setSelectedCategories] = useState<ContentCategory[]>([]);
+  const [individualProfile, setIndividualProfile] = useState({ fullName: "", stageName: "", primaryRole: "" });
+  const [organizationProfile, setOrganizationProfile] = useState({ organizationName: "", contactPersonName: "", officialEmail: "", organizationType: "" });
+
+  useEffect(() => {
+    if (!profile) return;
+
+    setSelectedCategories((profile.contentCategories?.map((item) => item.category) ?? [profile.category]).filter(Boolean));
+    setSocialLinks(Object.fromEntries((profile.socialLinkRows ?? []).map((link) => [link.platform, link.url])));
+    setIndividualProfile({
+      fullName: profile.individualProfile?.fullName ?? "",
+      stageName: profile.individualProfile?.stageName ?? "",
+      primaryRole: profile.individualProfile?.primaryRole ?? "",
+    });
+    setOrganizationProfile({
+      organizationName: profile.ministryOrganizationProfile?.organizationName ?? "",
+      contactPersonName: profile.ministryOrganizationProfile?.contactPersonName ?? "",
+      officialEmail: profile.ministryOrganizationProfile?.officialEmail ?? "",
+      organizationType: profile.ministryOrganizationProfile?.organizationType ?? "",
+    });
+  }, [profile]);
+
+  const displayName = profile?.displayName ?? user.name;
+  const handle = profile?.handle ?? user.handle;
+  const avatarInitial = displayName.trim()[0]?.toUpperCase() ?? user.avatarInitial;
+
+  const toggleCategory = (category: ContentCategory) => {
+    setSelectedCategories((current) => {
+      if (current.includes(category)) {
+        return current.length > 1 ? current.filter((item) => item !== category) : current;
+      }
+      return [...current, category].slice(0, 8);
+    });
+  };
+
+  const saveProfile = () => {
+    if (!profile) return;
+    const cleanSocialLinks = compactStringRecord(socialLinks);
+    const cleanIndividualProfile = compactStringRecord(individualProfile);
+    const cleanOrganizationProfile = compactStringRecord(organizationProfile);
+
+    updateProfile.mutate(
+      {
+        contentCategories: selectedCategories,
+        ...(Object.keys(cleanSocialLinks).length > 0 && { socialLinks: cleanSocialLinks }),
+        ...(profile.creatorType === "INDIVIDUAL"
+          ? { individualProfile: cleanIndividualProfile }
+          : { ministryOrganizationProfile: cleanOrganizationProfile }),
+      },
+      {
+        onSuccess: () => toast({ title: "Profile saved" }),
+        onError: (error) =>
+          toast({
+            title: "Could not save profile",
+            description: error instanceof Error ? error.message : "Please try again.",
+            variant: "destructive",
+          }),
+      },
+    );
+  };
+
   return (
     <div className="space-y-8">
       <SectionHeader eyebrow="Public profile" title="Creator Profile" subtitle="This is how listeners see your NoraPlus presence." />
@@ -584,11 +763,11 @@ const CreatorProfileView = () => {
         <div className="h-40 bg-gradient-to-br from-[hsl(350_55%_22%)] via-[hsl(350_45%_15%)] to-background" />
         <div className="px-8 pb-8 -mt-12 flex flex-col md:flex-row md:items-end gap-6">
           <div className="h-24 w-24 rounded-2xl bg-gold-gradient grid place-items-center font-display text-3xl text-primary-foreground ring-4 ring-background shadow-glow">
-            {user.avatarInitial}
+            {avatarInitial}
           </div>
           <div className="flex-1">
-            <h2 className="font-display text-2xl">{user.name}</h2>
-            <p className="text-sm text-muted-foreground">noraplus.io/@{user.handle}</p>
+            <h2 className="font-display text-2xl">{displayName}</h2>
+            <p className="text-sm text-muted-foreground">noraplus.io/@{handle}</p>
           </div>
           <Link to={`/app/creators`} className="inline-flex items-center gap-2 rounded-full border border-gold/40 px-5 py-2.5 text-sm text-gold hover:bg-gold/10 transition">
             <ExternalLink className="h-4 w-4" /> View public page
@@ -597,15 +776,65 @@ const CreatorProfileView = () => {
       </div>
       <div className="rounded-2xl bg-card-gradient ring-1 ring-border/60 p-6">
         <h3 className="font-display text-lg">Edit profile</h3>
+        {profileQuery.isError && (
+          <p className="mt-3 text-sm text-destructive">Profile could not be loaded right now.</p>
+        )}
         <div className="mt-5 grid gap-5 md:grid-cols-2">
-          <Field label="Display Name"><input className={inputCls} defaultValue={user.name} /></Field>
-          <Field label="Handle"><input className={inputCls} defaultValue={user.handle} /></Field>
+          <Field label="Display Name" hint="Managed by NoraPlus after creator approval."><input className={inputCls} value={displayName} disabled readOnly /></Field>
+          <Field label="Handle" hint="Handles are assigned from your approved application."><input className={inputCls} value={handle} disabled readOnly /></Field>
+          <div className="md:col-span-2">
+            <Field label="Focus categories">
+              <div className="flex flex-wrap gap-2">
+                {categoryOptions.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => toggleCategory(option.value)}
+                    className={cn(
+                      "rounded-full px-3 py-1 text-xs ring-1 transition",
+                      selectedCategories.includes(option.value)
+                        ? "bg-gold/10 text-gold ring-gold/40"
+                        : "bg-secondary/40 text-muted-foreground ring-border hover:text-foreground",
+                    )}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </Field>
+          </div>
+          {profile?.creatorType === "INDIVIDUAL" ? (
+            <>
+              <Field label="Full name"><input className={inputCls} value={individualProfile.fullName} onChange={(e) => setIndividualProfile((p) => ({ ...p, fullName: e.target.value }))} /></Field>
+              <Field label="Stage name"><input className={inputCls} value={individualProfile.stageName} onChange={(e) => setIndividualProfile((p) => ({ ...p, stageName: e.target.value }))} /></Field>
+              <Field label="Primary role"><input className={inputCls} value={individualProfile.primaryRole} onChange={(e) => setIndividualProfile((p) => ({ ...p, primaryRole: e.target.value }))} /></Field>
+            </>
+          ) : (
+            <>
+              <Field label="Organization name"><input className={inputCls} value={organizationProfile.organizationName} onChange={(e) => setOrganizationProfile((p) => ({ ...p, organizationName: e.target.value }))} /></Field>
+              <Field label="Contact person"><input className={inputCls} value={organizationProfile.contactPersonName} onChange={(e) => setOrganizationProfile((p) => ({ ...p, contactPersonName: e.target.value }))} /></Field>
+              <Field label="Official email"><input type="email" className={inputCls} value={organizationProfile.officialEmail} onChange={(e) => setOrganizationProfile((p) => ({ ...p, officialEmail: e.target.value }))} /></Field>
+              <Field label="Organization type"><input className={inputCls} value={organizationProfile.organizationType} onChange={(e) => setOrganizationProfile((p) => ({ ...p, organizationType: e.target.value }))} /></Field>
+            </>
+          )}
+          {socialPlatforms.map((platform) => (
+            <Field key={platform.key} label={`${platform.label} link`}>
+              <input
+                className={inputCls}
+                value={socialLinks[platform.key] ?? ""}
+                onChange={(e) => setSocialLinks((current) => ({ ...current, [platform.key]: e.target.value }))}
+                placeholder={platform.placeholder}
+              />
+            </Field>
+          ))}
           <div className="md:col-span-2">
             <Field label="Bio"><textarea rows={4} className={cn(inputCls, "resize-none")} placeholder="Tell your audience about your ministry or creative work…" /></Field>
           </div>
         </div>
         <div className="mt-6 flex justify-end">
-          <button onClick={() => toast({ title: "Profile saved" })} className="inline-flex items-center gap-2 rounded-full bg-red-gradient px-6 py-2.5 text-sm font-medium text-primary-foreground shadow-red-glow">Save changes</button>
+          <button disabled={!profile || updateProfile.isPending} onClick={saveProfile} className="inline-flex items-center gap-2 rounded-full bg-red-gradient px-6 py-2.5 text-sm font-medium text-primary-foreground shadow-red-glow disabled:opacity-50">
+            {updateProfile.isPending ? "Saving..." : "Save changes"}
+          </button>
         </div>
       </div>
     </div>
@@ -699,31 +928,30 @@ const FileDrop = ({
   </label>
 );
 
-const VisibilityField = ({ isPremium, onChange }: { isPremium: boolean; onChange: (value: boolean) => void }) => (
+const VisibilityField = ({ visibility, onChange }: { visibility: ContentVisibility; onChange: (value: ContentVisibility) => void }) => (
   <Field label="Visibility" required>
     <div className="grid grid-cols-3 gap-2">
       {[
-        { v: "Public", icon: Globe, premium: false },
-        { v: "Subscribers Only", icon: Star, premium: false },
-        { v: "Premium Only", icon: Lock, premium: true },
+        { label: "Public", value: "PUBLIC" as const, icon: Globe },
+        { label: "Subscribers Only", value: "SUBSCRIBERS_ONLY" as const, icon: Star },
+        { label: "Premium Only", value: "PREMIUM_ONLY" as const, icon: Lock },
       ].map((o) => (
-        <button key={o.v} type="button" onClick={() => onChange(o.premium)} className={cn("inline-flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2 text-xs transition", isPremium === o.premium ? "border-gold bg-gold/10 text-gold" : "border-border bg-secondary/40 text-muted-foreground hover:border-gold/40")}>
-          <o.icon className="h-3.5 w-3.5" /> {o.v}
+        <button key={o.value} type="button" onClick={() => onChange(o.value)} className={cn("inline-flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2 text-xs transition", visibility === o.value ? "border-gold bg-gold/10 text-gold" : "border-border bg-secondary/40 text-muted-foreground hover:border-gold/40")}>
+          <o.icon className="h-3.5 w-3.5" /> {o.label}
         </button>
       ))}
     </div>
   </Field>
 );
 
-const ReleaseField = ({ isPublished, onChange }: { isPublished: boolean; onChange: (value: boolean) => void }) => (
+const ReleaseField = ({ status, onChange }: { status: ContentStatus; onChange: (value: ContentStatus) => void }) => (
   <Field label="Release option" required>
-    <div className="grid grid-cols-3 gap-2">
+    <div className="grid grid-cols-2 gap-2">
       {[
-        { label: "Publish Now", value: true },
-        { label: "Save Draft", value: false },
-        { label: "Schedule Release", value: false },
+        { label: "Publish Now", value: "PUBLISHED" as const },
+        { label: "Save Draft", value: "DRAFT" as const },
       ].map((o) => (
-        <button key={o.label} type="button" onClick={() => onChange(o.value)} className={cn("rounded-xl border px-3 py-2 text-xs transition", isPublished === o.value ? "border-gold bg-gold/10 text-gold" : "border-border bg-secondary/40 text-muted-foreground hover:border-gold/40")}>{o.label}</button>
+        <button key={o.label} type="button" onClick={() => onChange(o.value)} className={cn("rounded-xl border px-3 py-2 text-xs transition", status === o.value ? "border-gold bg-gold/10 text-gold" : "border-border bg-secondary/40 text-muted-foreground hover:border-gold/40")}>{o.label}</button>
       ))}
     </div>
   </Field>
@@ -736,9 +964,17 @@ const UploadModal = ({ kind, onClose, onSubmit }: { kind: UploadKind; onClose: (
   const [tags, setTags] = useState("");
   const [mediaFile, setMediaFile] = useState<File | null>(null);
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
-  const [isPremium, setIsPremium] = useState(false);
-  const [isPublished, setIsPublished] = useState(true);
+  const [visibility, setVisibility] = useState<ContentVisibility>("PUBLIC");
+  const [releaseStatus, setReleaseStatus] = useState<ContentStatus>("PUBLISHED");
+  const [eventType, setEventType] = useState<LiveEventType>("WORSHIP_NIGHT");
+  const [eventDate, setEventDate] = useState("");
+  const [eventStartTime, setEventStartTime] = useState("");
+  const [eventEndTime, setEventEndTime] = useState("");
+  const [timezone, setTimezone] = useState("Africa/Lagos");
+  const [streamUrl, setStreamUrl] = useState("");
+  const [registrationRequired, setRegistrationRequired] = useState(true);
   const createContent = useCreateOwnContent();
+  const createLiveEvent = useCreateOwnLiveEvent();
   const updateContent = useUpdateOwnContent();
   const presignUpload = usePresignUpload();
   const confirmUpload = useConfirmUpload();
@@ -749,17 +985,41 @@ const UploadModal = ({ kind, onClose, onSubmit }: { kind: UploadKind; onClose: (
     video: "Upload Video",
     live: "Create Live Event",
   };
-  const isBusy = createContent.isPending || updateContent.isPending || presignUpload.isPending || confirmUpload.isPending;
+  const isBusy = createContent.isPending || createLiveEvent.isPending || updateContent.isPending || presignUpload.isPending || confirmUpload.isPending;
   const contentType: ContentType = kind === "video" ? "VIDEO" : "AUDIO";
   const mediaFolder = kind === "video" ? "videos" : "audio";
   const mediaAccept = kind === "video" ? "video/mp4,video/webm,video/quicktime" : "audio/mpeg,audio/mp4,audio/wav,audio/ogg";
 
-  const submitContent = async (publish: boolean) => {
+  const submitContent = async (targetStatus: ContentStatus) => {
     if (kind === "live") {
-      toast({
-        title: "Live events are not wired yet",
-        description: "Creator live-event endpoints are still tracked as backend work.",
-      });
+      if (!title.trim() || !eventDate || !eventStartTime) {
+        toast({ title: "Title, date, and start time are required", variant: "destructive" });
+        return;
+      }
+
+      try {
+        const scheduledAt = new Date(`${eventDate}T${eventStartTime}`).toISOString();
+        const endTime = eventEndTime ? new Date(`${eventDate}T${eventEndTime}`).toISOString() : undefined;
+        await createLiveEvent.mutateAsync({
+          title: title.trim(),
+          description: description.trim() || undefined,
+          eventType,
+          scheduledAt,
+          startTime: scheduledAt,
+          endTime,
+          timezone: timezone.trim() || undefined,
+          streamUrl: streamUrl.trim() || undefined,
+          registrationRequired,
+          visibility,
+        });
+        onSubmit();
+      } catch (error) {
+        toast({
+          title: "Live event could not be created",
+          description: error instanceof Error ? error.message : "Please try again.",
+          variant: "destructive",
+        });
+      }
       return;
     }
 
@@ -768,13 +1028,22 @@ const UploadModal = ({ kind, onClose, onSubmit }: { kind: UploadKind; onClose: (
       return;
     }
 
-    if (publish && !mediaFile) {
+    if (targetStatus === "PUBLISHED" && !mediaFile) {
       toast({ title: "Choose a media file before publishing", variant: "destructive" });
       return;
     }
 
     try {
-      let thumbnailUrl: string | undefined;
+      const created = await createContent.mutateAsync({
+        title: title.trim(),
+        description: description.trim() || undefined,
+        type: contentType,
+        mediaType: kind === "video" ? "VIDEO" : "AUDIO",
+        category,
+        visibility,
+        status: "DRAFT",
+        tags: splitTags(tags),
+      });
 
       if (thumbnailFile) {
         const thumbnail = await presignUpload.mutateAsync({
@@ -784,21 +1053,11 @@ const UploadModal = ({ kind, onClose, onSubmit }: { kind: UploadKind; onClose: (
           folder: "thumbnails",
         });
         await uploadFileToPresignedUrl(thumbnailFile, thumbnail.uploadUrl);
-        thumbnailUrl = thumbnail.publicUrl;
+        await confirmUpload.mutateAsync({ key: thumbnail.key, contentId: created.id, assetRole: "thumbnail" });
       }
 
-      const created = await createContent.mutateAsync({
-        title: title.trim(),
-        description: description.trim() || undefined,
-        type: contentType,
-        category,
-        thumbnailUrl,
-        isPremium,
-        isPublished: false,
-        tags: splitTags(tags),
-      });
-
       if (mediaFile) {
+        const assetRole: UploadAssetRole = kind === "video" ? "primary_video" : "primary_audio";
         const media = await presignUpload.mutateAsync({
           fileName: mediaFile.name,
           contentType: mediaFile.type,
@@ -806,11 +1065,11 @@ const UploadModal = ({ kind, onClose, onSubmit }: { kind: UploadKind; onClose: (
           folder: mediaFolder,
         });
         await uploadFileToPresignedUrl(mediaFile, media.uploadUrl);
-        await confirmUpload.mutateAsync({ key: media.key, contentId: created.id });
+        await confirmUpload.mutateAsync({ key: media.key, contentId: created.id, assetRole });
       }
 
-      if (publish) {
-        await updateContent.mutateAsync({ contentId: created.id, input: { isPublished: true } });
+      if (targetStatus === "PUBLISHED") {
+        await updateContent.mutateAsync({ contentId: created.id, input: { status: "PUBLISHED" } });
       }
 
       onSubmit();
@@ -843,8 +1102,8 @@ const UploadModal = ({ kind, onClose, onSubmit }: { kind: UploadKind; onClose: (
             </Field>
             <Field label="Tags"><input className={inputCls} value={tags} onChange={(e) => setTags(e.target.value)} placeholder="worship, faith, prayer" /></Field>
             <Field label="Language" required><input className={inputCls} placeholder="English" /></Field>
-            <div className="md:col-span-2"><VisibilityField isPremium={isPremium} onChange={setIsPremium} /></div>
-            <div className="md:col-span-2"><ReleaseField isPublished={isPublished} onChange={setIsPublished} /></div>
+            <div className="md:col-span-2"><VisibilityField visibility={visibility} onChange={setVisibility} /></div>
+            <div className="md:col-span-2"><ReleaseField status={releaseStatus} onChange={setReleaseStatus} /></div>
           </div>
         )}
 
@@ -862,45 +1121,50 @@ const UploadModal = ({ kind, onClose, onSubmit }: { kind: UploadKind; onClose: (
             <div className="md:col-span-2"><Field label="Description"><textarea rows={3} className={cn(inputCls, "resize-none")} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What is this video about?" /></Field></div>
             <Field label="Tags"><input className={inputCls} value={tags} onChange={(e) => setTags(e.target.value)} placeholder="kingdom, story, film" /></Field>
             <Field label="Language" required><input className={inputCls} placeholder="English" /></Field>
-            <div className="md:col-span-2"><VisibilityField isPremium={isPremium} onChange={setIsPremium} /></div>
-            <div className="md:col-span-2"><ReleaseField isPublished={isPublished} onChange={setIsPublished} /></div>
+            <div className="md:col-span-2"><VisibilityField visibility={visibility} onChange={setVisibility} /></div>
+            <div className="md:col-span-2"><ReleaseField status={releaseStatus} onChange={setReleaseStatus} /></div>
           </div>
         )}
 
         {kind === "live" && (
           <div className="mt-8 grid gap-5 md:grid-cols-2">
-            <div className="md:col-span-2"><Field label="Event banner" required><FileDrop label="Upload event banner · 16:9" icon={ImageIcon} tall /></Field></div>
-            <Field label="Event title" required><input className={inputCls} placeholder="Worship Night Lagos" /></Field>
-            <Field label="Event type" required><input className={inputCls} placeholder="Worship · Service · Conference" /></Field>
-            <div className="md:col-span-2"><Field label="Description"><textarea rows={3} className={cn(inputCls, "resize-none")} placeholder="What can guests expect?" /></Field></div>
-            <Field label="Date" required><input type="date" className={inputCls} /></Field>
-            <Field label="Time zone" required><input className={inputCls} placeholder="WAT · GMT+1" /></Field>
-            <Field label="Start time" required><input type="time" className={inputCls} /></Field>
-            <Field label="End time" required><input type="time" className={inputCls} /></Field>
-            <div className="md:col-span-2"><Field label="Streaming URL"><input className={inputCls} placeholder="rtmp:// or https://" /></Field></div>
+            <div className="md:col-span-2"><Field label="Event banner" required><FileDrop label="Upload event banner - 16:9" icon={ImageIcon} tall /></Field></div>
+            <Field label="Event title" required><input className={inputCls} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Worship Night Lagos" /></Field>
+            <Field label="Event type" required>
+              <select className={inputCls} value={eventType} onChange={(e) => setEventType(e.target.value as LiveEventType)}>
+                {liveEventTypeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+              </select>
+            </Field>
+            <div className="md:col-span-2"><Field label="Description"><textarea rows={3} className={cn(inputCls, "resize-none")} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What can guests expect?" /></Field></div>
+            <Field label="Date" required><input type="date" className={inputCls} value={eventDate} onChange={(e) => setEventDate(e.target.value)} /></Field>
+            <Field label="Time zone" required><input className={inputCls} value={timezone} onChange={(e) => setTimezone(e.target.value)} placeholder="Africa/Lagos" /></Field>
+            <Field label="Start time" required><input type="time" className={inputCls} value={eventStartTime} onChange={(e) => setEventStartTime(e.target.value)} /></Field>
+            <Field label="End time" required><input type="time" className={inputCls} value={eventEndTime} onChange={(e) => setEventEndTime(e.target.value)} /></Field>
+            <div className="md:col-span-2"><Field label="Streaming URL"><input className={inputCls} value={streamUrl} onChange={(e) => setStreamUrl(e.target.value)} placeholder="rtmp:// or https://" /></Field></div>
             <div className="md:col-span-2">
               <label className="flex items-center justify-between rounded-2xl border border-border bg-secondary/30 p-4">
                 <div>
                   <p className="text-sm font-medium">Require registration</p>
                   <p className="text-xs text-muted-foreground">Guests register to receive a reminder and link.</p>
                 </div>
-                <span className="relative h-6 w-11 rounded-full bg-gold-gradient">
-                  <span className="absolute right-0.5 top-0.5 h-5 w-5 rounded-full bg-background" />
+                <input className="sr-only" type="checkbox" checked={registrationRequired} onChange={(e) => setRegistrationRequired(e.target.checked)} />
+                <span className={cn("relative h-6 w-11 rounded-full transition", registrationRequired ? "bg-gold-gradient" : "bg-muted")}>
+                  <span className={cn("absolute top-0.5 h-5 w-5 rounded-full bg-background transition", registrationRequired ? "right-0.5" : "left-0.5")} />
                 </span>
               </label>
             </div>
-            <div className="md:col-span-2"><VisibilityField isPremium={isPremium} onChange={setIsPremium} /></div>
+            <div className="md:col-span-2"><VisibilityField visibility={visibility} onChange={setVisibility} /></div>
           </div>
         )}
 
         <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-6">
           <button onClick={onClose} className="rounded-full px-5 py-2.5 text-sm text-muted-foreground hover:text-foreground">Cancel</button>
           <div className="flex gap-3">
-            <button disabled={isBusy} onClick={() => submitContent(false)} className="inline-flex items-center gap-2 rounded-full border border-gold/40 px-5 py-2.5 text-sm text-gold hover:bg-gold/10 disabled:opacity-50">
+            <button disabled={isBusy} onClick={() => submitContent("DRAFT")} className="inline-flex items-center gap-2 rounded-full border border-gold/40 px-5 py-2.5 text-sm text-gold hover:bg-gold/10 disabled:opacity-50">
               {isBusy ? "Working..." : "Save Draft"}
             </button>
-            <button disabled={isBusy} onClick={() => submitContent(isPublished)} className="inline-flex items-center gap-2 rounded-full bg-red-gradient px-6 py-2.5 text-sm font-medium text-primary-foreground shadow-red-glow disabled:opacity-50">
-              {kind === "live" ? <><Calendar className="h-4 w-4" /> Schedule Event</> : <><Sparkles className="h-4 w-4" /> {isPublished ? "Publish" : "Save Draft"}</>}
+            <button disabled={isBusy} onClick={() => submitContent(releaseStatus)} className="inline-flex items-center gap-2 rounded-full bg-red-gradient px-6 py-2.5 text-sm font-medium text-primary-foreground shadow-red-glow disabled:opacity-50">
+              {kind === "live" ? <><Calendar className="h-4 w-4" /> Schedule Event</> : <><Sparkles className="h-4 w-4" /> {releaseStatus === "PUBLISHED" ? "Publish" : "Save Draft"}</>}
             </button>
           </div>
         </div>
