@@ -14,6 +14,8 @@ import type {
   ApiUser,
   CreateContentInput,
   UpdateContentInput,
+  UserRole,
+  SubscriptionTier,
 } from "../types";
 
 type ApiQuery = Record<string, string | number | boolean | undefined>;
@@ -143,6 +145,38 @@ export function useCreateAdminLiveEvent() {
       apiRequest<ApiLiveEvent>("/api/admin/live", { body: input }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.live.all });
+    },
+  });
+}
+
+export function useReviewApplication() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      input,
+    }: {
+      id: string;
+      input: { status: "APPROVED" | "REJECTED"; displayName?: string; adminNotes?: string };
+    }) => apiRequest(`/api/admin/applications/${id}`, { method: "PATCH", body: input }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.applications() });
+    },
+  });
+}
+
+export function useUpdateAdminUser() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      input,
+    }: {
+      id: string;
+      input: { role?: UserRole; subscriptionTier?: SubscriptionTier; isActive?: boolean };
+    }) => apiRequest<ApiUser>(`/api/admin/users/${id}`, { method: "PATCH", body: input }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.users() });
     },
   });
 }

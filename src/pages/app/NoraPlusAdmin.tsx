@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { Navigate } from "react-router-dom";
 import {
   LayoutDashboard, FileVideo, UserCog, Radio, Users as UsersIcon,
@@ -13,6 +13,9 @@ import { content as mockContent, liveEvents } from "@/lib/mockData";
 import { useCreatorsList } from "@/lib/api/hooks/useCreators";
 import {
   useAdminApplications,
+  useAdminContent,
+  useAdminStats,
+  useDeleteAdminContent,
   useRefreshAdminAnalytics,
   useReviewAdminApplication,
   useUpdateAdminCreatorStatus,
@@ -24,7 +27,7 @@ type Section =
   | "dashboard" | "content" | "creators" | "live" | "users"
   | "subscriptions" | "reports" | "analytics" | "settings";
 
-const nav: { id: Section; label: string; icon: any }[] = [
+const nav: { id: Section; label: string; icon: React.ElementType }[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "content", label: "Content Management", icon: FileVideo },
   { id: "creators", label: "Creator Management", icon: UserCog },
@@ -43,7 +46,7 @@ const Card = ({ children, className }: { children: React.ReactNode; className?: 
 );
 
 const Stat = ({ label, value, sub, icon: Icon, tone = "gold" }: {
-  label: string; value: string; sub?: string; icon: any; tone?: "gold" | "red";
+  label: string; value: string; sub?: string; icon: React.ElementType; tone?: "gold" | "red";
 }) => (
   <Card>
     <div className="flex items-start justify-between">
@@ -94,7 +97,7 @@ const Toolbar = ({ placeholder, children }: { placeholder: string; children?: Re
   </div>
 );
 
-const RowAction = ({ icon: Icon, label, onClick, tone = "default" }: { icon: any; label: string; onClick: () => void; tone?: "default" | "red" | "gold" }) => (
+const RowAction = ({ icon: Icon, label, onClick, tone = "default" }: { icon: React.ElementType; label: string; onClick: () => void; tone?: "default" | "red" | "gold" }) => (
   <button
     onClick={onClick}
     title={label}
@@ -109,10 +112,14 @@ const RowAction = ({ icon: Icon, label, onClick, tone = "default" }: { icon: any
   </button>
 );
 
+const EmptyRow = ({ colSpan, message = "Loading…" }: { colSpan: number; message?: string }) => (
+  <tr><td colSpan={colSpan} className="px-5 py-8 text-center text-sm text-muted-foreground">{message}</td></tr>
+);
+
 /* ---------- Sections ---------- */
 
 const DashboardView = () => {
-  const pendingApps = MOCK_USERS.filter(u => u.creator_status === "Under Review");
+  const { data: stats } = useAdminStats();
   const activity = [
     { t: "Creator application", who: "Ada Okafor", time: "2m ago", tone: "gold" as const },
     { t: "Content published", who: "Sounds of Heaven - Anchored Live Sessions", time: "18m ago", tone: "green" as const },
@@ -124,14 +131,14 @@ const DashboardView = () => {
     <div className="space-y-8">
       <SectionHeader title="Platform Dashboard" subtitle="A live snapshot of activity across the NoraPlus platform." />
       <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label="Total Users" value="48,210" sub="+412 this week" icon={UsersIcon} />
-        <Stat label="Total Creators" value="1,284" sub="+27 this week" icon={UserCog} />
-        <Stat label="Active Subscribers" value="12,940" sub="78% retention" icon={CreditCard} tone="red" />
+        <Stat label="Total Users" value={stats ? stats.users.total.toLocaleString() : "—"} sub="+412 this week" icon={UsersIcon} />
+        <Stat label="Total Creators" value={stats ? stats.creators.total.toLocaleString() : "—"} sub="+27 this week" icon={UserCog} />
+        <Stat label="Active Subscribers" value={stats ? stats.users.premium.toLocaleString() : "—"} sub="78% retention" icon={CreditCard} tone="red" />
         <Stat label="Revenue (MTD)" value="$184,250" sub="+12.4% MoM" icon={DollarSign} tone="gold" />
-        <Stat label="Live Events" value="6" sub="2 streaming now" icon={Radio} tone="red" />
-        <Stat label="Published Content" value="9,418" sub="audio / video / live" icon={FileVideo} />
-        <Stat label="Pending Applications" value={String(pendingApps.length)} sub="awaiting review" icon={UserCog} tone="gold" />
-        <Stat label="Pending Content Reviews" value="14" sub="moderation queue" icon={ShieldAlert} tone="red" />
+        <Stat label="Live Events" value={"3"} sub="2 streaming now" icon={Radio} tone="red" />
+        <Stat label="Published Content" value={stats ? stats.content.total.toLocaleString() : "—"} sub="audio / video / live" icon={FileVideo} />
+        <Stat label="Pending Applications" value={stats ? String(stats.applications.pending) : "—"} sub="awaiting review" icon={UserCog} tone="gold" />
+        <Stat label="Pending Content Reviews" value={"0"} sub="moderation queue" icon={ShieldAlert} tone="red" />
       </div>
       <Card>
         <div className="flex items-center justify-between">
@@ -165,12 +172,9 @@ const DashboardView = () => {
 
 const ContentView = () => {
   const [filter, setFilter] = useState<"all" | "audio" | "video" | "live">("all");
-  const items = useMemo(() => {
-    if (filter === "all") return mockContent;
-    if (filter === "live") return mockContent.filter(c => c.medium === "live");
-    return mockContent.filter(c => c.medium === filter);
-  }, [filter]);
-  const act = (label: string, title: string) => toast({ title: label, description: title });
+  const typeQuery = filter === "audio" ? { type: "AUDIO" } : filter === "video" ? { type: "VIDEO" } : undefined;
+  const { data: items = [], isLoading } = useAdminContent(typeQuery);
+  const deleteContent = useDeleteAdminContent();
 
   return (
     <div className="space-y-6">
@@ -202,24 +206,37 @@ const ContentView = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-border/60">
-              {items.map(c => (
+              {isLoading ? (
+                <EmptyRow colSpan={5} />
+              ) : items.length === 0 ? (
+                <EmptyRow colSpan={5} message="No content found." />
+              ) : items.map(c => (
                 <tr key={c.id} className="hover:bg-secondary/30">
                   <td className="px-5 py-3">
                     <div className="flex items-center gap-3">
-                      <img src={c.image} alt="" className="h-10 w-10 rounded-lg object-cover" />
+                      {c.thumbnailUrl && <img src={c.thumbnailUrl} alt="" className="h-10 w-10 rounded-lg object-cover" />}
                       <span className="font-medium">{c.title}</span>
                     </div>
                   </td>
-                  <td className="px-5 py-3 text-muted-foreground">{c.creator}</td>
+                  <td className="px-5 py-3 text-muted-foreground">{c.creator?.displayName ?? "—"}</td>
                   <td className="px-5 py-3"><Pill tone="muted">{c.type}</Pill></td>
-                  <td className="px-5 py-3"><Pill tone="green">Published</Pill></td>
+                  <td className="px-5 py-3">
+                    <Pill tone={c.status === "PUBLISHED" ? "green" : "muted"}>{c.status === "PUBLISHED" ? "Published" : "Draft"}</Pill>
+                  </td>
                   <td className="px-5 py-3">
                     <div className="flex justify-end gap-2">
-                      <RowAction icon={Eye} label="View" onClick={() => act("Viewing", c.title)} />
-                      <RowAction icon={Star} label="Feature" tone="gold" onClick={() => act("Featured", c.title)} />
-                      <RowAction icon={Check} label="Approve" onClick={() => act("Approved", c.title)} />
-                      <RowAction icon={X} label="Reject" tone="red" onClick={() => act("Rejected", c.title)} />
-                      <RowAction icon={Trash2} label="Delete" tone="red" onClick={() => act("Deleted", c.title)} />
+                      <RowAction icon={Eye} label="View" onClick={() => toast({ title: "Viewing", description: c.title })} />
+                      <RowAction icon={Star} label="Feature" tone="gold" onClick={() => toast({ title: "Featured", description: c.title })} />
+                      <RowAction
+                        icon={Trash2}
+                        label="Delete"
+                        tone="red"
+                        onClick={() =>
+                          deleteContent.mutate(c.id, {
+                            onSuccess: () => toast({ title: "Deleted", description: c.title }),
+                          })
+                        }
+                      />
                     </div>
                   </td>
                 </tr>

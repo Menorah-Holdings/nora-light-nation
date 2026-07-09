@@ -586,6 +586,7 @@ const LiveManager = ({ openUpload }: { openUpload: (k: UploadKind) => void }) =>
   if (!liveQuery.isLoading && items.length === 0) {
     return <EmptyState icon={Radio} title="No live events scheduled." cta="Create Live Event" onCta={() => openUpload("live")} />;
   }
+
   return (
     <div className="space-y-6">
       <SectionHeader eyebrow="Manager" title="Live Events" subtitle="Schedule, stream and review your live experiences."
@@ -598,10 +599,8 @@ const LiveManager = ({ openUpload }: { openUpload: (k: UploadKind) => void }) =>
             <thead className="text-left text-xs uppercase tracking-wider text-muted-foreground bg-background/40">
               <tr>
                 <th className="px-6 py-3 font-normal">Event</th>
-                <th className="px-6 py-3 font-normal">Type</th>
                 <th className="px-6 py-3 font-normal">Date</th>
                 <th className="px-6 py-3 font-normal">Status</th>
-                <th className="px-6 py-3 font-normal">Registrations</th>
                 <th className="px-6 py-3 font-normal">Viewers</th>
                 <th className="px-6 py-3 text-right font-normal">Actions</th>
               </tr>
@@ -696,6 +695,7 @@ const CreatorProfileView = () => {
   const profile = profileQuery.data;
   const [socialLinks, setSocialLinks] = useState<Partial<Record<CreatorSocialPlatform, string>>>({});
   const [selectedCategories, setSelectedCategories] = useState<ContentCategory[]>([]);
+  const [bio, setBio] = useState("");
   const [individualProfile, setIndividualProfile] = useState({ fullName: "", stageName: "", primaryRole: "" });
   const [organizationProfile, setOrganizationProfile] = useState({ organizationName: "", contactPersonName: "", officialEmail: "", organizationType: "" });
 
@@ -715,6 +715,7 @@ const CreatorProfileView = () => {
       officialEmail: profile.ministryOrganizationProfile?.officialEmail ?? "",
       organizationType: profile.ministryOrganizationProfile?.organizationType ?? "",
     });
+    setBio(profile.bio ?? "");
   }, [profile]);
 
   const displayName = profile?.displayName ?? user.name;
@@ -828,7 +829,15 @@ const CreatorProfileView = () => {
             </Field>
           ))}
           <div className="md:col-span-2">
-            <Field label="Bio"><textarea rows={4} className={cn(inputCls, "resize-none")} placeholder="Tell your audience about your ministry or creative work…" /></Field>
+            <Field label="Bio">
+              <textarea
+                rows={4}
+                className={cn(inputCls, "resize-none")}
+                value={bio}
+                onChange={(e) => setBio(e.target.value)}
+                placeholder="Tell your audience about your ministry or creative work…"
+              />
+            </Field>
           </div>
         </div>
         <div className="mt-6 flex justify-end">
@@ -1142,7 +1151,7 @@ const UploadModal = ({ kind, onClose, onSubmit }: { kind: UploadKind; onClose: (
             <Field label="End time" required><input type="time" className={inputCls} value={eventEndTime} onChange={(e) => setEventEndTime(e.target.value)} /></Field>
             <div className="md:col-span-2"><Field label="Streaming URL"><input className={inputCls} value={streamUrl} onChange={(e) => setStreamUrl(e.target.value)} placeholder="rtmp:// or https://" /></Field></div>
             <div className="md:col-span-2">
-              <label className="flex items-center justify-between rounded-2xl border border-border bg-secondary/30 p-4">
+              <label className="flex items-center justify-between rounded-2xl border border-border bg-secondary/30 p-4 cursor-pointer">
                 <div>
                   <p className="text-sm font-medium">Require registration</p>
                   <p className="text-xs text-muted-foreground">Guests register to receive a reminder and link.</p>
