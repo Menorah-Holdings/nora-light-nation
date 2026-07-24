@@ -37,6 +37,11 @@ export const queryKeys = {
     current: () => [...queryKeys.library.all, "current"] as const,
     progress: (contentId: string) => [...queryKeys.library.all, "progress", contentId] as const,
   },
+  playlists: {
+    all: ["playlists"] as const,
+    list: () => [...queryKeys.playlists.all, "list"] as const,
+    detail: (id: string) => [...queryKeys.playlists.all, "detail", id] as const,
+  },
   admin: {
     all: ["admin"] as const,
     stats: () => [...queryKeys.admin.all, "stats"] as const,
