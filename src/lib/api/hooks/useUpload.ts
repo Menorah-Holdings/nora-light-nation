@@ -2,8 +2,11 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "../client";
 import { queryKeys } from "../queryKeys";
 import type {
+  ConfirmUserMediaInput,
+  ConfirmUserMediaResponse,
   ConfirmUploadInput,
   ConfirmUploadResponse,
+  PresignUserMediaInput,
   PresignUploadInput,
   PresignUploadResponse,
 } from "../types";
@@ -24,6 +27,27 @@ export function useConfirmUpload() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.creators.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.content.all });
+    },
+  });
+}
+
+export function usePresignUserMedia() {
+  return useMutation({
+    mutationFn: (input: PresignUserMediaInput) =>
+      apiRequest<PresignUploadResponse>("/api/users/me/media/presign", { body: input }),
+  });
+}
+
+export function useConfirmUserMedia() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: ConfirmUserMediaInput) =>
+      apiRequest<ConfirmUserMediaResponse>("/api/users/me/media/confirm", { body: input }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.auth.session() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.users.me() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.creators.myApplication() });
     },
   });
 }

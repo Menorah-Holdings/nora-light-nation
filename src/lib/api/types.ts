@@ -125,6 +125,8 @@ export interface ApiCreatorApplication {
   displayName: string;
   requestedHandle?: string | null;
   websiteUrl?: string | null;
+  avatarUrl?: string | null;
+  bannerUrl?: string | null;
   socialLinks?: Partial<Record<CreatorSocialPlatform, string>> | null;
   status: ApplicationStatus;
   adminNotes?: string | null;
@@ -258,6 +260,8 @@ export interface CreatorApplicationInput {
   handle?: string;
   category: ContentCategory;
   websiteUrl?: string;
+  avatarUrl?: string;
+  bannerUrl?: string;
   socialLinks?: Partial<Record<CreatorSocialPlatform, string>>;
 }
 
@@ -317,6 +321,10 @@ export interface PresignUploadInput {
   fileSize: number;
 }
 
+export interface PresignUserMediaInput extends Omit<PresignUploadInput, "folder"> {
+  folder: "avatars" | "banners";
+}
+
 export interface PresignUploadResponse {
   uploadUrl: string;
   key: string;
@@ -333,6 +341,19 @@ export interface ConfirmUploadInput {
 export interface ConfirmUploadResponse {
   url: string;
   key: string;
+}
+
+export type UserMediaRole = "avatar" | "banner";
+
+export interface ConfirmUserMediaInput {
+  key: string;
+  role: UserMediaRole;
+}
+
+export interface ConfirmUserMediaResponse {
+  url: string;
+  key: string;
+  role: UserMediaRole;
 }
 
 export interface AdminStats {

@@ -10,6 +10,7 @@ import { toast } from "@/hooks/use-toast";
 import { useUser } from "@/lib/user";
 import CreatorStudio from "@/components/CreatorStudio";
 import { useSubmitCreatorApplication } from "@/lib/api/hooks/useCreators";
+import { uploadFileToPresignedUrl, useConfirmUserMedia, usePresignUserMedia } from "@/lib/api/hooks/useUpload";
 import type { ContentCategory, CreatorApplicationInput, CreatorSocialPlatform } from "@/lib/api/types";
 
 
@@ -123,6 +124,7 @@ const Field = ({ label, required, children, hint }: { label: string; required?: 
 );
 
 const inputCls = "w-full rounded-xl border border-border bg-secondary/40 px-4 py-2.5 text-sm placeholder:text-muted-foreground/70 focus:outline-none focus:ring-1 focus:ring-gold focus:border-gold/60 transition";
+const disabledInputCls = "w-full rounded-xl border border-border bg-secondary/30 px-4 py-2.5 text-sm text-muted-foreground placeholder:text-muted-foreground/70 cursor-not-allowed";
 
 const CATEGORIES: { label: string; value: ContentCategory }[] = [
   { label: "Music", value: "MUSIC" },
@@ -143,6 +145,95 @@ const SOCIAL: { key: CreatorSocialPlatform; label: string; icon: typeof Instagra
   { key: "X", label: "X", icon: Twitter, ph: "https://x.com/yourhandle" },
 ];
 
+type ApplicationUpload = {
+  fileName: string;
+  key: string;
+  url: string;
+};
+
+const ApplicationImageUpload = ({
+  label,
+  folder,
+  role,
+  shape,
+  upload,
+  onUpload,
+}: {
+  label: string;
+  folder: "avatars" | "banners";
+  role: "avatar" | "banner";
+  shape: "avatar" | "banner";
+  upload: ApplicationUpload | null;
+  onUpload: (upload: ApplicationUpload | null) => void;
+}) => {
+  const presignUpload = usePresignUserMedia();
+  const confirmUpload = useConfirmUserMedia();
+  const isUploading = presignUpload.isPending || confirmUpload.isPending;
+
+  const chooseFile = async (file: File | undefined) => {
+    if (!file || isUploading) return;
+
+    try {
+      const presigned = await presignUpload.mutateAsync({
+        fileName: file.name,
+        contentType: file.type,
+        folder,
+        fileSize: file.size,
+      });
+      await uploadFileToPresignedUrl(file, presigned.uploadUrl);
+      const confirmed = await confirmUpload.mutateAsync({ key: presigned.key, role });
+      const nextUpload = { fileName: file.name, key: confirmed.key, url: confirmed.url };
+      onUpload(nextUpload);
+      toast({ title: `${label} uploaded`, description: file.name });
+    } catch (error) {
+      toast({
+        title: `${label} upload failed`,
+        description: error instanceof Error ? error.message : "Please choose a valid JPG, PNG, or WebP image.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  return (
+    <div>
+      <label
+        className={cn(
+          "group relative flex cursor-pointer items-center justify-center overflow-hidden border border-dashed border-gold/40 bg-secondary/30 transition-colors hover:border-gold",
+          shape === "avatar" ? "h-32 w-32 rounded-full" : "h-32 rounded-2xl",
+          isUploading && "pointer-events-none opacity-70",
+        )}
+      >
+        {upload ? (
+          <img src={upload.url} alt="" className="h-full w-full object-cover" />
+        ) : (
+          <div className="text-center">
+            <ImageIcon className="mx-auto h-6 w-6 text-gold" />
+            {shape === "banner" && <p className="mt-2 text-xs text-muted-foreground">Upload cover image</p>}
+          </div>
+        )}
+        <input
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          className="sr-only"
+          disabled={isUploading}
+          onChange={(event) => void chooseFile(event.target.files?.[0])}
+        />
+        <span className="absolute inset-x-0 bottom-0 bg-background/80 px-2 py-1 text-center text-[11px] text-gold opacity-0 transition group-hover:opacity-100">
+          {isUploading ? "Uploading..." : upload ? "Replace" : "Upload"}
+        </span>
+      </label>
+      {upload && (
+        <div className="mt-2 flex max-w-full items-center gap-2 text-xs text-muted-foreground">
+          <span className="truncate">{upload.fileName}</span>
+          <button type="button" onClick={() => onUpload(null)} className="shrink-0 text-gold hover:underline">
+            Remove
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const Application = ({
   onCancel,
   onSubmit,
@@ -152,6 +243,7 @@ const Application = ({
   onSubmit: (input: CreatorApplicationInput) => void;
   isSubmitting: boolean;
 }) => {
+  const { user } = useUser();
   const [step, setStep] = useState(1);
   const [type, setType] = useState<CreatorType>(null);
   const [handle, setHandle] = useState("");
@@ -159,8 +251,13 @@ const Application = ({
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [categories, setCategories] = useState<ContentCategory[]>([]);
   const [socialLinks, setSocialLinks] = useState<Partial<Record<CreatorSocialPlatform, string>>>({});
+  const [avatarUpload, setAvatarUpload] = useState<ApplicationUpload | null>(null);
+  const [bannerUpload, setBannerUpload] = useState<ApplicationUpload | null>(null);
   const [agree1, setAgree1] = useState(false);
   const [agree2, setAgree2] = useState(false);
+  const accountName = user.name?.trim() || "";
+  const accountEmail = user.email?.trim() || "";
+  const lockAccountFields = true;
 
   const canNext = useMemo(() => {
     if (step === 1) return type !== null;
@@ -191,6 +288,8 @@ const Application = ({
       ...(handle.trim() && { handle: handle.trim() }),
       category: categories[0] ?? "OTHER",
       ...(websiteUrl.trim() && { websiteUrl: websiteUrl.trim() }),
+      ...(avatarUpload?.url && { avatarUrl: avatarUpload.url }),
+      ...(bannerUpload?.url && { bannerUrl: bannerUpload.url }),
       ...(Object.keys(links).length > 0 && { socialLinks: links }),
     });
   };
@@ -243,7 +342,9 @@ const Application = ({
           <div className="space-y-8">
             <StepHeader step={2} title="Personal Information" />
             <div className="grid gap-5 md:grid-cols-2">
-              <Field label="Full Name" required><input className={inputCls} placeholder="Your full name" /></Field>
+              <Field label="Full Name" required hint={lockAccountFields ? "Pulled from your NoraPlus account." : undefined}>
+                <input className={lockAccountFields ? disabledInputCls : inputCls} value={accountName} readOnly={lockAccountFields} disabled={lockAccountFields} placeholder="Your full name" />
+              </Field>
               <Field label="Creator Display Name" required>
                 <input className={inputCls} value={applicationName} onChange={(e) => setApplicationName(e.target.value)} placeholder="How it appears on NoraPlus" />
               </Field>
@@ -262,10 +363,9 @@ const Application = ({
                   />
                 </div>
               </Field>
-              <Field label="Email Address" required><input type="email" className={inputCls} placeholder="you@email.com" /></Field>
-              <Field label="Phone Number"><input className={inputCls} placeholder="+234 800 000 0000" /></Field>
-              <Field label="Country" required><input className={inputCls} placeholder="Nigeria" /></Field>
-              <Field label="City" required><input className={inputCls} placeholder="Lagos" /></Field>
+              <Field label="Email Address" required hint={lockAccountFields ? "Pulled from your NoraPlus account." : undefined}>
+                <input type="email" className={lockAccountFields ? disabledInputCls : inputCls} value={accountEmail} readOnly={lockAccountFields} disabled={lockAccountFields} placeholder="you@email.com" />
+              </Field>
             </div>
           </div>
         )}
@@ -277,7 +377,6 @@ const Application = ({
               <Field label="Organization Name" required>
                 <input className={inputCls} value={applicationName} onChange={(e) => setApplicationName(e.target.value)} placeholder="Ministry / Organization name" />
               </Field>
-              <Field label="Display Name" required><input className={inputCls} placeholder="How it appears on NoraPlus" /></Field>
               <Field
                 label="Creator Handle"
                 required
@@ -293,11 +392,12 @@ const Application = ({
                   />
                 </div>
               </Field>
-              <Field label="Contact Person" required><input className={inputCls} placeholder="Full name" /></Field>
-              <Field label="Official Email" required><input type="email" className={inputCls} placeholder="contact@ministry.org" /></Field>
-              <Field label="Phone Number"><input className={inputCls} placeholder="+234 800 000 0000" /></Field>
-              <Field label="Country" required><input className={inputCls} placeholder="Nigeria" /></Field>
-              <Field label="City" required><input className={inputCls} placeholder="Lagos" /></Field>
+              <Field label="Contact Person" required hint={lockAccountFields ? "Pulled from your NoraPlus account." : undefined}>
+                <input className={lockAccountFields ? disabledInputCls : inputCls} value={accountName} readOnly={lockAccountFields} disabled={lockAccountFields} placeholder="Full name" />
+              </Field>
+              <Field label="Official Email" required hint={lockAccountFields ? "Pulled from your NoraPlus account." : undefined}>
+                <input type="email" className={lockAccountFields ? disabledInputCls : inputCls} value={accountEmail} readOnly={lockAccountFields} disabled={lockAccountFields} placeholder="contact@ministry.org" />
+              </Field>
             </div>
           </div>
         )}
@@ -307,18 +407,30 @@ const Application = ({
             <StepHeader step={3} title="Creator Profile" />
             <div className="grid gap-5 md:grid-cols-2">
               <Field label="Profile Photo">
-                <div className="flex h-32 w-32 items-center justify-center rounded-full border border-dashed border-gold/40 bg-secondary/30 hover:border-gold transition-colors cursor-pointer">
-                  <ImageIcon className="h-6 w-6 text-gold" />
-                </div>
+                <ApplicationImageUpload
+                  label="Profile photo"
+                  folder="avatars"
+                  role="avatar"
+                  shape="avatar"
+                  upload={avatarUpload}
+                  onUpload={setAvatarUpload}
+                />
               </Field>
               <Field label="Cover Image">
-                <div className="flex h-32 items-center justify-center rounded-2xl border border-dashed border-gold/40 bg-secondary/30 hover:border-gold transition-colors cursor-pointer">
-                  <div className="text-center">
-                    <ImageIcon className="mx-auto h-6 w-6 text-gold" />
-                    <p className="mt-2 text-xs text-muted-foreground">Upload cover image</p>
-                  </div>
-                </div>
+                <ApplicationImageUpload
+                  label="Cover image"
+                  folder="banners"
+                  role="banner"
+                  shape="banner"
+                  upload={bannerUpload}
+                  onUpload={setBannerUpload}
+                />
               </Field>
+              {(avatarUpload || bannerUpload) && (
+                <p className="md:col-span-2 text-xs text-muted-foreground">
+                  Images will be submitted with your creator application and used for your creator profile after approval.
+                </p>
+              )}
               <div className="md:col-span-2">
                 <Field label="Short Bio">
                   <textarea rows={4} className={cn(inputCls, "resize-none")} placeholder="Tell us about your ministry or creative work..." />
