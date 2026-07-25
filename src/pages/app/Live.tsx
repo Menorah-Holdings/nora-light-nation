@@ -2,7 +2,8 @@ import { useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Calendar, Users } from "lucide-react";
 import { adaptLiveEvent, type UiLiveEvent } from "@/lib/api/adapters";
-import { useActiveLiveEvents, useLiveEvents } from "@/lib/api/hooks/useLive";
+import { useActiveLiveEvents, useJoinLiveEvent, useLiveEvents } from "@/lib/api/hooks/useLive";
+import { toast } from "@/hooks/use-toast";
 
 const tabs = ["Live Now", "Upcoming", "Replays"] as const;
 const statusMap: Record<(typeof tabs)[number], UiLiveEvent["status"]> = {
@@ -85,13 +86,7 @@ const Live = () => {
                 <p className="mt-2 text-sm text-muted-foreground">Hosted by {event.host}</p>
                 <div className="mt-5 flex items-center justify-between">
                   <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground"><Users className="h-3.5 w-3.5" /> {event.viewerCount.toLocaleString()} viewers</span>
-                  {event.youtubeUrl ? (
-                    <a href={event.youtubeUrl} target="_blank" rel="noreferrer" className="rounded-full bg-red-gradient px-5 py-2 text-xs font-medium text-primary-foreground shadow-red-glow">
-                      {event.status === "live" ? "Watch live" : "View event"}
-                    </a>
-                  ) : (
-                    <span className="rounded-full border border-border px-5 py-2 text-xs text-muted-foreground">Details soon</span>
-                  )}
+                  <LiveEventAction event={event} />
                 </div>
               </div>
             </div>
@@ -101,6 +96,45 @@ const Live = () => {
     </div>
   );
 };
+
+function LiveEventAction({ event }: { event: UiLiveEvent }) {
+  const joinLiveEvent = useJoinLiveEvent();
+  const canJoin = event.status === "live" || event.status === "upcoming";
+
+  if (!canJoin) {
+    return <span className="rounded-full border border-border px-5 py-2 text-xs text-muted-foreground">Replay soon</span>;
+  }
+
+  const join = () => {
+    joinLiveEvent.mutate(event.id, {
+      onSuccess: (source) => {
+        if (!source.url) {
+          toast({ title: "Stream is not available yet" });
+          return;
+        }
+        window.open(source.url, "_blank", "noopener,noreferrer");
+      },
+      onError: (error) => {
+        toast({
+          title: "Could not open stream",
+          description: error instanceof Error ? error.message : "Please try again.",
+          variant: "destructive",
+        });
+      },
+    });
+  };
+
+  return (
+    <button
+      type="button"
+      disabled={joinLiveEvent.isPending}
+      onClick={join}
+      className="rounded-full bg-red-gradient px-5 py-2 text-xs font-medium text-primary-foreground shadow-red-glow disabled:opacity-60"
+    >
+      {joinLiveEvent.isPending ? "Opening..." : event.status === "live" ? "Watch live" : "Join event"}
+    </button>
+  );
+}
 
 function mergeEvents(events: UiLiveEvent[]): UiLiveEvent[] {
   const seen = new Set<string>();

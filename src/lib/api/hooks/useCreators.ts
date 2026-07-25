@@ -4,12 +4,18 @@ import { queryKeys } from "../queryKeys";
 import type {
   ApiContent,
   ApiCreator,
+  ApiCreatorAnalytics,
   ApiCreatorApplication,
+  ApiLiveEvent,
   CreatorApplicationInput,
+  CreatorProfileUpdateInput,
+  CreateCreatorLiveEventInput,
   CreateContentInput,
   ListContentQuery,
   ListCreatorsQuery,
+  ListLiveEventsQuery,
   UpdateContentInput,
+  UpdateCreatorLiveEventInput,
 } from "../types";
 
 export function useCreatorsList(query?: ListCreatorsQuery) {
@@ -24,6 +30,14 @@ export function useCreatorDetail(id: string | undefined) {
     queryKey: queryKeys.creators.detail(id ?? ""),
     queryFn: () => apiRequest<ApiCreator>(`/api/creators/${id}`),
     enabled: Boolean(id),
+  });
+}
+
+export function useCreatorByHandle(handle: string | undefined) {
+  return useQuery({
+    queryKey: queryKeys.creators.handle(handle ?? ""),
+    queryFn: () => apiRequest<ApiCreator>(`/api/creators/handle/${handle}`),
+    enabled: Boolean(handle),
   });
 }
 
@@ -50,6 +64,22 @@ export function useMyCreatorApplication(enabled = true) {
   });
 }
 
+export function useMyCreatorProfile(enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.creators.myProfile(),
+    queryFn: () => apiRequest<ApiCreator>("/api/creators/me/profile"),
+    enabled,
+  });
+}
+
+export function useMyCreatorAnalytics(enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.creators.myAnalytics(),
+    queryFn: () => apiRequest<ApiCreatorAnalytics>("/api/creators/me/analytics"),
+    enabled,
+  });
+}
+
 export function useSubmitCreatorApplication() {
   const queryClient = useQueryClient();
 
@@ -57,9 +87,26 @@ export function useSubmitCreatorApplication() {
     mutationFn: (input: CreatorApplicationInput) =>
       apiRequest("/api/creators/apply", { body: input }),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.auth.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.creators.myApplication() });
       queryClient.invalidateQueries({ queryKey: queryKeys.creators.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.users.all });
+    },
+  });
+}
+
+export function useUpdateMyCreatorProfile() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: CreatorProfileUpdateInput) =>
+      apiRequest<ApiCreator>("/api/creators/me/profile", {
+        method: "PATCH",
+        body: input,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.creators.myProfile() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.creators.all });
     },
   });
 }
@@ -102,6 +149,55 @@ export function useDeleteOwnContent() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.creators.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.content.all });
+    },
+  });
+}
+
+export function useOwnCreatorLiveEvents(query?: ListLiveEventsQuery) {
+  return useQuery({
+    queryKey: queryKeys.creators.ownLive(query),
+    queryFn: () => apiRequest<ApiLiveEvent[]>("/api/creators/me/live", { query }),
+  });
+}
+
+export function useCreateOwnLiveEvent() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: CreateCreatorLiveEventInput) =>
+      apiRequest<ApiLiveEvent>("/api/creators/me/live", { body: input }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.creators.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.live.all });
+    },
+  });
+}
+
+export function useUpdateOwnLiveEvent() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: UpdateCreatorLiveEventInput }) =>
+      apiRequest<ApiLiveEvent>(`/api/creators/me/live/${id}`, {
+        method: "PATCH",
+        body: input,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.creators.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.live.all });
+    },
+  });
+}
+
+export function useDeleteOwnLiveEvent() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) =>
+      apiRequest(`/api/creators/me/live/${id}`, { method: "DELETE" }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.creators.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.live.all });
     },
   });
 }

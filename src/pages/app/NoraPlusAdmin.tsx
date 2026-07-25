@@ -7,25 +7,27 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
-import { useUser, MOCK_USERS } from "@/lib/user";
-import { content as mockContent } from "@/lib/mockData";
+import { useUser, MOCK_USERS, creatorBadgeLabel } from "@/lib/user";
+import { CreatorStatusBadge } from "@/components/CreatorStatusBadge";
+import { content as mockContent, liveEvents } from "@/lib/mockData";
+import { useCreatorsList } from "@/lib/api/hooks/useCreators";
 import {
-  useAdminStats,
-  useAdminContent,
-  useDeleteAdminContent,
-  useAdminUsers,
   useAdminApplications,
-  useReviewApplication,
-  useUpdateAdminUser,
-  useUpdateAdminLiveEvent,
+  useAdminContent,
+  useAdminStats,
+  useDeleteAdminContent,
+  useRefreshAdminAnalytics,
+  useReviewAdminApplication,
+  useUpdateAdminCreatorStatus,
 } from "@/lib/api/hooks/useAdmin";
-import { useLiveEvents } from "@/lib/api/hooks/useLive";
+import { buildAdminReviewApplicationInput } from "@/lib/api/adminPayloads";
+import type { ApiCreatorApplication } from "@/lib/api/types";
 
 type Section =
   | "dashboard" | "content" | "creators" | "live" | "users"
   | "subscriptions" | "reports" | "analytics" | "settings";
 
-const nav: { id: Section; label: string; icon: any }[] = [
+const nav: { id: Section; label: string; icon: React.ElementType }[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "content", label: "Content Management", icon: FileVideo },
   { id: "creators", label: "Creator Management", icon: UserCog },
@@ -44,7 +46,7 @@ const Card = ({ children, className }: { children: React.ReactNode; className?: 
 );
 
 const Stat = ({ label, value, sub, icon: Icon, tone = "gold" }: {
-  label: string; value: string; sub?: string; icon: any; tone?: "gold" | "red";
+  label: string; value: string; sub?: string; icon: React.ElementType; tone?: "gold" | "red";
 }) => (
   <Card>
     <div className="flex items-start justify-between">
@@ -95,7 +97,7 @@ const Toolbar = ({ placeholder, children }: { placeholder: string; children?: Re
   </div>
 );
 
-const RowAction = ({ icon: Icon, label, onClick, tone = "default" }: { icon: any; label: string; onClick: () => void; tone?: "default" | "red" | "gold" }) => (
+const RowAction = ({ icon: Icon, label, onClick, tone = "default" }: { icon: React.ElementType; label: string; onClick: () => void; tone?: "default" | "red" | "gold" }) => (
   <button
     onClick={onClick}
     title={label}
@@ -120,10 +122,10 @@ const DashboardView = () => {
   const { data: stats } = useAdminStats();
   const activity = [
     { t: "Creator application", who: "Ada Okafor", time: "2m ago", tone: "gold" as const },
-    { t: "Content published", who: "Sounds of Heaven · Anchored — Live Sessions", time: "18m ago", tone: "green" as const },
-    { t: "Subscription upgraded", who: "u-1842 → Premium", time: "1h ago", tone: "default" as const },
+    { t: "Content published", who: "Sounds of Heaven - Anchored Live Sessions", time: "18m ago", tone: "green" as const },
+    { t: "Subscription upgraded", who: "u-1842 -> Premium", time: "1h ago", tone: "default" as const },
     { t: "Report filed", who: "Comment on \"The Narrow Way\"", time: "3h ago", tone: "red" as const },
-    { t: "Live event started", who: "Youth Revival — Nairobi", time: "5h ago", tone: "red" as const },
+    { t: "Live event started", who: "Youth Revival - Nairobi", time: "5h ago", tone: "red" as const },
   ];
   return (
     <div className="space-y-8">
@@ -133,10 +135,10 @@ const DashboardView = () => {
         <Stat label="Total Creators" value={stats ? stats.creators.total.toLocaleString() : "—"} sub="+27 this week" icon={UserCog} />
         <Stat label="Active Subscribers" value={stats ? stats.users.premium.toLocaleString() : "—"} sub="78% retention" icon={CreditCard} tone="red" />
         <Stat label="Revenue (MTD)" value="$184,250" sub="+12.4% MoM" icon={DollarSign} tone="gold" />
-        <Stat label="Live Events" value={stats ? String(stats.live.active) : "—"} sub="streaming now" icon={Radio} tone="red" />
-        <Stat label="Published Content" value={stats ? stats.content.published.toLocaleString() : "—"} sub="audio · video · live" icon={FileVideo} />
+        <Stat label="Live Events" value={"3"} sub="2 streaming now" icon={Radio} tone="red" />
+        <Stat label="Published Content" value={stats ? stats.content.total.toLocaleString() : "—"} sub="audio / video / live" icon={FileVideo} />
         <Stat label="Pending Applications" value={stats ? String(stats.applications.pending) : "—"} sub="awaiting review" icon={UserCog} tone="gold" />
-        <Stat label="Pending Content Reviews" value="14" sub="moderation queue" icon={ShieldAlert} tone="red" />
+        <Stat label="Pending Content Reviews" value={"0"} sub="moderation queue" icon={ShieldAlert} tone="red" />
       </div>
       <Card>
         <div className="flex items-center justify-between">
@@ -177,7 +179,7 @@ const ContentView = () => {
   return (
     <div className="space-y-6">
       <SectionHeader title="Content Management" subtitle="Approve, moderate, feature and manage every piece of content on NoraPlus." />
-      <Toolbar placeholder="Search content, creators, titles…">
+      <Toolbar placeholder="Search content, creators, titles...">
         {(["all", "audio", "video", "live"] as const).map(f => (
           <button
             key={f}
@@ -219,7 +221,7 @@ const ContentView = () => {
                   <td className="px-5 py-3 text-muted-foreground">{c.creator?.displayName ?? "—"}</td>
                   <td className="px-5 py-3"><Pill tone="muted">{c.type}</Pill></td>
                   <td className="px-5 py-3">
-                    <Pill tone={c.isPublished ? "green" : "muted"}>{c.isPublished ? "Published" : "Draft"}</Pill>
+                    <Pill tone={c.status === "PUBLISHED" ? "green" : "muted"}>{c.status === "PUBLISHED" ? "Published" : "Draft"}</Pill>
                   </td>
                   <td className="px-5 py-3">
                     <div className="flex justify-end gap-2">
@@ -248,199 +250,124 @@ const ContentView = () => {
 };
 
 const CreatorsView = () => {
-  const { data: applications = [], isLoading } = useAdminApplications();
-  const reviewApp = useReviewApplication();
+  const applicationsQuery = useAdminApplications({ status: "PENDING", limit: 50 });
+  const creatorsQuery = useCreatorsList({ limit: 50 });
+  const reviewApplication = useReviewAdminApplication();
+  const updateCreatorStatus = useUpdateAdminCreatorStatus();
 
-  const approve = (id: string, name: string, ministryName: string) =>
-    reviewApp.mutate(
-      { id, input: { status: "APPROVED", displayName: ministryName } },
-      { onSuccess: () => toast({ title: `${name} approved` }) },
+  const review = (application: ApiCreatorApplication, status: "APPROVED" | "REJECTED") => {
+    const declineReason = status === "REJECTED" ? window.prompt("Decline reason")?.trim() : undefined;
+    if (status === "REJECTED" && !declineReason) return;
+
+    reviewApplication.mutate(
+      {
+        id: application.id,
+        input: buildAdminReviewApplicationInput(application, status, declineReason),
+      },
+      {
+        onSuccess: () => toast({ title: status === "APPROVED" ? "Application approved" : "Application declined" }),
+        onError: (error) =>
+          toast({
+            title: "Review failed",
+            description: error instanceof Error ? error.message : "Please try again.",
+            variant: "destructive",
+          }),
+      },
     );
-  const decline = (id: string, name: string) =>
-    reviewApp.mutate(
-      { id, input: { status: "REJECTED" } },
-      { onSuccess: () => toast({ title: `${name} declined` }) },
+  };
+
+  const toggleCreator = (id: string, isActive: boolean | undefined) => {
+    updateCreatorStatus.mutate(
+      { id, input: { isActive: !isActive } },
+      {
+        onSuccess: () => toast({ title: isActive ? "Creator deactivated" : "Creator activated" }),
+        onError: (error) =>
+          toast({
+            title: "Status update failed",
+            description: error instanceof Error ? error.message : "Please try again.",
+            variant: "destructive",
+          }),
+      },
     );
+  };
 
   return (
     <div className="space-y-6">
-      <SectionHeader title="Creator Management" subtitle="Review applications, approve creators, and manage verified status." />
-      <Toolbar placeholder="Search creators or applicants…" />
+      <SectionHeader title="Creator Management" subtitle="Review applications, approve creators, and manage activation." />
+      <Toolbar placeholder="Search creators or applicants..." />
       <Card className="overflow-hidden p-0">
+        <div className="border-b border-border/60 px-5 py-4">
+          <h3 className="font-display text-lg">Pending Applications</h3>
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-secondary/40 text-xs uppercase tracking-wider text-muted-foreground">
               <tr>
-                <th className="px-5 py-3 text-left">Name</th>
-                <th className="px-5 py-3 text-left">Ministry</th>
+                <th className="px-5 py-3 text-left">Applicant</th>
+                <th className="px-5 py-3 text-left">Type</th>
+                <th className="px-5 py-3 text-left">Category</th>
                 <th className="px-5 py-3 text-left">Status</th>
                 <th className="px-5 py-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/60">
-              {isLoading ? (
-                <EmptyRow colSpan={4} />
-              ) : applications.length === 0 ? (
-                <EmptyRow colSpan={4} message="No applications found." />
-              ) : applications.map(app => {
-                const name = app.user?.name ?? app.ministryName;
-                const initial = (name[0] ?? "A").toUpperCase();
-                return (
-                  <tr key={app.id} className="hover:bg-secondary/30">
-                    <td className="px-5 py-3">
-                      <div className="flex items-center gap-3">
-                        <div className="h-9 w-9 rounded-full bg-gold-gradient grid place-items-center text-xs font-semibold text-primary-foreground">{initial}</div>
-                        <div>
-                          <p className="font-medium">{name}</p>
-                          <p className="text-xs text-muted-foreground">{app.user?.email ?? ""}</p>
-                        </div>
+              {applicationsQuery.isLoading && <tr><td colSpan={5} className="px-5 py-8 text-center text-muted-foreground">Loading applications...</td></tr>}
+              {!applicationsQuery.isLoading && (applicationsQuery.data ?? []).length === 0 && <tr><td colSpan={5} className="px-5 py-8 text-center text-muted-foreground">No pending applications.</td></tr>}
+              {(applicationsQuery.data ?? []).map(app => (
+                <tr key={app.id} className="hover:bg-secondary/30">
+                  <td className="px-5 py-3">
+                    <div className="flex items-center gap-3">
+                      <div className="h-9 w-9 rounded-full bg-gold-gradient grid place-items-center text-xs font-semibold text-primary-foreground">{app.displayName[0]?.toUpperCase() ?? "C"}</div>
+                      <div>
+                        <p className="font-medium">{app.displayName}</p>
+                        <p className="text-xs text-muted-foreground">@{app.requestedHandle ?? "pending-handle"}</p>
                       </div>
-                    </td>
-                    <td className="px-5 py-3 text-muted-foreground">{app.ministryName}</td>
-                    <td className="px-5 py-3">
-                      <Pill tone={app.status === "APPROVED" ? "green" : app.status === "REJECTED" ? "red" : "gold"}>
-                        {app.status}
-                      </Pill>
-                    </td>
-                    <td className="px-5 py-3">
-                      <div className="flex justify-end gap-2">
-                        <RowAction icon={Eye} label="View profile" onClick={() => toast({ title: `Viewing ${name}` })} />
-                        <RowAction icon={Check} label="Approve" tone="gold" onClick={() => approve(app.id, name, app.ministryName)} />
-                        <RowAction icon={X} label="Decline" tone="red" onClick={() => decline(app.id, name)} />
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
+                    </div>
+                  </td>
+                  <td className="px-5 py-3 text-muted-foreground">{app.creatorType === "INDIVIDUAL" ? "Individual" : "Organization"}</td>
+                  <td className="px-5 py-3 text-muted-foreground">{app.category}</td>
+                  <td className="px-5 py-3"><Pill tone="gold">Pending</Pill></td>
+                  <td className="px-5 py-3">
+                    <div className="flex justify-end gap-2">
+                      <RowAction icon={Check} label="Approve" tone="gold" onClick={() => review(app, "APPROVED")} />
+                      <RowAction icon={X} label="Decline" tone="red" onClick={() => review(app, "REJECTED")} />
+                    </div>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
       </Card>
-    </div>
-  );
-};
-
-const LiveView = () => {
-  const { data: events = [], isLoading } = useLiveEvents();
-  const updateEvent = useUpdateAdminLiveEvent();
-
-  const statusTone = (s: string) =>
-    s === "LIVE" ? "red" : s === "ENDED" ? "muted" : "gold";
-  const statusLabel = (s: string) =>
-    s === "LIVE" ? "● Live now" : s === "ENDED" ? "Replay" : "Scheduled";
-
-  return (
-    <div className="space-y-6">
-      <SectionHeader title="Live Event Management" subtitle="Approve, monitor and moderate scheduled and active live events." />
-      <Toolbar placeholder="Search live events…" />
-      {isLoading ? (
-        <p className="py-8 text-center text-sm text-muted-foreground">Loading…</p>
-      ) : events.length === 0 ? (
-        <p className="py-8 text-center text-sm text-muted-foreground">No live events found.</p>
-      ) : (
-        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-          {events.map(e => (
-            <Card key={e.id} className="p-0 overflow-hidden">
-              {e.thumbnailUrl && <img src={e.thumbnailUrl} alt="" className="h-40 w-full object-cover" />}
-              <div className="p-5 space-y-3">
-                <div className="flex items-center justify-between">
-                  <Pill tone={statusTone(e.status) as any}>{statusLabel(e.status)}</Pill>
-                  <Pill tone={e.isPremium ? "gold" : "muted"}>{e.isPremium ? "Paid" : "Free"}</Pill>
-                </div>
-                <div>
-                  <p className="font-display text-lg">{e.title}</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {e.creator?.displayName ?? "—"} · {new Date(e.scheduledAt).toLocaleDateString()}
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <RowAction icon={Star} label="Feature" tone="gold" onClick={() => toast({ title: `${e.title} featured` })} />
-                  <RowAction icon={Eye} label="Monitor" onClick={() => toast({ title: `Monitoring ${e.title}` })} />
-                  <RowAction
-                    icon={X}
-                    label="End / Cancel"
-                    tone="red"
-                    onClick={() =>
-                      updateEvent.mutate(
-                        { id: e.id, input: { status: "ENDED" } },
-                        { onSuccess: () => toast({ title: `${e.title} ended` }) },
-                      )
-                    }
-                  />
-                </div>
-              </div>
-            </Card>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
-
-const UsersView = () => {
-  const { data: users = [], isLoading } = useAdminUsers();
-  const updateUser = useUpdateAdminUser();
-
-  const suspend = (id: string, name: string) =>
-    updateUser.mutate(
-      { id, input: { isActive: false } },
-      { onSuccess: () => toast({ title: `${name} suspended` }) },
-    );
-  const reactivate = (id: string, name: string) =>
-    updateUser.mutate(
-      { id, input: { isActive: true } },
-      { onSuccess: () => toast({ title: `${name} reactivated` }) },
-    );
-
-  return (
-    <div className="space-y-6">
-      <SectionHeader title="User Management" subtitle="Search, suspend, reactivate and manage listener accounts." />
-      <Toolbar placeholder="Search users by name, email or ID…" />
       <Card className="overflow-hidden p-0">
+        <div className="border-b border-border/60 px-5 py-4">
+          <h3 className="font-display text-lg">Active Creator Profiles</h3>
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-secondary/40 text-xs uppercase tracking-wider text-muted-foreground">
               <tr>
-                <th className="px-5 py-3 text-left">User</th>
-                <th className="px-5 py-3 text-left">Email</th>
-                <th className="px-5 py-3 text-left">Role</th>
-                <th className="px-5 py-3 text-left">Subscription</th>
+                <th className="px-5 py-3 text-left">Creator</th>
+                <th className="px-5 py-3 text-left">Handle</th>
+                <th className="px-5 py-3 text-left">Status</th>
                 <th className="px-5 py-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/60">
-              {isLoading ? (
-                <EmptyRow colSpan={5} />
-              ) : users.length === 0 ? (
-                <EmptyRow colSpan={5} message="No users found." />
-              ) : users.map(u => {
-                const name = u.name ?? u.email;
-                const initial = (name[0] ?? "U").toUpperCase();
-                return (
-                  <tr key={u.id} className="hover:bg-secondary/30">
-                    <td className="px-5 py-3">
-                      <div className="flex items-center gap-3">
-                        <div className="h-9 w-9 rounded-full bg-gold-gradient grid place-items-center text-xs font-semibold text-primary-foreground">{initial}</div>
-                        <span className="font-medium">{name}</span>
-                      </div>
-                    </td>
-                    <td className="px-5 py-3 text-muted-foreground">{u.email}</td>
-                    <td className="px-5 py-3 text-muted-foreground capitalize">{u.role?.toLowerCase() ?? "user"}</td>
-                    <td className="px-5 py-3">
-                      <Pill tone={u.subscriptionTier === "PREMIUM" ? "gold" : "muted"}>
-                        {u.subscriptionTier ?? "FREE"}
-                      </Pill>
-                    </td>
-                    <td className="px-5 py-3">
-                      <div className="flex justify-end gap-2">
-                        <RowAction icon={Eye} label="View" onClick={() => toast({ title: `Viewing ${name}` })} />
-                        <RowAction icon={Pause} label="Suspend" tone="red" onClick={() => suspend(u.id, name)} />
-                        <RowAction icon={Play} label="Reactivate" tone="gold" onClick={() => reactivate(u.id, name)} />
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
+              {creatorsQuery.isLoading && <tr><td colSpan={4} className="px-5 py-8 text-center text-muted-foreground">Loading creators...</td></tr>}
+              {(creatorsQuery.data ?? []).map(creator => (
+                <tr key={creator.id} className="hover:bg-secondary/30">
+                  <td className="px-5 py-3 font-medium">{creator.displayName}</td>
+                  <td className="px-5 py-3 text-muted-foreground">@{creator.handle ?? creator.id}</td>
+                  <td className="px-5 py-3"><Pill tone={creator.isActive === false ? "muted" : "green"}>{creator.isActive === false ? "Inactive" : "Active"}</Pill></td>
+                  <td className="px-5 py-3">
+                    <div className="flex justify-end gap-2">
+                      <RowAction icon={Eye} label="View profile" onClick={() => toast({ title: `Viewing ${creator.displayName}` })} />
+                      <RowAction icon={creator.isActive === false ? Play : Pause} label={creator.isActive === false ? "Activate" : "Deactivate"} tone={creator.isActive === false ? "gold" : "red"} onClick={() => toggleCreator(creator.id, creator.isActive !== false)} />
+                    </div>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
@@ -448,6 +375,82 @@ const UsersView = () => {
     </div>
   );
 };
+
+const LiveView = () => (
+  <div className="space-y-6">
+    <SectionHeader title="Live Event Management" subtitle="Approve, monitor and moderate scheduled and active live events." />
+    <Toolbar placeholder="Search live events..." />
+    <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+      {liveEvents.map(e => (
+        <Card key={e.id} className="p-0 overflow-hidden">
+          <img src={e.image} alt="" className="h-40 w-full object-cover" />
+          <div className="p-5 space-y-3">
+            <div className="flex items-center justify-between">
+              <Pill tone={e.status === "live" ? "red" : e.status === "replay" ? "muted" : "gold"}>
+                {e.status === "live" ? "Live now" : e.status === "replay" ? "Replay" : "Scheduled"}
+              </Pill>
+              <Pill tone={e.access === "Paid" ? "gold" : "muted"}>{e.access}</Pill>
+            </div>
+            <div>
+              <p className="font-display text-lg">{e.title}</p>
+              <p className="text-xs text-muted-foreground mt-1">{e.host} / {e.date} / {e.time}</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <RowAction icon={Check} label="Approve" tone="gold" onClick={() => toast({ title: `${e.title} approved` })} />
+              <RowAction icon={Star} label="Feature" tone="gold" onClick={() => toast({ title: `${e.title} featured` })} />
+              <RowAction icon={Eye} label="Monitor" onClick={() => toast({ title: `Monitoring ${e.title}` })} />
+              <RowAction icon={X} label="End / Cancel" tone="red" onClick={() => toast({ title: `${e.title} ended` })} />
+            </div>
+          </div>
+        </Card>
+      ))}
+    </div>
+  </div>
+);
+
+const UsersView = () => (
+  <div className="space-y-6">
+    <SectionHeader title="User Management" subtitle="Search, suspend, reactivate and manage listener accounts." />
+    <Toolbar placeholder="Search users by name, email or ID..." />
+    <Card className="overflow-hidden p-0">
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="bg-secondary/40 text-xs uppercase tracking-wider text-muted-foreground">
+            <tr>
+              <th className="px-5 py-3 text-left">User</th>
+              <th className="px-5 py-3 text-left">Email</th>
+              <th className="px-5 py-3 text-left">Creator Status</th>
+              <th className="px-5 py-3 text-left">Subscription</th>
+              <th className="px-5 py-3 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border/60">
+            {MOCK_USERS.map((u, i) => (
+              <tr key={u.id} className="hover:bg-secondary/30">
+                <td className="px-5 py-3">
+                  <div className="flex items-center gap-3">
+                    <div className="h-9 w-9 rounded-full bg-gold-gradient grid place-items-center text-xs font-semibold text-primary-foreground">{u.avatarInitial}</div>
+                    <span className="font-medium">{u.name}</span>
+                  </div>
+                </td>
+                <td className="px-5 py-3 text-muted-foreground">{u.email}</td>
+                <td className="px-5 py-3 text-muted-foreground">{creatorBadgeLabel(u.creator_status)}</td>
+                <td className="px-5 py-3"><Pill tone={i % 3 === 0 ? "gold" : i % 3 === 1 ? "muted" : "green"}>{["Premium", "Free", "Essential"][i % 3]}</Pill></td>
+                <td className="px-5 py-3">
+                  <div className="flex justify-end gap-2">
+                    <RowAction icon={Eye} label="View" onClick={() => toast({ title: `Viewing ${u.name}` })} />
+                    <RowAction icon={Pause} label="Suspend" tone="red" onClick={() => toast({ title: `${u.name} suspended` })} />
+                    <RowAction icon={Play} label="Reactivate" tone="gold" onClick={() => toast({ title: `${u.name} reactivated` })} />
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Card>
+  </div>
+);
 
 const SubscriptionsView = () => (
   <div className="space-y-6">
@@ -496,7 +499,7 @@ const ReportsView = () => {
     { kind: "Reported content", subject: "Comment on \"The Narrow Way\"", reason: "Harassment", severity: "high" as const },
     { kind: "Copyright claim", subject: "Sounds of Worship Vol. 1", reason: "DMCA notice", severity: "high" as const },
     { kind: "Reported user", subject: "@kingdomvoice22", reason: "Spam", severity: "med" as const },
-    { kind: "Community guideline", subject: "Live chat — Youth Revival", reason: "Hate speech", severity: "high" as const },
+    { kind: "Community guideline", subject: "Live chat - Youth Revival", reason: "Hate speech", severity: "high" as const },
     { kind: "Reported content", subject: "Grace in the Marketplace", reason: "Misleading", severity: "low" as const },
   ];
   const tone = (s: "high" | "med" | "low") => s === "high" ? "red" : s === "med" ? "gold" : "muted";
@@ -545,11 +548,33 @@ const ReportsView = () => {
 };
 
 const AnalyticsView = () => {
+  const refreshAnalytics = useRefreshAdminAnalytics();
   const bars = [42, 58, 49, 73, 65, 84, 91, 78, 96, 88, 102, 118];
   const max = Math.max(...bars);
+  const refresh = () => {
+    refreshAnalytics.mutate(undefined, {
+      onSuccess: (result) => toast({ title: "Analytics refresh queued", description: `${result.refreshed} records refreshed.` }),
+      onError: (error) =>
+        toast({
+          title: "Refresh failed",
+          description: error instanceof Error ? error.message : "Please try again.",
+          variant: "destructive",
+        }),
+    });
+  };
+
   return (
     <div className="space-y-6">
-      <SectionHeader title="Platform Analytics" subtitle="Daily and monthly engagement, growth and revenue across NoraPlus." />
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <SectionHeader title="Platform Analytics" subtitle="Daily and monthly engagement, growth and revenue across NoraPlus." />
+        <button
+          onClick={refresh}
+          disabled={refreshAnalytics.isPending}
+          className="inline-flex items-center justify-center rounded-full border border-gold/40 px-4 py-2 text-sm text-gold transition hover:bg-gold/10 disabled:opacity-50"
+        >
+          Refresh Analytics
+        </button>
+      </div>
       <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
         <Stat label="Daily Active Users" value="22,418" sub="+6.4% WoW" icon={UsersIcon} />
         <Stat label="Monthly Active Users" value="184,920" sub="+11.2% MoM" icon={TrendingUp} tone="gold" />
@@ -562,14 +587,14 @@ const AnalyticsView = () => {
       </div>
       <Card>
         <div className="flex items-center justify-between">
-          <h3 className="font-display text-xl">Plays — Last 12 months</h3>
+          <h3 className="font-display text-xl">Plays - Last 12 months</h3>
           <Pill tone="gold">Trending up</Pill>
         </div>
         <div className="mt-6 flex h-48 items-end gap-3">
           {bars.map((b, i) => (
             <div key={i} className="group relative flex-1">
               <div className="w-full rounded-t-md bg-red-gradient transition-all" style={{ height: `${(b / max) * 100}%` }} />
-              <p className="mt-2 text-center text-[10px] text-muted-foreground">{["J","F","M","A","M","J","J","A","S","O","N","D"][i]}</p>
+              <p className="mt-2 text-center text-[10px] text-muted-foreground">{["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"][i]}</p>
             </div>
           ))}
         </div>
@@ -580,8 +605,8 @@ const AnalyticsView = () => {
           <ul className="mt-4 space-y-3 text-sm">
             {["Sounds of Heaven", "Pastor David Adeleke", "Lightwave Films", "Kingdom Conversations", "Grace Iweka"].map((n, i) => (
               <li key={n} className="flex items-center justify-between">
-                <span><span className="text-gold mr-2">{i+1}.</span>{n}</span>
-                <span className="text-muted-foreground text-xs">{(48 - i*6)}.{i}M plays</span>
+                <span><span className="text-gold mr-2">{i + 1}.</span>{n}</span>
+                <span className="text-muted-foreground text-xs">{(48 - i * 6)}.{i}M plays</span>
               </li>
             ))}
           </ul>
@@ -591,8 +616,8 @@ const AnalyticsView = () => {
           <ul className="mt-4 space-y-3 text-sm">
             {mockContent.slice(0, 5).map((c, i) => (
               <li key={c.id} className="flex items-center justify-between">
-                <span><span className="text-gold mr-2">{i+1}.</span>{c.title}</span>
-                <span className="text-muted-foreground text-xs">{(2.4 - i*0.3).toFixed(1)}M</span>
+                <span><span className="text-gold mr-2">{i + 1}.</span>{c.title}</span>
+                <span className="text-muted-foreground text-xs">{(2.4 - i * 0.3).toFixed(1)}M</span>
               </li>
             ))}
           </ul>
@@ -623,7 +648,7 @@ const SettingsView = () => {
             className="text-left rounded-2xl bg-card-gradient ring-1 ring-border/60 p-5 hover:ring-gold/40 transition-all">
             <p className="font-display text-base">{g.title}</p>
             <p className="mt-1 text-xs text-muted-foreground">{g.desc}</p>
-            <span className="mt-4 inline-block text-xs text-gold">Configure →</span>
+            <span className="mt-4 inline-block text-xs text-gold">Configure -&gt;</span>
           </button>
         ))}
       </div>

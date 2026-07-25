@@ -1,6 +1,17 @@
 ﻿export type UserRole = "USER" | "CREATOR" | "ADMIN";
+export type UserCreatorStatus = "NOT_APPLIED" | "PENDING" | "APPROVED" | "DECLINED";
 export type SubscriptionTier = "FREE" | "PREMIUM";
 export type ContentType = "VIDEO" | "AUDIO" | "DEVOTIONAL" | "PODCAST";
+export type ContentMediaType = "AUDIO" | "VIDEO";
+export type ContentStatus =
+  | "DRAFT"
+  | "PROCESSING"
+  | "UNDER_REVIEW"
+  | "PUBLISHED"
+  | "SCHEDULED"
+  | "REJECTED"
+  | "UNPUBLISHED";
+export type ContentVisibility = "PUBLIC" | "SUBSCRIBERS_ONLY" | "PREMIUM_ONLY";
 export type ContentCategory =
   | "WORSHIP"
   | "SERMON"
@@ -12,7 +23,26 @@ export type ContentCategory =
   | "TESTIMONY"
   | "BIBLE_STUDY"
   | "OTHER";
-export type LiveEventStatus = "SCHEDULED" | "LIVE" | "ENDED";
+export type LiveEventStatus =
+  | "SCHEDULED"
+  | "LIVE"
+  | "ENDED"
+  | "DRAFT"
+  | "CANCELLED"
+  | "UNDER_REVIEW"
+  | "REJECTED";
+export type CreatorType = "INDIVIDUAL" | "MINISTRY_ORGANIZATION";
+export type CreatorSocialPlatform = "INSTAGRAM" | "YOUTUBE" | "FACEBOOK" | "TIKTOK" | "X" | "WEBSITE";
+export type LiveEventType =
+  | "WORSHIP_NIGHT"
+  | "CONFERENCE"
+  | "VIGIL"
+  | "CONCERT"
+  | "PRAYER_MEETING"
+  | "PREMIERE"
+  | "RETREAT"
+  | "CHURCH_EVENT";
+export type UploadAssetRole = "thumbnail" | "cover_art" | "primary_audio" | "primary_video" | "trailer";
 export type ApplicationStatus = "PENDING" | "APPROVED" | "REJECTED";
 
 export interface ApiUser {
@@ -21,6 +51,7 @@ export interface ApiUser {
   name?: string | null;
   image?: string | null;
   role?: UserRole;
+  creatorStatus?: UserCreatorStatus;
   subscriptionTier?: SubscriptionTier;
   subscriptionExpiresAt?: string | null;
   emailVerified?: boolean;
@@ -36,32 +67,73 @@ export interface ApiCreatorSummary {
   isVerified: boolean;
 }
 
+export interface ApiCreatorSocialLink {
+  id: string;
+  platform: CreatorSocialPlatform;
+  url: string;
+  createdAt?: string;
+}
+
+export interface ApiIndividualCreatorProfile {
+  id: string;
+  fullName?: string | null;
+  stageName?: string | null;
+  primaryRole?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface ApiMinistryOrganizationProfile {
+  id: string;
+  organizationName?: string | null;
+  contactPersonName?: string | null;
+  officialEmail?: string | null;
+  organizationType?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface ApiCreator {
   id: string;
+  creatorType: CreatorType;
   displayName: string;
+  handle?: string | null;
   bio?: string | null;
   avatarUrl?: string | null;
   bannerUrl?: string | null;
   category: ContentCategory;
+  country?: string | null;
+  city?: string | null;
+  websiteUrl?: string | null;
   isVerified: boolean;
+  isActive?: boolean;
   followerCount: number;
-  socialLinks?: Record<string, string> | null;
+  socialLinkRows?: ApiCreatorSocialLink[];
+  contentCategories?: { id: string; category: ContentCategory }[];
+  individualProfile?: ApiIndividualCreatorProfile | null;
+  ministryOrganizationProfile?: ApiMinistryOrganizationProfile | null;
   createdAt: string;
+  updatedAt?: string;
   user?: Pick<ApiUser, "id" | "name" | "image">;
 }
 
 export interface ApiCreatorApplication {
   id: string;
   userId: string;
+  creatorType: CreatorType;
   category: ContentCategory;
-  ministryName: string;
+  displayName: string;
+  requestedHandle?: string | null;
   websiteUrl?: string | null;
-  socialLinks?: Record<string, string> | null;
+  avatarUrl?: string | null;
+  bannerUrl?: string | null;
+  socialLinks?: Partial<Record<CreatorSocialPlatform, string>> | null;
   status: ApplicationStatus;
   adminNotes?: string | null;
+  declineReason?: string | null;
   submittedAt: string;
   reviewedAt?: string | null;
-  user?: { id: string; name: string | null; email: string } | null;
+  reviewedById?: string | null;
 }
 
 export interface ApiContent {
@@ -69,11 +141,20 @@ export interface ApiContent {
   title: string;
   description?: string | null;
   type: ContentType;
+  mediaType?: ContentMediaType;
   category: ContentCategory;
   thumbnailUrl?: string | null;
+  coverArtUrl?: string | null;
+  mediaUrl?: string | null;
+  mediaKey?: string | null;
+  audioUrl?: string | null;
+  videoUrl?: string | null;
+  trailerUrl?: string | null;
   durationSeconds?: number | null;
-  isPremium: boolean;
-  isPublished?: boolean;
+  status: ContentStatus;
+  visibility: ContentVisibility;
+  publishedAt?: string | null;
+  scheduledAt?: string | null;
   isFeatured?: boolean;
   viewCount?: number;
   likeCount?: number;
@@ -93,14 +174,35 @@ export interface ApiLiveEvent {
   id: string;
   title: string;
   description?: string | null;
+  eventType?: LiveEventType | null;
+  bannerUrl?: string | null;
   thumbnailUrl?: string | null;
   scheduledAt: string;
-  youtubeUrl?: string | null;
+  startTime?: string | null;
+  endTime?: string | null;
+  timezone?: string | null;
+  registrationRequired?: boolean;
+  visibility: ContentVisibility;
   status: LiveEventStatus;
   viewerCount: number;
-  isPremium: boolean;
   createdAt: string;
   creator?: Pick<ApiCreator, "id" | "displayName" | "avatarUrl"> | null;
+}
+
+export interface ApiLiveJoin {
+  url: string | null;
+  expiresIn: number | null;
+}
+
+export interface ApiCreatorAnalytics {
+  totalUploads: number;
+  publishedContent: number;
+  drafts: number;
+  followersCount: number;
+  totalPlays: number;
+  totalViews: number;
+  upcomingLiveEvents: number;
+  updatedAt: string;
 }
 
 export interface ApiLibraryItem {
@@ -152,23 +254,41 @@ export interface UpdateCurrentUserInput {
 }
 
 export interface CreatorApplicationInput {
-  ministryName: string;
+  creatorType?: CreatorType;
+  displayName?: string;
+  organizationName?: string;
+  handle?: string;
   category: ContentCategory;
   websiteUrl?: string;
-  socialLinks?: Record<string, string>;
+  avatarUrl?: string;
+  bannerUrl?: string;
+  socialLinks?: Partial<Record<CreatorSocialPlatform, string>>;
+}
+
+export interface CreatorProfileUpdateInput {
+  individualProfile?: Partial<Omit<ApiIndividualCreatorProfile, "id" | "createdAt" | "updatedAt">>;
+  ministryOrganizationProfile?: Partial<Omit<ApiMinistryOrganizationProfile, "id" | "createdAt" | "updatedAt">>;
+  socialLinks?: Partial<Record<CreatorSocialPlatform, string>>;
+  contentCategories?: ContentCategory[];
 }
 
 export interface CreateContentInput {
   title: string;
   description?: string;
   type: ContentType;
+  mediaType?: ContentMediaType;
   category: ContentCategory;
   thumbnailUrl?: string;
+  coverArtUrl?: string;
   mediaUrl?: string;
   mediaKey?: string;
+  audioUrl?: string;
+  videoUrl?: string;
+  trailerUrl?: string;
   durationSeconds?: number;
-  isPremium?: boolean;
-  isPublished?: boolean;
+  status?: ContentStatus;
+  visibility?: ContentVisibility;
+  scheduledAt?: string;
   isFeatured?: boolean;
   scriptureReference?: string;
   tags?: string[];
@@ -177,11 +297,32 @@ export interface CreateContentInput {
 
 export type UpdateContentInput = Partial<CreateContentInput>;
 
+export interface CreateCreatorLiveEventInput {
+  title: string;
+  description?: string;
+  eventType?: LiveEventType;
+  scheduledAt: string;
+  startTime?: string;
+  endTime?: string;
+  timezone?: string;
+  bannerUrl?: string;
+  thumbnailUrl?: string;
+  streamUrl?: string;
+  registrationRequired?: boolean;
+  visibility?: ContentVisibility;
+}
+
+export type UpdateCreatorLiveEventInput = Partial<CreateCreatorLiveEventInput>;
+
 export interface PresignUploadInput {
   fileName: string;
   contentType: string;
   folder: "thumbnails" | "videos" | "audio" | "avatars" | "banners";
   fileSize: number;
+}
+
+export interface PresignUserMediaInput extends Omit<PresignUploadInput, "folder"> {
+  folder: "avatars" | "banners";
 }
 
 export interface PresignUploadResponse {
@@ -194,11 +335,25 @@ export interface PresignUploadResponse {
 export interface ConfirmUploadInput {
   key: string;
   contentId?: string;
+  assetRole?: UploadAssetRole;
 }
 
 export interface ConfirmUploadResponse {
   url: string;
   key: string;
+}
+
+export type UserMediaRole = "avatar" | "banner";
+
+export interface ConfirmUserMediaInput {
+  key: string;
+  role: UserMediaRole;
+}
+
+export interface ConfirmUserMediaResponse {
+  url: string;
+  key: string;
+  role: UserMediaRole;
 }
 
 export interface ApiPlaylistItem {
@@ -225,4 +380,24 @@ export interface AdminStats {
   content: { total: number; published: number };
   applications: { pending: number };
   live: { active: number };
+}
+
+export interface AdminReviewApplicationInput {
+  status: "APPROVED" | "REJECTED";
+  displayName?: string;
+  adminNotes?: string;
+  declineReason?: string;
+}
+
+export interface AdminReviewApplicationResponse {
+  reviewed: boolean;
+  status: ApplicationStatus;
+}
+
+export interface AdminCreatorActivationInput {
+  isActive: boolean;
+}
+
+export interface AdminAnalyticsRefreshResponse {
+  refreshed: number;
 }
