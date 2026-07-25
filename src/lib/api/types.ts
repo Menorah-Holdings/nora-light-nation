@@ -356,6 +356,24 @@ export interface ConfirmUserMediaResponse {
   role: UserMediaRole;
 }
 
+export interface ApiPlaylistItem {
+  id: string;
+  playlistId: string;
+  contentId: string;
+  position: number;
+  addedAt: string;
+  content: ApiContent;
+}
+
+export interface ApiPlaylist {
+  id: string;
+  userId: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+  items: ApiPlaylistItem[];
+}
+
 export interface AdminStats {
   users: { total: number; premium: number };
   creators: { total: number };

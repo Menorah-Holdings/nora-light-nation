@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Input } from "@/components/ui/input";
 import {
   MoreVertical, Bookmark, BookmarkCheck, Plus, Share2, Download, Lock,
   User, Disc3, ListVideo, Flag, EyeOff, Link2, Bell, Check,
@@ -16,6 +17,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { useLibrary, useSaveContent, useUnsaveContent } from "@/lib/api/hooks/useLibrary";
+import { usePlaylists, useCreatePlaylist, useAddToPlaylist } from "@/lib/api/hooks/usePlaylists";
+import { useUser } from "@/lib/user";
 import type { ContentItem } from "@/lib/mockData";
 
 interface Props {
@@ -25,7 +28,6 @@ interface Props {
   isLive?: boolean;
 }
 
-const PLAYLISTS = ["My Worship List", "Messages for Growth", "Prayer & Fire"];
 const SHARE_TARGETS = [
   { label: "Copy Link", icon: Link2, key: "copy" },
   { label: "WhatsApp", icon: Share2, key: "wa" },
@@ -40,6 +42,7 @@ const REPORT_REASONS = [
 export const NowPlayingMenu = ({ item, variant = "default", canDownload = false, isLive = false }: Props) => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const { isAuthenticated } = useUser();
   const storageKey = `nora_np_${item.id}`;
   const readState = () => {
     try { return JSON.parse(localStorage.getItem(storageKey) || "{}"); } catch { return {}; }
@@ -48,24 +51,36 @@ export const NowPlayingMenu = ({ item, variant = "default", canDownload = false,
   const libraryQuery = useLibrary();
   const saveMutation = useSaveContent();
   const unsaveMutation = useUnsaveContent();
-  const saved = Boolean(libraryQuery.data?.saved.some((entry) => entry.contentId === item.id)) || (!libraryQuery.data && Boolean(initial.saved));
+  const playlistsQuery = usePlaylists(isAuthenticated);
+  const addToPlaylist = useAddToPlaylist();
+  const createPlaylist = useCreatePlaylist();
+  const saved = Boolean(libraryQuery.data?.saved.some((entry) => entry.contentId === item.id));
   const [downloaded, setDownloaded] = useState<boolean>(!!initial.downloaded);
   const [playlistOpen, setPlaylistOpen] = useState(false);
+  const [newPlaylistName, setNewPlaylistName] = useState("");
+  const [creatingNew, setCreatingNew] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
+
+  const isSeries = ["podcast", "podcast-video", "skit", "message"].includes(item.type as string);
+  const isAlbum = ["music", "music-video"].includes(item.type as string);
 
   const persist = (next: Record<string, unknown>) => {
     localStorage.setItem(storageKey, JSON.stringify({ ...readState(), ...next }));
   };
 
-  const isSeries = ["podcast", "podcast-video", "skit", "message"].includes(item.type as string);
-  const isAlbum = ["music", "music-video"].includes(item.type as string);
-
   const handleSave = () => {
-    const next = !saved;
-    setSaved(next);
-    persist({ saved: next });
-    toast.success(next ? "Saved to Library" : "Removed from Library");
+    if (saved) {
+      unsaveMutation.mutate(item.id, {
+        onSuccess: () => toast.success("Removed from Library"),
+        onError: () => toast.error("Could not remove from library"),
+      });
+    } else {
+      saveMutation.mutate(item.id, {
+        onSuccess: () => toast.success("Saved to Library"),
+        onError: () => toast.error("Could not save to library"),
+      });
+    }
   };
 
   const handleDownload = () => {
@@ -75,7 +90,6 @@ export const NowPlayingMenu = ({ item, variant = "default", canDownload = false,
       return;
     }
     setDownloaded(true);
-    persist({ downloaded: true });
     toast.success("Download Started");
   };
 
@@ -84,13 +98,29 @@ export const NowPlayingMenu = ({ item, variant = "default", canDownload = false,
   const handleNotInterested = () =>
     toast("Got it", { description: "We'll show fewer recommendations like this." });
 
-  const handlePickPlaylist = (name: string) => {
-    setPlaylistOpen(false);
-    toast.success(`Added to ${name}`);
+  const handlePickPlaylist = (playlistId: string, playlistName: string) => {
+    addToPlaylist.mutate({ playlistId, contentId: item.id }, {
+      onSuccess: () => { setPlaylistOpen(false); toast.success(`Added to ${playlistName}`); },
+      onError: (err) => toast.error(err instanceof Error ? err.message : "Could not add to playlist"),
+    });
   };
+
   const handleCreatePlaylist = () => {
-    setPlaylistOpen(false);
-    toast.success("New playlist created");
+    const name = newPlaylistName.trim();
+    if (!name) return;
+    createPlaylist.mutate(name, {
+      onSuccess: (playlist) => {
+        addToPlaylist.mutate({ playlistId: playlist.id, contentId: item.id }, {
+          onSuccess: () => {
+            setPlaylistOpen(false);
+            setCreatingNew(false);
+            setNewPlaylistName("");
+            toast.success(`Added to "${name}"`);
+          },
+        });
+      },
+      onError: (err) => toast.error(err instanceof Error ? err.message : "Could not create playlist"),
+    });
   };
 
   const handleShare = (key: string, label: string) => {
@@ -212,23 +242,48 @@ export const NowPlayingMenu = ({ item, variant = "default", canDownload = false,
       )}
 
       {/* Playlist picker */}
-      <Dialog open={playlistOpen} onOpenChange={setPlaylistOpen}>
+      <Dialog open={playlistOpen} onOpenChange={(open) => { setPlaylistOpen(open); if (!open) { setCreatingNew(false); setNewPlaylistName(""); } }}>
         <DialogContent className="bg-card-gradient border-border">
           <DialogHeader>
             <DialogTitle className="font-display">Add to Playlist</DialogTitle>
           </DialogHeader>
           <div className="space-y-1">
-            {PLAYLISTS.map((p) => (
-              <button key={p} onClick={() => handlePickPlaylist(p)}
-                className="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-sm hover:bg-sidebar-accent hover:text-gold transition-colors">
-                <ListVideo className="h-4 w-4" /> {p}
-              </button>
-            ))}
+            {playlistsQuery.isLoading ? (
+              <p className="px-3 py-3 text-sm text-muted-foreground">Loading playlists…</p>
+            ) : (playlistsQuery.data ?? []).length === 0 && !creatingNew ? (
+              <p className="px-3 py-3 text-sm text-muted-foreground">No playlists yet. Create one below.</p>
+            ) : (
+              (playlistsQuery.data ?? []).map((p) => (
+                <button key={p.id} onClick={() => handlePickPlaylist(p.id, p.name)}
+                  disabled={addToPlaylist.isPending}
+                  className="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-sm hover:bg-sidebar-accent hover:text-gold transition-colors disabled:opacity-50">
+                  <ListVideo className="h-4 w-4" /> {p.name}
+                  <span className="ml-auto text-xs text-muted-foreground">{p.items.length} items</span>
+                </button>
+              ))
+            )}
             <div className="my-2 h-px bg-border/60" />
-            <button onClick={handleCreatePlaylist}
-              className="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-sm text-gold hover:bg-sidebar-accent transition-colors">
-              <Plus className="h-4 w-4" /> Create New Playlist
-            </button>
+            {creatingNew ? (
+              <div className="flex items-center gap-2 px-1">
+                <Input
+                  autoFocus
+                  value={newPlaylistName}
+                  onChange={(e) => setNewPlaylistName(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") handleCreatePlaylist(); if (e.key === "Escape") { setCreatingNew(false); setNewPlaylistName(""); } }}
+                  placeholder="Playlist name"
+                  className="h-9 text-sm"
+                />
+                <button onClick={handleCreatePlaylist} disabled={!newPlaylistName.trim() || createPlaylist.isPending}
+                  className="shrink-0 rounded-lg bg-red-gradient px-3 py-2 text-xs font-medium text-primary-foreground disabled:opacity-50">
+                  {createPlaylist.isPending ? "Saving…" : "Save"}
+                </button>
+              </div>
+            ) : (
+              <button onClick={() => setCreatingNew(true)}
+                className="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-sm text-gold hover:bg-sidebar-accent transition-colors">
+                <Plus className="h-4 w-4" /> Create New Playlist
+              </button>
+            )}
           </div>
         </DialogContent>
       </Dialog>

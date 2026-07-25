@@ -2,7 +2,7 @@
 import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Logo } from "@/components/Logo";
-import { ArrowRight, Loader2 } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, Loader2 } from "lucide-react";
 import hero from "@/assets/hero-worship.jpg";
 import { authApi, AuthClientError } from "@/lib/api/auth";
 import { queryKeys } from "@/lib/api/queryKeys";
@@ -18,6 +18,7 @@ const Auth = () => {
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -128,6 +129,7 @@ const Auth = () => {
     setError(null);
     setNotice(null);
     setOtp("");
+    setShowPassword(false);
     setMode(mode === "signin" ? "signup" : "signin");
   };
 
@@ -200,14 +202,24 @@ const Auth = () => {
                     </Link>
                   )}
                 </div>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-border bg-secondary/60 px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-gold"
-                  placeholder="Password"
-                  autoComplete={mode === "signin" ? "current-password" : "new-password"}
-                />
+                <div className="relative mt-1">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full rounded-lg border border-border bg-secondary/60 px-4 py-3 pr-10 text-sm focus:outline-none focus:ring-1 focus:ring-gold"
+                    placeholder="Password"
+                    autoComplete={mode === "signin" ? "current-password" : "new-password"}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
               </div>
             )}
 
