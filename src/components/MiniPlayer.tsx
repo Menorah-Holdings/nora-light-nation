@@ -1,39 +1,100 @@
-import { Pause, Play, SkipBack, SkipForward, Volume2, Heart } from "lucide-react";
-import { useState } from "react";
-import { content } from "@/lib/mockData";
+import { Pause, Play, SkipBack, SkipForward, Volume2 } from "lucide-react";
+import { useRef } from "react";
+import { usePlayer, formatTime } from "@/lib/player";
 import { NowPlayingMenu } from "./NowPlayingMenu";
 
 export const MiniPlayer = () => {
-  const [playing, setPlaying] = useState(false);
-  const track = content[0];
+  const { track, isPlaying, currentTime, duration, toggle, seek, pause, resume } = usePlayer();
+  const progressRef = useRef<HTMLDivElement>(null);
+
+  if (!track) return null;
+
+  const progress = duration > 0 ? currentTime / duration : 0;
+
+  const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    seek(ratio * duration);
+  };
+
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-background/85 backdrop-blur-xl md:left-64">
+    <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-background/90 backdrop-blur-xl md:left-64">
       <div className="mx-auto flex items-center gap-4 px-4 py-3">
-        <img src={track.image} alt="" className="h-12 w-12 rounded-md object-cover" />
+        {/* Thumbnail + info */}
+        <img src={track.image} alt="" className="h-12 w-12 shrink-0 rounded-md object-cover" />
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium">{track.title}</p>
           <p className="truncate text-xs text-muted-foreground">{track.creator}</p>
         </div>
-        <div className="hidden md:flex items-center gap-2">
-          <button className="text-muted-foreground hover:text-foreground"><SkipBack className="h-4 w-4" /></button>
-          <button onClick={() => setPlaying(!playing)} className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-red-gradient text-primary-foreground shadow-red-glow">
-            {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 fill-current" />}
+
+        {/* Controls */}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => seek(Math.max(0, currentTime - 15))}
+            className="hidden text-muted-foreground hover:text-foreground md:inline-flex"
+            aria-label="Back 15 seconds"
+          >
+            <SkipBack className="h-4 w-4" />
           </button>
-          <button className="text-muted-foreground hover:text-foreground"><SkipForward className="h-4 w-4" /></button>
+          <button
+            type="button"
+            onClick={toggle}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-red-gradient text-primary-foreground shadow-red-glow"
+            aria-label={isPlaying ? "Pause" : "Play"}
+          >
+            {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 fill-current" />}
+          </button>
+          <button
+            type="button"
+            onClick={() => seek(Math.min(duration, currentTime + 15))}
+            className="hidden text-muted-foreground hover:text-foreground md:inline-flex"
+            aria-label="Forward 15 seconds"
+          >
+            <SkipForward className="h-4 w-4" />
+          </button>
         </div>
+
+        {/* Progress bar */}
         <div className="hidden lg:flex flex-1 items-center gap-3 max-w-md">
-          <span className="text-[10px] text-muted-foreground">1:24</span>
-          <div className="relative h-1 flex-1 overflow-hidden rounded-full bg-muted">
-            <div className="absolute inset-y-0 left-0 w-1/3 bg-gold-gradient" />
+          <span className="w-8 text-right text-[10px] tabular-nums text-muted-foreground">
+            {formatTime(currentTime)}
+          </span>
+          <div
+            ref={progressRef}
+            role="progressbar"
+            aria-valuenow={Math.round(currentTime)}
+            aria-valuemax={Math.round(duration)}
+            onClick={handleProgressClick}
+            className="relative h-1.5 flex-1 cursor-pointer overflow-hidden rounded-full bg-muted"
+          >
+            <div
+              className="absolute inset-y-0 left-0 bg-gold-gradient transition-all duration-300"
+              style={{ width: `${progress * 100}%` }}
+            />
           </div>
-          <span className="text-[10px] text-muted-foreground">{track.duration}</span>
+          <span className="w-8 text-[10px] tabular-nums text-muted-foreground">
+            {formatTime(duration)}
+          </span>
         </div>
-        <button className="hidden md:inline-flex text-muted-foreground hover:text-gold"><Heart className="h-4 w-4" /></button>
-        <button className="hidden md:inline-flex text-muted-foreground"><Volume2 className="h-4 w-4" /></button>
-        <button onClick={() => setPlaying(!playing)} className="md:hidden inline-flex h-9 w-9 items-center justify-center rounded-full bg-red-gradient text-primary-foreground shadow-red-glow">
-          {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 fill-current" />}
+
+        <button
+          type="button"
+          className="hidden text-muted-foreground md:inline-flex"
+          aria-label="Volume"
+        >
+          <Volume2 className="h-4 w-4" />
         </button>
+
         <NowPlayingMenu item={track} variant="compact" />
+      </div>
+
+      {/* Mobile thin progress strip at bottom edge */}
+      <div className="h-0.5 w-full bg-muted lg:hidden">
+        <div
+          className="h-full bg-gold-gradient transition-all duration-300"
+          style={{ width: `${progress * 100}%` }}
+        />
       </div>
     </div>
   );

@@ -26,6 +26,7 @@ import Admin from "./pages/app/Admin.tsx";
 import NoraPlusAdmin from "./pages/app/NoraPlusAdmin.tsx";
 import Settings from "./pages/app/Settings.tsx";
 import { UserProvider } from "./lib/user";
+import { PlayerProvider } from "./lib/player";
 
 const queryClient = new QueryClient();
 
@@ -35,6 +36,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <UserProvider>
+        <PlayerProvider>
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
@@ -65,6 +67,7 @@ const App = () => (
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
+        </PlayerProvider>
       </UserProvider>
     </TooltipProvider>
   </QueryClientProvider>

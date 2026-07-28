@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { Play, Share2, Pause } from "lucide-react";
+import { Play, Share2, Pause, SkipBack, SkipForward } from "lucide-react";
 import { ContentCard } from "@/components/ContentCard";
 import { NowPlayingMenu } from "@/components/NowPlayingMenu";
 import { SaveToLibraryButton } from "@/components/SaveToLibraryButton";
@@ -8,6 +8,7 @@ import { adaptContent, contentTypeLabel } from "@/lib/api/adapters";
 import { ApiClientError } from "@/lib/api/client";
 import { useContentDetail, useContentList, useContentPlayback } from "@/lib/api/hooks/useContent";
 import { usePlaybackProgress, useUpdateProgress } from "@/lib/api/hooks/useLibrary";
+import { usePlayer, formatTime } from "@/lib/player";
 
 const PROGRESS_WRITE_INTERVAL_SECONDS = 15;
 
@@ -21,7 +22,9 @@ const ContentDetail = () => {
   const playbackQuery = useContentPlayback(id);
   const progressQuery = usePlaybackProgress(id);
   const updateProgress = useUpdateProgress();
+  const player = usePlayer();
   const item = detailQuery.data ? adaptContent(detailQuery.data) : null;
+  const isActiveTrack = player.track?.id === item?.id;
   const related = (relatedQuery.data ?? [])
     .filter((content) => content.id !== id)
     .map(adaptContent)
@@ -130,38 +133,71 @@ const ContentDetail = () => {
             </div>
           ) : (
             <div className="rounded-2xl bg-card-gradient p-6 ring-1 ring-border/60">
-              {playbackUrl ? (
-                <audio
-                  controls
-                  className="w-full"
-                  src={playbackUrl}
-                  onLoadedMetadata={(event) => applySavedProgress(event.currentTarget)}
-                  onPlay={() => setPlaying(true)}
-                  onPause={(event) => {
-                    setPlaying(false);
-                    writeProgress(event.currentTarget);
+              {/* Progress bar */}
+              <div className="flex items-center gap-3 text-xs text-muted-foreground mb-4">
+                <span className="w-8 text-right tabular-nums">
+                  {isActiveTrack ? formatTime(player.currentTime) : "0:00"}
+                </span>
+                <div
+                  className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-muted cursor-pointer"
+                  onClick={(e) => {
+                    if (!isActiveTrack || !player.duration) return;
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+                    player.seek(ratio * player.duration);
                   }}
-                  onTimeUpdate={(event) => writeProgress(event.currentTarget)}
-                  onEnded={(event) => writeProgress(event.currentTarget, true)}
-                />
-              ) : (
-                <>
-                  <div className="flex items-center gap-3 text-xs text-muted-foreground mb-3">
-                    <span>0:00</span>
-                    <div className="relative h-1 flex-1 overflow-hidden rounded-full bg-muted">
-                      <div className="absolute inset-y-0 left-0 w-1/4 bg-gold-gradient" />
-                    </div>
-                    <span>{item.duration}</span>
-                  </div>
-                  <div className="flex items-center justify-center gap-6">
-                    <button type="button" className="text-muted-foreground">-15s</button>
-                    <button type="button" onClick={() => setPlaying(!playing)} className="h-12 w-12 rounded-full bg-gold-gradient text-primary-foreground inline-flex items-center justify-center">
-                      {playing ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5 fill-current" />}
-                    </button>
-                    <button type="button" className="text-muted-foreground">+15s</button>
-                  </div>
-                  <PlayerUnavailable isLoading={playbackQuery.isLoading} isError={playbackQuery.isError} premiumDenied={premiumDenied} />
-                </>
+                >
+                  <div
+                    className="absolute inset-y-0 left-0 bg-gold-gradient transition-all duration-300"
+                    style={{
+                      width: isActiveTrack && player.duration > 0
+                        ? `${(player.currentTime / player.duration) * 100}%`
+                        : "0%",
+                    }}
+                  />
+                </div>
+                <span className="w-8 tabular-nums">
+                  {isActiveTrack && player.duration > 0 ? formatTime(player.duration) : item.duration}
+                </span>
+              </div>
+              {/* Controls */}
+              <div className="flex items-center justify-center gap-6">
+                <button
+                  type="button"
+                  disabled={!isActiveTrack}
+                  onClick={() => player.seek(Math.max(0, player.currentTime - 15))}
+                  className="text-muted-foreground hover:text-foreground disabled:opacity-30"
+                >
+                  <SkipBack className="h-5 w-5" />
+                </button>
+                <button
+                  type="button"
+                  disabled={!playbackUrl && !isActiveTrack}
+                  onClick={() => {
+                    if (!item || !playbackUrl) return;
+                    if (isActiveTrack) {
+                      player.toggle();
+                    } else {
+                      player.play(item, playbackUrl, progressQuery.data?.progressSeconds ?? 0);
+                    }
+                  }}
+                  className="h-14 w-14 rounded-full bg-gold-gradient text-primary-foreground inline-flex items-center justify-center shadow-glow disabled:opacity-40"
+                >
+                  {isActiveTrack && player.isPlaying
+                    ? <Pause className="h-6 w-6" />
+                    : <Play className="h-6 w-6 fill-current" />}
+                </button>
+                <button
+                  type="button"
+                  disabled={!isActiveTrack}
+                  onClick={() => player.seek(Math.min(player.duration, player.currentTime + 15))}
+                  className="text-muted-foreground hover:text-foreground disabled:opacity-30"
+                >
+                  <SkipForward className="h-5 w-5" />
+                </button>
+              </div>
+              {!playbackUrl && (
+                <PlayerUnavailable isLoading={playbackQuery.isLoading} isError={playbackQuery.isError} premiumDenied={premiumDenied} />
               )}
             </div>
           )}
