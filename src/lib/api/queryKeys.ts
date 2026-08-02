@@ -8,6 +8,11 @@ export const queryKeys = {
   users: {
     all: ["users"] as const,
     me: () => [...queryKeys.users.all, "me"] as const,
+    sessions: () => [...queryKeys.users.all, "sessions"] as const,
+  },
+  notifications: {
+    all: ["notifications"] as const,
+    list: () => [...queryKeys.notifications.all, "list"] as const,
   },
   content: {
     all: ["content"] as const,
@@ -21,15 +26,12 @@ export const queryKeys = {
     list: (query?: ListCreatorsQuery) => [...queryKeys.creators.all, "list", query ?? {}] as const,
     detail: (id: string) => [...queryKeys.creators.all, "detail", id] as const,
     handle: (handle: string) => [...queryKeys.creators.all, "handle", handle] as const,
-    content: (id: string, query?: ListContentQuery) =>
-      [...queryKeys.creators.all, "content", id, query ?? {}] as const,
+    content: (id: string, query?: ListContentQuery) => [...queryKeys.creators.all, "content", id, query ?? {}] as const,
     myApplication: () => [...queryKeys.creators.all, "me", "application"] as const,
     myProfile: () => [...queryKeys.creators.all, "me", "profile"] as const,
     myAnalytics: () => [...queryKeys.creators.all, "me", "analytics"] as const,
-    ownContent: (query?: ListContentQuery) =>
-      [...queryKeys.creators.all, "me", "content", query ?? {}] as const,
-    ownLive: (query?: ListLiveEventsQuery) =>
-      [...queryKeys.creators.all, "me", "live", query ?? {}] as const,
+    ownContent: (query?: ListContentQuery) => [...queryKeys.creators.all, "me", "content", query ?? {}] as const,
+    ownLive: (query?: ListLiveEventsQuery) => [...queryKeys.creators.all, "me", "live", query ?? {}] as const,
   },
   live: {
     all: ["live"] as const,
@@ -53,8 +55,7 @@ export const queryKeys = {
     stats: () => [...queryKeys.admin.all, "stats"] as const,
     users: (query?: Record<string, unknown>) => [...queryKeys.admin.all, "users", query ?? {}] as const,
     content: (query?: Record<string, unknown>) => [...queryKeys.admin.all, "content", query ?? {}] as const,
-    applications: (query?: Record<string, unknown>) =>
-      [...queryKeys.admin.all, "applications", query ?? {}] as const,
+    applications: (query?: Record<string, unknown>) => [...queryKeys.admin.all, "applications", query ?? {}] as const,
     analytics: () => [...queryKeys.admin.all, "analytics"] as const,
   },
 };

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { Play, Share2, Pause, SkipBack, SkipForward } from "lucide-react";
+import { Play, Share2, Pause } from "lucide-react";
 import { ContentCard } from "@/components/ContentCard";
 import { NowPlayingMenu } from "@/components/NowPlayingMenu";
 import { SaveToLibraryButton } from "@/components/SaveToLibraryButton";
@@ -15,6 +15,8 @@ const PROGRESS_WRITE_INTERVAL_SECONDS = 15;
 const ContentDetail = () => {
   const { id } = useParams();
   const [playing, setPlaying] = useState(false);
+  const playerSectionRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const progressAppliedRef = useRef(false);
   const lastProgressWriteRef = useRef(0);
   const detailQuery = useContentDetail(id);
@@ -41,12 +43,42 @@ const ContentDetail = () => {
   }
 
   if (!item) {
-    return <p>Not found. <Link to="/app" className="text-gold">Back</Link></p>;
+    return (
+      <p>
+        Not found.{" "}
+        <Link to="/app" className="text-gold">
+          Back
+        </Link>
+      </p>
+    );
   }
 
   const isVideo = item.medium === "video";
   const playbackUrl = playbackQuery.data?.url ?? null;
   const premiumDenied = playbackQuery.error instanceof ApiClientError && playbackQuery.error.status === 403;
+  const heroIsPlaying = isVideo ? playing : isActiveTrack && player.isPlaying;
+
+  const handleHeroPlay = () => {
+    playerSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+
+    if (!playbackUrl) return;
+
+    if (isVideo) {
+      if (videoRef.current) {
+        void videoRef.current.play().catch(() => {});
+      }
+      return;
+    }
+
+    if (isActiveTrack) {
+      if (!player.isPlaying) {
+        player.resume();
+      }
+      return;
+    }
+
+    player.play(item, playbackUrl, progressQuery.data?.progressSeconds ?? 0);
+  };
 
   const applySavedProgress = (media: HTMLMediaElement) => {
     if (progressAppliedRef.current) return;
@@ -79,8 +111,12 @@ const ContentDetail = () => {
         <div className="relative aspect-[16/9] md:aspect-[21/9]">
           <img src={item.image} alt={item.title} className="h-full w-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
-          <button type="button" onClick={() => setPlaying(!playing)} className="absolute inset-0 m-auto h-20 w-20 rounded-full bg-red-gradient text-primary-foreground shadow-red-glow inline-flex items-center justify-center hover:scale-105 transition">
-            {playing ? <Pause className="h-8 w-8" /> : <Play className="h-8 w-8 fill-current" />}
+          <button
+            type="button"
+            onClick={handleHeroPlay}
+            className="absolute inset-0 m-auto h-20 w-20 rounded-full bg-red-gradient text-primary-foreground shadow-red-glow inline-flex items-center justify-center hover:scale-105 transition"
+          >
+            {heroIsPlaying ? <Pause className="h-8 w-8" /> : <Play className="h-8 w-8 fill-current" />}
           </button>
           <div className="absolute top-3 right-3 md:top-5 md:right-5">
             <NowPlayingMenu item={item} variant="overlay" />
@@ -91,10 +127,14 @@ const ContentDetail = () => {
       <div className="grid gap-12 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-6">
           <div>
-            <p className="text-xs uppercase tracking-[0.25em] text-gold">{contentTypeLabel(item.type)} - {item.duration}</p>
+            <p className="text-xs uppercase tracking-[0.25em] text-gold">
+              {contentTypeLabel(item.type)} - {item.duration}
+            </p>
             <h1 className="mt-3 font-display text-4xl md:text-5xl leading-tight">{item.title}</h1>
             {item.creatorId ? (
-              <Link to={`/app/creators/${item.creatorId}`} className="mt-2 inline-block text-sm text-muted-foreground hover:text-gold">by {item.creator}</Link>
+              <Link to={`/app/creators/${item.creatorId}`} className="mt-2 inline-block text-sm text-muted-foreground hover:text-gold">
+                by {item.creator}
+              </Link>
             ) : (
               <p className="mt-2 text-sm text-muted-foreground">by {item.creator}</p>
             )}
@@ -104,19 +144,28 @@ const ContentDetail = () => {
           </p>
 
           <div className="flex flex-wrap gap-3">
-            <button type="button" onClick={() => setPlaying(!playing)} className="inline-flex items-center gap-2 rounded-full bg-red-gradient px-5 py-2.5 text-sm font-medium text-primary-foreground shadow-red-glow"><Play className="h-4 w-4 fill-current" /> Play</button>
+            <button
+              type="button"
+              onClick={handleHeroPlay}
+              className="inline-flex items-center gap-2 rounded-full bg-red-gradient px-5 py-2.5 text-sm font-medium text-primary-foreground shadow-red-glow"
+            >
+              <Play className="h-4 w-4 fill-current" /> Play
+            </button>
             <SaveToLibraryButton contentId={item.id} showLabel className="border border-border px-5 py-2.5 text-sm text-foreground" />
-            <button type="button" className="inline-flex items-center gap-2 rounded-full border border-border px-5 py-2.5 text-sm"><Share2 className="h-4 w-4" /> Share</button>
+            <button type="button" className="inline-flex items-center gap-2 rounded-full border border-border px-5 py-2.5 text-sm">
+              <Share2 className="h-4 w-4" /> Share
+            </button>
           </div>
 
           {isVideo ? (
-            <div className="rounded-2xl bg-card-gradient p-6 ring-1 ring-border/60">
+            <div ref={playerSectionRef} className="rounded-2xl bg-card-gradient p-6 ring-1 ring-gold/20 shadow-[0_12px_40px_hsl(var(--gold)/0.15)]">
               <p className="text-xs uppercase tracking-widest text-gold mb-3">Video player</p>
               {playbackUrl ? (
                 <video
+                  ref={videoRef}
                   controls
                   poster={item.image}
-                  className="aspect-video w-full rounded-lg bg-background/60"
+                  className="aspect-video w-full rounded-xl border border-gold/20 bg-background/70"
                   src={playbackUrl}
                   onLoadedMetadata={(event) => applySavedProgress(event.currentTarget)}
                   onPlay={() => setPlaying(true)}
@@ -132,12 +181,10 @@ const ContentDetail = () => {
               )}
             </div>
           ) : (
-            <div className="rounded-2xl bg-card-gradient p-6 ring-1 ring-border/60">
+            <div ref={playerSectionRef} className="rounded-2xl bg-card-gradient p-6 ring-1 ring-gold/20 shadow-[0_12px_40px_hsl(var(--gold)/0.15)]">
               {/* Progress bar */}
               <div className="flex items-center gap-3 text-xs text-muted-foreground mb-4">
-                <span className="w-8 text-right tabular-nums">
-                  {isActiveTrack ? formatTime(player.currentTime) : "0:00"}
-                </span>
+                <span className="w-8 text-right tabular-nums">{isActiveTrack ? formatTime(player.currentTime) : "0:00"}</span>
                 <div
                   className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-muted cursor-pointer"
                   onClick={(e) => {
@@ -150,26 +197,14 @@ const ContentDetail = () => {
                   <div
                     className="absolute inset-y-0 left-0 bg-gold-gradient transition-all duration-300"
                     style={{
-                      width: isActiveTrack && player.duration > 0
-                        ? `${(player.currentTime / player.duration) * 100}%`
-                        : "0%",
+                      width: isActiveTrack && player.duration > 0 ? `${(player.currentTime / player.duration) * 100}%` : "0%",
                     }}
                   />
                 </div>
-                <span className="w-8 tabular-nums">
-                  {isActiveTrack && player.duration > 0 ? formatTime(player.duration) : item.duration}
-                </span>
+                <span className="w-8 tabular-nums">{isActiveTrack && player.duration > 0 ? formatTime(player.duration) : item.duration}</span>
               </div>
               {/* Controls */}
-              <div className="flex items-center justify-center gap-6">
-                <button
-                  type="button"
-                  disabled={!isActiveTrack}
-                  onClick={() => player.seek(Math.max(0, player.currentTime - 15))}
-                  className="text-muted-foreground hover:text-foreground disabled:opacity-30"
-                >
-                  <SkipBack className="h-5 w-5" />
-                </button>
+              <div className="flex items-center justify-center">
                 <button
                   type="button"
                   disabled={!playbackUrl && !isActiveTrack}
@@ -183,17 +218,7 @@ const ContentDetail = () => {
                   }}
                   className="h-14 w-14 rounded-full bg-gold-gradient text-primary-foreground inline-flex items-center justify-center shadow-glow disabled:opacity-40"
                 >
-                  {isActiveTrack && player.isPlaying
-                    ? <Pause className="h-6 w-6" />
-                    : <Play className="h-6 w-6 fill-current" />}
-                </button>
-                <button
-                  type="button"
-                  disabled={!isActiveTrack}
-                  onClick={() => player.seek(Math.min(player.duration, player.currentTime + 15))}
-                  className="text-muted-foreground hover:text-foreground disabled:opacity-30"
-                >
-                  <SkipForward className="h-5 w-5" />
+                  {isActiveTrack && player.isPlaying ? <Pause className="h-6 w-6" /> : <Play className="h-6 w-6 fill-current" />}
                 </button>
               </div>
               {!playbackUrl && (
@@ -208,7 +233,11 @@ const ContentDetail = () => {
             <p className="text-xs uppercase tracking-widest text-gold">About this creator</p>
             <p className="mt-3 font-display text-xl">{item.creator}</p>
             <p className="mt-2 text-sm text-muted-foreground">Trusted creator in the NoraPlus collective.</p>
-            {item.creatorId && <Link to={`/app/creators/${item.creatorId}`} className="mt-4 inline-block text-sm text-gold hover:underline">View profile</Link>}
+            {item.creatorId && (
+              <Link to={`/app/creators/${item.creatorId}`} className="mt-4 inline-block text-sm text-gold hover:underline">
+                View profile
+              </Link>
+            )}
           </div>
         </aside>
       </div>
@@ -219,7 +248,9 @@ const ContentDetail = () => {
           <RelatedSkeleton />
         ) : related.length > 0 ? (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-5">
-            {related.map((content) => <ContentCard key={content.id} item={content} size="sm" />)}
+            {related.map((content) => (
+              <ContentCard key={content.id} item={content} size="sm" queue={related} />
+            ))}
           </div>
         ) : (
           <div className="rounded-2xl border border-dashed border-border p-8 text-sm text-muted-foreground">
@@ -231,15 +262,7 @@ const ContentDetail = () => {
   );
 };
 
-const PlayerUnavailable = ({
-  isLoading,
-  isError,
-  premiumDenied,
-}: {
-  isLoading: boolean;
-  isError: boolean;
-  premiumDenied: boolean;
-}) => (
+const PlayerUnavailable = ({ isLoading, isError, premiumDenied }: { isLoading: boolean; isError: boolean; premiumDenied: boolean }) => (
   <div className="mt-4 text-center text-xs text-muted-foreground">
     <p>
       {isLoading
@@ -250,7 +273,11 @@ const PlayerUnavailable = ({
             ? "Playback is not available for this item right now."
             : "Playback media is not available yet."}
     </p>
-    {premiumDenied && <Link to="/plans" className="mt-3 inline-flex text-gold hover:underline">View plans</Link>}
+    {premiumDenied && (
+      <Link to="/plans" className="mt-3 inline-flex text-gold hover:underline">
+        View plans
+      </Link>
+    )}
   </div>
 );
 

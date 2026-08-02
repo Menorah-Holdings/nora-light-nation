@@ -1,21 +1,8 @@
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
-import {
-  BookOpen,
-  Headphones,
-  Home,
-  LayoutDashboard,
-  Library,
-  LogOut,
-  Menu,
-  Play,
-  Radio,
-  Search,
-  Shield,
-  Users,
-  X,
-} from "lucide-react";
+import { BookOpen, Headphones, Home, LayoutDashboard, Library, LogOut, Menu, Play, Radio, Search, Shield, Users, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useState } from "react";
+import type { FormEvent } from "react";
 import { Logo } from "./Logo";
 import { NotificationsPanel } from "./NotificationsPanel";
 import { MiniPlayer } from "./MiniPlayer";
@@ -41,6 +28,7 @@ const baseNav: NavItem[] = [
 
 export const AppLayout = () => {
   const [open, setOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const { user, isNoraTeam, signOut } = useUser();
@@ -56,6 +44,12 @@ export const AppLayout = () => {
     { to: "/app/admin", label: creatorNavLabel(user.creator_status), icon: LayoutDashboard },
     ...(isNoraTeam ? [{ to: "/app/noraplus-admin", label: "NoraPlus Admin", icon: Shield }] : []),
   ];
+
+  const submitSearch = (event: FormEvent) => {
+    event.preventDefault();
+    const query = searchQuery.trim();
+    navigate(query ? `/app/listen?search=${encodeURIComponent(query)}` : "/app/listen");
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -116,13 +110,15 @@ export const AppLayout = () => {
           <button type="button" className="md:hidden text-muted-foreground" onClick={() => setOpen(true)}>
             <Menu className="h-5 w-5" />
           </button>
-          <div className="relative flex-1 max-w-xl">
+          <form className="relative flex-1 max-w-xl" onSubmit={submitSearch}>
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <input
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
               placeholder="Search messages, worship, podcasts, movies, creators..."
               className="w-full rounded-full border border-border bg-secondary/60 py-2.5 pl-10 pr-4 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-gold"
             />
-          </div>
+          </form>
           <div className="flex space-x-4">
             <NotificationsPanel />
             <NavLink

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   KeyRound,
   ShieldCheck,
@@ -23,25 +23,29 @@ import {
   Laptop,
   Trash2,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { useUser } from "@/lib/user";
 import { cn } from "@/lib/utils";
+import {
+  useCurrentUser,
+  useDeactivateAccount,
+  useDeleteAccount,
+  useRevokeAllUserSessions,
+  useRevokeUserSession,
+  useUpdateCurrentUser,
+  useUserSessions,
+} from "@/lib/api/hooks/useUsers";
+import { ApiClientError } from "@/lib/api/client";
+import type { ApiSession } from "@/lib/api/types";
 
-const PANEL =
-  "relative overflow-hidden rounded-2xl border border-gold/20 shadow-elegant";
+const PANEL = "relative overflow-hidden rounded-2xl border border-gold/20 shadow-elegant";
 const PANEL_STYLE = {
   background: "linear-gradient(160deg, hsl(350 30% 11%), hsl(350 22% 7%))",
 } as const;
@@ -53,15 +57,7 @@ const SectionHeader = ({ title, subtitle }: { title: string; subtitle?: string }
   </div>
 );
 
-const InfoRow = ({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: any;
-  label: string;
-  value: string;
-}) => (
+const InfoRow = ({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: string }) => (
   <div className="flex items-start gap-3 py-3">
     <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-secondary/60 ring-1 ring-border/60">
       <Icon className="h-4 w-4 text-gold" />
@@ -81,7 +77,7 @@ const SecurityCard = ({
   onClick,
   tone = "default",
 }: {
-  icon: any;
+  icon: LucideIcon;
   title: string;
   description: string;
   action: string;
@@ -96,37 +92,18 @@ const SecurityCard = ({
     )}
     style={PANEL_STYLE}
   >
-    <div
-      className={cn(
-        "grid h-10 w-10 place-items-center rounded-xl ring-1",
-        tone === "gold"
-          ? "bg-gold/15 ring-gold/30"
-          : "bg-red/15 ring-red/30",
-      )}
-    >
+    <div className={cn("grid h-10 w-10 place-items-center rounded-xl ring-1", tone === "gold" ? "bg-gold/15 ring-gold/30" : "bg-red/15 ring-red/30")}>
       <Icon className={cn("h-5 w-5", tone === "gold" ? "text-gold" : "text-red-soft")} />
     </div>
     <div>
       <p className="font-display text-sm text-foreground">{title}</p>
       <p className="mt-1 text-xs text-muted-foreground">{description}</p>
     </div>
-    <span className="mt-2 text-xs font-medium text-gold group-hover:underline">
-      {action} →
-    </span>
+    <span className="mt-2 text-xs font-medium text-gold group-hover:underline">{action} →</span>
   </button>
 );
 
-const ToggleRow = ({
-  title,
-  helper,
-  checked,
-  onChange,
-}: {
-  title: string;
-  helper?: string;
-  checked: boolean;
-  onChange: (v: boolean) => void;
-}) => (
+const ToggleRow = ({ title, helper, checked, onChange }: { title: string; helper?: string; checked: boolean; onChange: (v: boolean) => void }) => (
   <div className="flex items-center justify-between gap-4 py-4">
     <div className="min-w-0 flex-1">
       <p className="text-sm text-foreground">{title}</p>
@@ -139,18 +116,12 @@ const ToggleRow = ({
 interface SessionItem {
   id: string;
   device: string;
-  icon: any;
+  icon: LucideIcon;
   location: string;
   browser: string;
   current?: boolean;
   lastActive: string;
 }
-
-const INITIAL_SESSIONS: SessionItem[] = [
-  { id: "s1", device: "MacBook Pro", icon: Monitor, location: "Lagos, Nigeria", browser: "Safari", current: true, lastActive: "Active now" },
-  { id: "s2", device: "iPhone 15", icon: Smartphone, location: "Lagos, Nigeria", browser: "NoraPlus iOS App", lastActive: "2 hours ago" },
-  { id: "s3", device: "Windows PC", icon: Monitor, location: "Abuja, Nigeria", browser: "Chrome", lastActive: "Yesterday" },
-];
 
 interface ProviderItem {
   id: string;
@@ -159,7 +130,14 @@ interface ProviderItem {
 }
 
 const AccountSettings = () => {
-  const { user } = useUser();
+  const { user, signOut } = useUser();
+  const currentUserQuery = useCurrentUser(true);
+  const updateUserMutation = useUpdateCurrentUser();
+  const sessionsQuery = useUserSessions(true);
+  const revokeSessionMutation = useRevokeUserSession();
+  const revokeAllSessionsMutation = useRevokeAllUserSessions();
+  const deactivateAccountMutation = useDeactivateAccount();
+  const deleteAccountMutation = useDeleteAccount();
 
   // Dialogs
   const [editOpen, setEditOpen] = useState(false);
@@ -169,14 +147,17 @@ const AccountSettings = () => {
   const [deleteOpen, setDeleteOpen] = useState(false);
 
   // Account info
-  const [info, setInfo] = useState({
-    fullName: user.name,
-    displayName: user.handle,
-    email: user.email,
-    phone: "+234 802 123 4567",
-    country: "Nigeria",
-    memberSince: "March 2024",
-  });
+  const info = useMemo(() => {
+    const apiUser = currentUserQuery.data;
+    return {
+      fullName: apiUser?.name || user.name,
+      displayName: apiUser?.displayName || user.handle,
+      email: apiUser?.email || user.email,
+      phone: apiUser?.phone || "Not set",
+      country: apiUser?.country || "Not set",
+      memberSince: formatMemberSince(apiUser?.createdAt),
+    };
+  }, [currentUserQuery.data, user.email, user.handle, user.name]);
   const [draft, setDraft] = useState(info);
 
   // Password
@@ -186,7 +167,7 @@ const AccountSettings = () => {
   const [twoFA, setTwoFA] = useState(false);
 
   // Sessions
-  const [sessions, setSessions] = useState(INITIAL_SESSIONS);
+  const sessions = useMemo(() => (sessionsQuery.data ?? []).map(mapApiSessionToView), [sessionsQuery.data]);
 
   // Connected accounts
   const [providers, setProviders] = useState<ProviderItem[]>([
@@ -232,9 +213,23 @@ const AccountSettings = () => {
   };
 
   const saveInfo = () => {
-    setInfo(draft);
-    setEditOpen(false);
-    toast.success("Account information updated");
+    updateUserMutation.mutate(
+      {
+        name: draft.fullName,
+        displayName: draft.displayName,
+        phone: draft.phone,
+        country: draft.country,
+      },
+      {
+        onSuccess: () => {
+          setEditOpen(false);
+          toast.success("Account information updated");
+        },
+        onError: (error) => {
+          toast.error(getErrorMessage(error, "Could not update account information"));
+        },
+      },
+    );
   };
 
   const updatePassword = () => {
@@ -255,27 +250,46 @@ const AccountSettings = () => {
     toast.success("Password updated");
   };
 
-  const signOut = (id: string) => {
-    setSessions((s) => s.filter((x) => x.id !== id));
-    toast.success("Device signed out");
+  const signOutDevice = (id: string) => {
+    revokeSessionMutation.mutate(id, {
+      onSuccess: () => {
+        toast.success("Device signed out");
+      },
+      onError: (error) => {
+        toast.error(getErrorMessage(error, "Could not sign out this device"));
+      },
+    });
   };
 
   const signOutAll = () => {
-    setSessions((s) => s.filter((x) => x.current));
-    toast.success("All other devices signed out");
+    revokeAllSessionsMutation.mutate(undefined, {
+      onSuccess: async () => {
+        toast.success("All other devices signed out");
+        await signOut();
+      },
+      onError: (error) => {
+        toast.error(getErrorMessage(error, "Could not sign out all devices"));
+      },
+    });
   };
 
   const toggleProvider = (id: string) => {
-    setProviders((ps) =>
-      ps.map((p) => (p.id === id ? { ...p, connected: !p.connected } : p)),
-    );
+    setProviders((ps) => ps.map((p) => (p.id === id ? { ...p, connected: !p.connected } : p)));
     const p = providers.find((p) => p.id === id);
     toast.success(`${p?.name} ${p?.connected ? "disconnected" : "connected"}`);
   };
 
   const deactivate = () => {
-    toast.success("Account deactivated", {
-      description: "You can reactivate by signing in again within 30 days.",
+    deactivateAccountMutation.mutate(undefined, {
+      onSuccess: async () => {
+        toast.success("Account deactivated", {
+          description: "You can reactivate by signing in again within 30 days.",
+        });
+        await signOut();
+      },
+      onError: (error) => {
+        toast.error(getErrorMessage(error, "Could not deactivate account"));
+      },
     });
   };
 
@@ -284,19 +298,28 @@ const AccountSettings = () => {
       toast.error("Please confirm password and acknowledge the action");
       return;
     }
-    setDeleteOpen(false);
-    setDelPwd("");
-    setDelAck(false);
-    toast.success("Deletion request submitted");
+    deleteAccountMutation.mutate(undefined, {
+      onSuccess: async () => {
+        setDeleteOpen(false);
+        setDelPwd("");
+        setDelAck(false);
+        toast.success("Account permanently deleted");
+        await signOut();
+      },
+      onError: (error) => {
+        toast.error(getErrorMessage(error, "Could not delete account"));
+      },
+    });
   };
+
+  const destructivePending =
+    revokeSessionMutation.isPending || revokeAllSessionsMutation.isPending || deactivateAccountMutation.isPending || deleteAccountMutation.isPending;
 
   return (
     <div className="space-y-8">
       <div>
         <h2 className="font-display text-2xl text-foreground">Account Settings</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Manage your account, security, and sign-in preferences.
-        </p>
+        <p className="mt-1 text-sm text-muted-foreground">Manage your account, security, and sign-in preferences.</p>
       </div>
 
       {/* Account Information */}
@@ -415,11 +438,36 @@ const AccountSettings = () => {
         <div className={PANEL} style={PANEL_STYLE}>
           <div className="absolute inset-0 pointer-events-none glow-radial opacity-30" />
           <div className="relative divide-y divide-border/40 px-5 sm:px-6">
-            <ToggleRow title="Email Notifications" helper="Account activity, security, and alerts." checked={comms.email} onChange={(v) => setComms({ ...comms, email: v })} />
-            <ToggleRow title="Product Updates" helper="New features and improvements." checked={comms.productUpdates} onChange={(v) => setComms({ ...comms, productUpdates: v })} />
-            <ToggleRow title="Creator Announcements" helper="News from creators you follow." checked={comms.creatorAnnouncements} onChange={(v) => setComms({ ...comms, creatorAnnouncements: v })} />
-            <ToggleRow title="Subscription Emails" helper="Billing receipts and renewals." checked={comms.subscriptionEmails} onChange={(v) => setComms({ ...comms, subscriptionEmails: v })} />
-            <ToggleRow title="Marketing Emails" helper="Promotions and partner offers." checked={comms.marketing} onChange={(v) => setComms({ ...comms, marketing: v })} />
+            <ToggleRow
+              title="Email Notifications"
+              helper="Account activity, security, and alerts."
+              checked={comms.email}
+              onChange={(v) => setComms({ ...comms, email: v })}
+            />
+            <ToggleRow
+              title="Product Updates"
+              helper="New features and improvements."
+              checked={comms.productUpdates}
+              onChange={(v) => setComms({ ...comms, productUpdates: v })}
+            />
+            <ToggleRow
+              title="Creator Announcements"
+              helper="News from creators you follow."
+              checked={comms.creatorAnnouncements}
+              onChange={(v) => setComms({ ...comms, creatorAnnouncements: v })}
+            />
+            <ToggleRow
+              title="Subscription Emails"
+              helper="Billing receipts and renewals."
+              checked={comms.subscriptionEmails}
+              onChange={(v) => setComms({ ...comms, subscriptionEmails: v })}
+            />
+            <ToggleRow
+              title="Marketing Emails"
+              helper="Promotions and partner offers."
+              checked={comms.marketing}
+              onChange={(v) => setComms({ ...comms, marketing: v })}
+            />
           </div>
           <div className="relative border-t border-border/40 px-5 sm:px-6 py-4 flex justify-end">
             <Button
@@ -438,10 +486,30 @@ const AccountSettings = () => {
         <div className={PANEL} style={PANEL_STYLE}>
           <div className="absolute inset-0 pointer-events-none glow-radial opacity-30" />
           <div className="relative divide-y divide-border/40 px-5 sm:px-6">
-            <ToggleRow title="Private Listening History" helper="Don't save what you listen to." checked={privacy.privateHistory} onChange={(v) => setPrivacy({ ...privacy, privateHistory: v })} />
-            <ToggleRow title="Hide Recently Played" helper="Hide your recent activity from your profile." checked={privacy.hideRecent} onChange={(v) => setPrivacy({ ...privacy, hideRecent: v })} />
-            <ToggleRow title="Personalized Recommendations" helper="Use your activity to tailor recommendations." checked={privacy.personalized} onChange={(v) => setPrivacy({ ...privacy, personalized: v })} />
-            <ToggleRow title="Data Collection Preferences" helper="Allow NoraPlus to collect usage data to improve the platform." checked={privacy.dataCollection} onChange={(v) => setPrivacy({ ...privacy, dataCollection: v })} />
+            <ToggleRow
+              title="Private Listening History"
+              helper="Don't save what you listen to."
+              checked={privacy.privateHistory}
+              onChange={(v) => setPrivacy({ ...privacy, privateHistory: v })}
+            />
+            <ToggleRow
+              title="Hide Recently Played"
+              helper="Hide your recent activity from your profile."
+              checked={privacy.hideRecent}
+              onChange={(v) => setPrivacy({ ...privacy, hideRecent: v })}
+            />
+            <ToggleRow
+              title="Personalized Recommendations"
+              helper="Use your activity to tailor recommendations."
+              checked={privacy.personalized}
+              onChange={(v) => setPrivacy({ ...privacy, personalized: v })}
+            />
+            <ToggleRow
+              title="Data Collection Preferences"
+              helper="Allow NoraPlus to collect usage data to improve the platform."
+              checked={privacy.dataCollection}
+              onChange={(v) => setPrivacy({ ...privacy, dataCollection: v })}
+            />
           </div>
           <div className="relative border-t border-border/40 px-5 sm:px-6 py-4 flex justify-end">
             <Button
@@ -459,10 +527,34 @@ const AccountSettings = () => {
         <SectionHeader title="Activity" subtitle="Manage your account activity and viewing history." />
         <div className="grid gap-4 md:grid-cols-2">
           {[
-            { icon: History, title: "Recently Played", desc: "View and manage your recently played audio and video content.", action: "View History", clear: null },
-            { icon: Tv, title: "Watch History", desc: "Review videos and live events you've watched.", action: "View History", clear: "watch" as ClearTarget },
-            { icon: Headphones, title: "Listening History", desc: "Review your listening activity across music, messages, podcasts, and devotionals.", action: "View History", clear: "listening" as ClearTarget },
-            { icon: Search, title: "Search History", desc: "View and manage your recent searches.", action: "View Searches", clear: "search" as ClearTarget },
+            {
+              icon: History,
+              title: "Recently Played",
+              desc: "View and manage your recently played audio and video content.",
+              action: "View History",
+              clear: null,
+            },
+            {
+              icon: Tv,
+              title: "Watch History",
+              desc: "Review videos and live events you've watched.",
+              action: "View History",
+              clear: "watch" as ClearTarget,
+            },
+            {
+              icon: Headphones,
+              title: "Listening History",
+              desc: "Review your listening activity across music, messages, podcasts, and devotionals.",
+              action: "View History",
+              clear: "listening" as ClearTarget,
+            },
+            {
+              icon: Search,
+              title: "Search History",
+              desc: "View and manage your recent searches.",
+              action: "View Searches",
+              clear: "search" as ClearTarget,
+            },
           ].map((card) => {
             const Icon = card.icon;
             return (
@@ -479,10 +571,7 @@ const AccountSettings = () => {
                     </div>
                   </div>
                   <div className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-2">
-                    <button
-                      onClick={() => toast.info(`${card.title} opened`)}
-                      className="text-xs font-medium text-gold hover:underline"
-                    >
+                    <button onClick={() => toast.info(`${card.title} opened`)} className="text-xs font-medium text-gold hover:underline">
                       {card.action} →
                     </button>
                     {card.clear && (
@@ -513,9 +602,7 @@ const AccountSettings = () => {
               </div>
               <div className="min-w-0 flex-1">
                 <p className="font-display text-sm text-foreground">Device History</p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  See devices that have recently accessed your NoraPlus account.
-                </p>
+                <p className="mt-1 text-xs text-muted-foreground">See devices that have recently accessed your NoraPlus account.</p>
               </div>
             </div>
             <div className="mt-4 divide-y divide-border/40 rounded-xl border border-border/60 bg-secondary/30">
@@ -562,17 +649,30 @@ const AccountSettings = () => {
           <div className="absolute inset-0 pointer-events-none glow-radial opacity-30" />
           <div className="relative p-5 sm:p-6">
             <p className="font-display text-sm text-foreground">History Controls</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Quickly clear specific activity or wipe everything at once.
-            </p>
+            <p className="mt-1 text-xs text-muted-foreground">Quickly clear specific activity or wipe everything at once.</p>
             <div className="mt-4 flex flex-wrap gap-2">
-              <Button size="sm" variant="outline" onClick={() => setClearTarget("watch")} className="border-red/40 bg-transparent text-red hover:bg-red/10 hover:text-red">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setClearTarget("watch")}
+                className="border-red/40 bg-transparent text-red hover:bg-red/10 hover:text-red"
+              >
                 Clear Watch History
               </Button>
-              <Button size="sm" variant="outline" onClick={() => setClearTarget("listening")} className="border-red/40 bg-transparent text-red hover:bg-red/10 hover:text-red">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setClearTarget("listening")}
+                className="border-red/40 bg-transparent text-red hover:bg-red/10 hover:text-red"
+              >
                 Clear Listening History
               </Button>
-              <Button size="sm" variant="outline" onClick={() => setClearTarget("search")} className="border-red/40 bg-transparent text-red hover:bg-red/10 hover:text-red">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setClearTarget("search")}
+                className="border-red/40 bg-transparent text-red hover:bg-red/10 hover:text-red"
+              >
                 Clear Search History
               </Button>
               <Button size="sm" onClick={() => setClearTarget("all")} className="bg-red-gradient text-primary-foreground hover:opacity-90">
@@ -596,7 +696,9 @@ const AccountSettings = () => {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-2">
-            <Button variant="ghost" onClick={() => setClearTarget(null)}>Cancel</Button>
+            <Button variant="ghost" onClick={() => setClearTarget(null)}>
+              Cancel
+            </Button>
             <Button onClick={confirmClear} className="bg-red-gradient text-primary-foreground hover:opacity-90">
               Clear Activity
             </Button>
@@ -625,6 +727,7 @@ const AccountSettings = () => {
               <Button
                 variant="outline"
                 onClick={deactivate}
+                disabled={destructivePending}
                 className="border-red/50 bg-transparent text-red-soft hover:bg-red/10 hover:text-red-soft"
               >
                 Deactivate
@@ -636,12 +739,11 @@ const AccountSettings = () => {
                   <AlertTriangle className="h-4 w-4 text-red-soft" />
                   Delete Account
                 </p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Permanently delete your NoraPlus account and all associated data.
-                </p>
+                <p className="mt-1 text-xs text-muted-foreground">Permanently delete your NoraPlus account and all associated data.</p>
               </div>
               <Button
                 onClick={() => setDeleteOpen(true)}
+                disabled={destructivePending}
                 className="bg-red-gradient text-primary-foreground hover:opacity-90"
               >
                 Delete Account
@@ -656,9 +758,7 @@ const AccountSettings = () => {
         <DialogContent className="border-gold/30" style={PANEL_STYLE}>
           <DialogHeader>
             <DialogTitle className="font-display text-xl">Edit Account Information</DialogTitle>
-            <DialogDescription className="text-muted-foreground">
-              Update your personal details.
-            </DialogDescription>
+            <DialogDescription className="text-muted-foreground">Update your personal details.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             {[
@@ -667,12 +767,14 @@ const AccountSettings = () => {
               { k: "email", l: "Email Address" },
               { k: "phone", l: "Phone Number" },
               { k: "country", l: "Country" },
-            ].map((f) => (
+            ].map((f: { k: keyof typeof draft; l: string }) => (
               <div key={f.k} className="space-y-1.5">
-                <Label htmlFor={f.k} className="text-xs text-muted-foreground">{f.l}</Label>
+                <Label htmlFor={f.k} className="text-xs text-muted-foreground">
+                  {f.l}
+                </Label>
                 <Input
                   id={f.k}
-                  value={(draft as any)[f.k]}
+                  value={draft[f.k]}
                   onChange={(e) => setDraft({ ...draft, [f.k]: e.target.value })}
                   className="border-border bg-secondary/60 focus-visible:ring-1 focus-visible:ring-gold"
                 />
@@ -680,7 +782,9 @@ const AccountSettings = () => {
             ))}
           </div>
           <DialogFooter className="gap-2 sm:gap-2">
-            <Button variant="ghost" onClick={() => setEditOpen(false)}>Cancel</Button>
+            <Button variant="ghost" onClick={() => setEditOpen(false)}>
+              Cancel
+            </Button>
             <Button onClick={saveInfo} className="bg-red-gradient text-primary-foreground hover:opacity-90">
               Save Changes
             </Button>
@@ -693,26 +797,41 @@ const AccountSettings = () => {
         <DialogContent className="border-gold/30" style={PANEL_STYLE}>
           <DialogHeader>
             <DialogTitle className="font-display text-xl">Change Password</DialogTitle>
-            <DialogDescription className="text-muted-foreground">
-              Use a strong, unique password for your NoraPlus account.
-            </DialogDescription>
+            <DialogDescription className="text-muted-foreground">Use a strong, unique password for your NoraPlus account.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
               <Label className="text-xs text-muted-foreground">Current Password</Label>
-              <Input type="password" value={pwd.current} onChange={(e) => setPwd({ ...pwd, current: e.target.value })} className="border-border bg-secondary/60 focus-visible:ring-1 focus-visible:ring-gold" />
+              <Input
+                type="password"
+                value={pwd.current}
+                onChange={(e) => setPwd({ ...pwd, current: e.target.value })}
+                className="border-border bg-secondary/60 focus-visible:ring-1 focus-visible:ring-gold"
+              />
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs text-muted-foreground">New Password</Label>
-              <Input type="password" value={pwd.next} onChange={(e) => setPwd({ ...pwd, next: e.target.value })} className="border-border bg-secondary/60 focus-visible:ring-1 focus-visible:ring-gold" />
+              <Input
+                type="password"
+                value={pwd.next}
+                onChange={(e) => setPwd({ ...pwd, next: e.target.value })}
+                className="border-border bg-secondary/60 focus-visible:ring-1 focus-visible:ring-gold"
+              />
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs text-muted-foreground">Confirm Password</Label>
-              <Input type="password" value={pwd.confirm} onChange={(e) => setPwd({ ...pwd, confirm: e.target.value })} className="border-border bg-secondary/60 focus-visible:ring-1 focus-visible:ring-gold" />
+              <Input
+                type="password"
+                value={pwd.confirm}
+                onChange={(e) => setPwd({ ...pwd, confirm: e.target.value })}
+                className="border-border bg-secondary/60 focus-visible:ring-1 focus-visible:ring-gold"
+              />
             </div>
           </div>
           <DialogFooter className="gap-2 sm:gap-2">
-            <Button variant="ghost" onClick={() => setPwdOpen(false)}>Cancel</Button>
+            <Button variant="ghost" onClick={() => setPwdOpen(false)}>
+              Cancel
+            </Button>
             <Button onClick={updatePassword} className="bg-red-gradient text-primary-foreground hover:opacity-90">
               Update Password
             </Button>
@@ -725,9 +844,7 @@ const AccountSettings = () => {
         <DialogContent className="border-gold/30 max-w-lg" style={PANEL_STYLE}>
           <DialogHeader>
             <DialogTitle className="font-display text-xl">Login Sessions</DialogTitle>
-            <DialogDescription className="text-muted-foreground">
-              Devices currently signed in to your NoraPlus account.
-            </DialogDescription>
+            <DialogDescription className="text-muted-foreground">Devices currently signed in to your NoraPlus account.</DialogDescription>
           </DialogHeader>
           <div className="space-y-3 py-2 max-h-[60vh] overflow-y-auto">
             {sessions.map((s) => {
@@ -753,7 +870,13 @@ const AccountSettings = () => {
                     </div>
                   </div>
                   {!s.current && (
-                    <Button size="sm" variant="outline" onClick={() => signOut(s.id)} className="border-red/40 bg-transparent text-red hover:bg-red/10 hover:text-red">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={revokeSessionMutation.isPending}
+                      onClick={() => signOutDevice(s.id)}
+                      className="border-red/40 bg-transparent text-red hover:bg-red/10 hover:text-red"
+                    >
                       <LogOut className="mr-1.5 h-3.5 w-3.5" />
                       Sign Out
                     </Button>
@@ -763,8 +886,14 @@ const AccountSettings = () => {
             })}
           </div>
           <DialogFooter className="gap-2 sm:gap-2">
-            <Button variant="ghost" onClick={() => setSessionsOpen(false)}>Close</Button>
-            <Button onClick={signOutAll} className="bg-red-gradient text-primary-foreground hover:opacity-90">
+            <Button variant="ghost" onClick={() => setSessionsOpen(false)}>
+              Close
+            </Button>
+            <Button
+              onClick={signOutAll}
+              disabled={revokeAllSessionsMutation.isPending}
+              className="bg-red-gradient text-primary-foreground hover:opacity-90"
+            >
               Sign Out All Devices
             </Button>
           </DialogFooter>
@@ -776,9 +905,7 @@ const AccountSettings = () => {
         <DialogContent className="border-gold/30" style={PANEL_STYLE}>
           <DialogHeader>
             <DialogTitle className="font-display text-xl">Connected Devices</DialogTitle>
-            <DialogDescription className="text-muted-foreground">
-              Devices authorized to stream NoraPlus on your account.
-            </DialogDescription>
+            <DialogDescription className="text-muted-foreground">Devices authorized to stream NoraPlus on your account.</DialogDescription>
           </DialogHeader>
           <div className="space-y-3 py-2">
             {sessions.map((s) => {
@@ -795,7 +922,13 @@ const AccountSettings = () => {
                     </div>
                   </div>
                   {!s.current && (
-                    <Button size="sm" variant="outline" onClick={() => signOut(s.id)} className="border-red/40 bg-transparent text-red hover:bg-red/10 hover:text-red">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={revokeSessionMutation.isPending}
+                      onClick={() => signOutDevice(s.id)}
+                      className="border-red/40 bg-transparent text-red hover:bg-red/10 hover:text-red"
+                    >
                       Remove
                     </Button>
                   )}
@@ -804,7 +937,9 @@ const AccountSettings = () => {
             })}
           </div>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setDevicesOpen(false)}>Close</Button>
+            <Button variant="ghost" onClick={() => setDevicesOpen(false)}>
+              Close
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -833,17 +968,21 @@ const AccountSettings = () => {
               />
             </div>
             <label className="flex items-start gap-2 cursor-pointer">
-              <Checkbox checked={delAck} onCheckedChange={(v) => setDelAck(!!v)} className="mt-0.5 border-red/40 data-[state=checked]:bg-red data-[state=checked]:border-red" />
-              <span className="text-xs text-muted-foreground">
-                I understand this action is permanent.
-              </span>
+              <Checkbox
+                checked={delAck}
+                onCheckedChange={(v) => setDelAck(!!v)}
+                className="mt-0.5 border-red/40 data-[state=checked]:bg-red data-[state=checked]:border-red"
+              />
+              <span className="text-xs text-muted-foreground">I understand this action is permanent.</span>
             </label>
           </div>
           <DialogFooter className="gap-2 sm:gap-2">
-            <Button variant="ghost" onClick={() => setDeleteOpen(false)}>Cancel</Button>
+            <Button variant="ghost" onClick={() => setDeleteOpen(false)}>
+              Cancel
+            </Button>
             <Button
               onClick={deleteAccount}
-              disabled={!delPwd || !delAck}
+              disabled={!delPwd || !delAck || deleteAccountMutation.isPending}
               className="bg-red-gradient text-primary-foreground hover:opacity-90 disabled:opacity-50"
             >
               Delete Account
@@ -856,3 +995,46 @@ const AccountSettings = () => {
 };
 
 export default AccountSettings;
+
+function getErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof ApiClientError) return error.message;
+  if (error instanceof Error) return error.message;
+  return fallback;
+}
+
+function formatMemberSince(createdAt?: string): string {
+  if (!createdAt) return "Unknown";
+  const value = new Date(createdAt);
+  if (Number.isNaN(value.getTime())) return "Unknown";
+  return value.toLocaleString(undefined, { month: "long", year: "numeric" });
+}
+
+function mapApiSessionToView(session: ApiSession): SessionItem {
+  const agent = (session.userAgent || "").toLowerCase();
+  const isMobile = /iphone|android|mobile/.test(agent);
+  const icon = isMobile ? Smartphone : Monitor;
+  const browser = session.userAgent || "Unknown client";
+  const location = session.ipAddress || "Unknown location";
+
+  return {
+    id: session.id,
+    device: isMobile ? "Mobile device" : "Desktop device",
+    icon,
+    location,
+    browser,
+    current: session.isCurrent,
+    lastActive: formatSessionTime(session.createdAt),
+  };
+}
+
+function formatSessionTime(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Unknown time";
+  const diffMs = Date.now() - date.getTime();
+  const diffMinutes = Math.floor(diffMs / 60000);
+  if (diffMinutes < 1) return "Active now";
+  if (diffMinutes < 60) return `${diffMinutes} minutes ago`;
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) return `${diffHours} hours ago`;
+  return date.toLocaleDateString();
+}

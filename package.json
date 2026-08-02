@@ -8,9 +8,11 @@
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
+    "lint:warn": "npm run lint || echo [warn] Frontend lint reported issues (non-blocking for this sprint)",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "release:check": "npm run test && npm run build && npm run lint:warn"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

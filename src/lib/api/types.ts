@@ -3,45 +3,13 @@ export type UserCreatorStatus = "NOT_APPLIED" | "PENDING" | "APPROVED" | "DECLIN
 export type SubscriptionTier = "FREE" | "PREMIUM";
 export type ContentType = "VIDEO" | "AUDIO" | "DEVOTIONAL" | "PODCAST";
 export type ContentMediaType = "AUDIO" | "VIDEO";
-export type ContentStatus =
-  | "DRAFT"
-  | "PROCESSING"
-  | "UNDER_REVIEW"
-  | "PUBLISHED"
-  | "SCHEDULED"
-  | "REJECTED"
-  | "UNPUBLISHED";
+export type ContentStatus = "DRAFT" | "PROCESSING" | "UNDER_REVIEW" | "PUBLISHED" | "SCHEDULED" | "REJECTED" | "UNPUBLISHED";
 export type ContentVisibility = "PUBLIC" | "SUBSCRIBERS_ONLY" | "PREMIUM_ONLY";
-export type ContentCategory =
-  | "WORSHIP"
-  | "SERMON"
-  | "PODCAST"
-  | "FILM"
-  | "DEVOTIONAL"
-  | "MUSIC"
-  | "PRAYER"
-  | "TESTIMONY"
-  | "BIBLE_STUDY"
-  | "OTHER";
-export type LiveEventStatus =
-  | "SCHEDULED"
-  | "LIVE"
-  | "ENDED"
-  | "DRAFT"
-  | "CANCELLED"
-  | "UNDER_REVIEW"
-  | "REJECTED";
+export type ContentCategory = "WORSHIP" | "SERMON" | "PODCAST" | "FILM" | "DEVOTIONAL" | "MUSIC" | "PRAYER" | "TESTIMONY" | "BIBLE_STUDY" | "OTHER";
+export type LiveEventStatus = "SCHEDULED" | "LIVE" | "ENDED" | "DRAFT" | "CANCELLED" | "UNDER_REVIEW" | "REJECTED";
 export type CreatorType = "INDIVIDUAL" | "MINISTRY_ORGANIZATION";
 export type CreatorSocialPlatform = "INSTAGRAM" | "YOUTUBE" | "FACEBOOK" | "TIKTOK" | "X" | "WEBSITE";
-export type LiveEventType =
-  | "WORSHIP_NIGHT"
-  | "CONFERENCE"
-  | "VIGIL"
-  | "CONCERT"
-  | "PRAYER_MEETING"
-  | "PREMIERE"
-  | "RETREAT"
-  | "CHURCH_EVENT";
+export type LiveEventType = "WORSHIP_NIGHT" | "CONFERENCE" | "VIGIL" | "CONCERT" | "PRAYER_MEETING" | "PREMIERE" | "RETREAT" | "CHURCH_EVENT";
 export type UploadAssetRole = "thumbnail" | "cover_art" | "primary_audio" | "primary_video" | "trailer";
 export type ApplicationStatus = "PENDING" | "APPROVED" | "REJECTED";
 
@@ -50,14 +18,53 @@ export interface ApiUser {
   email: string;
   name?: string | null;
   image?: string | null;
+  displayName?: string | null;
+  phone?: string | null;
+  country?: string | null;
   role?: UserRole;
   creatorStatus?: UserCreatorStatus;
   subscriptionTier?: SubscriptionTier;
   subscriptionExpiresAt?: string | null;
   emailVerified?: boolean;
   isActive?: boolean;
+  twoFactor?: boolean;
+  emailNotif?: boolean;
+  creatorUpdates?: boolean;
+  privateListening?: boolean;
+  hideRecentlyPlayed?: boolean;
+  personalizedRecs?: boolean;
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface ApiSession {
+  id: string;
+  ipAddress?: string | null;
+  userAgent?: string | null;
+  createdAt: string;
+  isCurrent: boolean;
+}
+
+export interface ApiActionResult {
+  success: boolean;
+  message: string;
+}
+
+export interface ApiNotification {
+  id: string;
+  type: string;
+  title: string;
+  subtitle?: string | null;
+  description?: string | null;
+  actionLabel?: string | null;
+  referenceId?: string | null;
+  isRead: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ApiMarkAllReadResult {
+  count: number;
 }
 
 export interface ApiCreatorSummary {
@@ -108,6 +115,7 @@ export interface ApiCreator {
   isVerified: boolean;
   isActive?: boolean;
   followerCount: number;
+  isFollowing?: boolean;
   socialLinkRows?: ApiCreatorSocialLink[];
   contentCategories?: { id: string; category: ContentCategory }[];
   individualProfile?: ApiIndividualCreatorProfile | null;
@@ -251,6 +259,15 @@ export interface ListLiveEventsQuery {
 export interface UpdateCurrentUserInput {
   name?: string;
   image?: string;
+  displayName?: string;
+  phone?: string;
+  country?: string;
+  twoFactor?: boolean;
+  emailNotif?: boolean;
+  creatorUpdates?: boolean;
+  privateListening?: boolean;
+  hideRecentlyPlayed?: boolean;
+  personalizedRecs?: boolean;
 }
 
 export interface CreatorApplicationInput {

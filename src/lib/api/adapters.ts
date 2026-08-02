@@ -46,7 +46,7 @@ export function adaptContent(item: ApiContent): ContentItem {
     medium: mapContentMedium(item.mediaType, item.type),
     duration: formatDuration(item.durationSeconds),
     description: item.description ?? "",
-    image: item.thumbnailUrl || fallbackContentImage(uiType, item.category),
+    image: item.coverArtUrl || item.thumbnailUrl || fallbackContentImage(uiType, item.category),
     tag: item.isFeatured ? "Featured" : item.visibility === "PREMIUM_ONLY" ? "Premium" : primaryDisplayTag(item.tags),
     date: item.createdAt,
   };
