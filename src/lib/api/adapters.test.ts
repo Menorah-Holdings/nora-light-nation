@@ -54,6 +54,16 @@ describe("api adapters", () => {
     });
   });
 
+  it("prefers coverArtUrl for card artwork when present", () => {
+    expect(
+      adaptContent({
+        ...baseContent,
+        coverArtUrl: "https://cdn.example/cover.jpg",
+        thumbnailUrl: "https://cdn.example/thumb.jpg",
+      }).image,
+    ).toBe("https://cdn.example/cover.jpg");
+  });
+
   it("maps live event statuses into the current UI tabs", () => {
     const event: ApiLiveEvent = {
       id: "event-1",
@@ -120,20 +130,24 @@ describe("api adapters", () => {
   });
 
   it("maps creator analytics into stable card stats", () => {
-    expect(adaptCreatorAnalytics({
-      totalUploads: 12,
-      publishedContent: 8,
-      drafts: 4,
-      followersCount: 1250,
-      totalPlays: 248000,
-      totalViews: 590000,
-      upcomingLiveEvents: 3,
-      updatedAt: "2026-07-09T00:00:00.000Z",
-    })).toEqual(expect.arrayContaining([
-      { label: "Uploads", value: "12", trend: "Total" },
-      { label: "Followers", value: "1.3K", trend: "Audience" },
-      { label: "Total plays", value: "248K", trend: "All time" },
-    ]));
+    expect(
+      adaptCreatorAnalytics({
+        totalUploads: 12,
+        publishedContent: 8,
+        drafts: 4,
+        followersCount: 1250,
+        totalPlays: 248000,
+        totalViews: 590000,
+        upcomingLiveEvents: 3,
+        updatedAt: "2026-07-09T00:00:00.000Z",
+      }),
+    ).toEqual(
+      expect.arrayContaining([
+        { label: "Uploads", value: "12", trend: "Total" },
+        { label: "Followers", value: "1.3K", trend: "Audience" },
+        { label: "Total plays", value: "248K", trend: "All time" },
+      ]),
+    );
   });
 
   it("formats shared display values", () => {
@@ -141,4 +155,3 @@ describe("api adapters", () => {
     expect(formatCompactNumber(248000)).toBe("248K");
   });
 });
-

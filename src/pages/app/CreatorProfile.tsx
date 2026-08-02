@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { ContentCard } from "@/components/ContentCard";
 import { toast } from "sonner";
 import { adaptContent, adaptCreator, adaptLiveEvent } from "@/lib/api/adapters";
-import { useCreatorContent, useCreatorDetail, useFollowCreator } from "@/lib/api/hooks/useCreators";
+import { useCreatorContent, useCreatorDetail, useFollowCreator, useUnfollowCreator } from "@/lib/api/hooks/useCreators";
 import { useLiveEvents } from "@/lib/api/hooks/useLive";
 import type { ContentItem } from "@/lib/mockData";
 
@@ -14,12 +14,13 @@ const tabs = ["Messages", "Music", "Videos", "Live Events"] as const;
 const CreatorProfile = () => {
   const { id } = useParams();
   const [tab, setTab] = useState<(typeof tabs)[number]>("Messages");
-  const [followed, setFollowed] = useState(false);
   const creatorQuery = useCreatorDetail(id);
   const contentQuery = useCreatorContent(id, { limit: 50 });
   const liveQuery = useLiveEvents({ limit: 50 });
   const followMutation = useFollowCreator();
+  const unfollowMutation = useUnfollowCreator();
   const creator = creatorQuery.data ? adaptCreator(creatorQuery.data) : null;
+  const followed = creatorQuery.data?.isFollowing === true;
 
   const contentItems = useMemo(() => {
     if (!creator) return [];
@@ -32,9 +33,7 @@ const CreatorProfile = () => {
 
   const liveEvents = useMemo(() => {
     if (!creator) return [];
-    return (liveQuery.data ?? [])
-      .filter((event) => event.creator?.id === creator.id)
-      .map(adaptLiveEvent);
+    return (liveQuery.data ?? []).filter((event) => event.creator?.id === creator.id).map(adaptLiveEvent);
   }, [creator, liveQuery.data]);
 
   const filteredItems = filterCreatorContent(contentItems, tab);
@@ -44,7 +43,14 @@ const CreatorProfile = () => {
   }
 
   if (!creator) {
-    return <p className="text-muted-foreground">Creator not found. <Link to="/app/creators" className="text-gold">Back</Link></p>;
+    return (
+      <p className="text-muted-foreground">
+        Creator not found.{" "}
+        <Link to="/app/creators" className="text-gold">
+          Back
+        </Link>
+      </p>
+    );
   }
 
   return (
@@ -67,22 +73,25 @@ const CreatorProfile = () => {
               <h1 className="font-display text-3xl md:text-4xl">{creator.name}</h1>
               {creator.verified && <BadgeCheck className="h-6 w-6 text-gold" />}
             </div>
-            <p className="mt-1 text-sm text-muted-foreground">{creator.category} - {creator.followers} followers</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {creator.category} - {creator.followers} followers
+            </p>
           </div>
           <button
             type="button"
-            disabled={followMutation.isPending || followed}
-            onClick={() =>
-              followMutation.mutate(creator.id, {
+            disabled={followMutation.isPending || unfollowMutation.isPending}
+            onClick={() => {
+              const mutation = followed ? unfollowMutation : followMutation;
+              mutation.mutate(creator.id, {
                 onSuccess: () => {
-                  setFollowed(true);
-                  toast.success(`Following ${creator.name}`);
+                  toast.success(followed ? `Unfollowed ${creator.name}` : `Following ${creator.name}`);
+                  void creatorQuery.refetch();
                 },
                 onError: (error) => {
-                  toast.error(error instanceof Error ? error.message : "Could not follow creator");
+                  toast.error(error instanceof Error ? error.message : `Could not ${followed ? "unfollow" : "follow"} creator`);
                 },
-              })
-            }
+              });
+            }}
             className="inline-flex items-center gap-2 rounded-full bg-red-gradient px-5 py-2.5 text-sm font-medium text-primary-foreground shadow-red-glow disabled:cursor-not-allowed disabled:opacity-60"
           >
             <Plus className="h-4 w-4" /> {followed ? "Following" : "Follow"}
@@ -109,10 +118,17 @@ const CreatorProfile = () => {
 
       <div className="flex flex-wrap gap-1 border-y border-border py-4">
         {tabs.map((t) => (
-          <button key={t} type="button" onClick={() => setTab(t)} className={cn(
-            "rounded-full px-4 py-1.5 text-sm transition-colors",
-            tab === t ? "bg-red-gradient text-primary-foreground" : "text-muted-foreground hover:text-foreground",
-          )}>{t}</button>
+          <button
+            key={t}
+            type="button"
+            onClick={() => setTab(t)}
+            className={cn(
+              "rounded-full px-4 py-1.5 text-sm transition-colors",
+              tab === t ? "bg-red-gradient text-primary-foreground" : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            {t}
+          </button>
         ))}
       </div>
 
@@ -122,7 +138,9 @@ const CreatorProfile = () => {
         <ContentGridSkeleton />
       ) : filteredItems.length > 0 ? (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-          {filteredItems.map((item) => <ContentCard key={item.id} item={item} />)}
+          {filteredItems.map((item) => (
+            <ContentCard key={item.id} item={item} queue={filteredItems} />
+          ))}
         </div>
       ) : (
         <div className="rounded-2xl border border-dashed border-border p-12 text-center">
@@ -168,9 +186,13 @@ const LiveEventsGrid = ({ events, isLoading }: { events: ReturnType<typeof adapt
             )}
           </div>
           <div className="p-5">
-            <p className="text-[10px] uppercase tracking-widest text-gold">{event.date} - {event.time}</p>
+            <p className="text-[10px] uppercase tracking-widest text-gold">
+              {event.date} - {event.time}
+            </p>
             <h3 className="mt-2 font-display text-lg">{event.title}</h3>
-            <p className="mt-2 inline-flex items-center gap-1.5 text-xs text-muted-foreground"><Users className="h-3.5 w-3.5" /> {event.viewerCount.toLocaleString()} viewers</p>
+            <p className="mt-2 inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Users className="h-3.5 w-3.5" /> {event.viewerCount.toLocaleString()} viewers
+            </p>
           </div>
         </div>
       ))}
@@ -194,5 +216,3 @@ const ContentGridSkeleton = () => (
 );
 
 export default CreatorProfile;
-
-

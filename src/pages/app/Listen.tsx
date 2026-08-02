@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { ContentCard } from "@/components/ContentCard";
 import { cn } from "@/lib/utils";
 import { Filter } from "lucide-react";
@@ -18,22 +19,27 @@ const typeMap: Record<(typeof tabs)[number], ContentItem["type"] | null> = {
 };
 
 const Listen = () => {
+  const [searchParams] = useSearchParams();
   const [tab, setTab] = useState<(typeof tabs)[number]>("All");
   const [sort, setSort] = useState("Newest");
+  const searchTerm = searchParams.get("search")?.trim().toLowerCase() ?? "";
   const audioQuery = useContentList({ type: "AUDIO", limit: 50 });
   const podcastQuery = useContentList({ type: "PODCAST", limit: 50 });
   const devotionalQuery = useContentList({ type: "DEVOTIONAL", limit: 50 });
 
   const items = useMemo(() => {
-    const apiItems = [
-      ...(audioQuery.data ?? []),
-      ...(podcastQuery.data ?? []),
-      ...(devotionalQuery.data ?? []),
-    ];
+    const apiItems = [...(audioQuery.data ?? []), ...(podcastQuery.data ?? []), ...(devotionalQuery.data ?? [])];
     const adapted = apiItems.map(adaptContent).filter((item) => item.medium === "audio");
-    const filtered = tab === "All" ? adapted : adapted.filter((item) => item.type === typeMap[tab]);
+    const byTab = tab === "All" ? adapted : adapted.filter((item) => item.type === typeMap[tab]);
+    const filtered =
+      searchTerm.length === 0
+        ? byTab
+        : byTab.filter((item) => {
+            const haystack = `${item.title} ${item.creator} ${item.description ?? ""}`.toLowerCase();
+            return haystack.includes(searchTerm);
+          });
     return sortItems(filtered, sort);
-  }, [audioQuery.data, devotionalQuery.data, podcastQuery.data, sort, tab]);
+  }, [audioQuery.data, devotionalQuery.data, podcastQuery.data, searchTerm, sort, tab]);
 
   const isLoading = audioQuery.isLoading || podcastQuery.isLoading || devotionalQuery.isLoading;
   const hasError = audioQuery.isError || podcastQuery.isError || devotionalQuery.isError;
@@ -43,7 +49,10 @@ const Listen = () => {
       <div>
         <p className="text-xs uppercase tracking-[0.25em] text-gold">Audio</p>
         <h1 className="mt-2 font-display text-4xl md:text-5xl">Listen</h1>
-        <p className="mt-2 text-muted-foreground max-w-lg">Worship, sound teaching, devotionals, and trusted conversations - for every moment of your day.</p>
+        <p className="mt-2 text-muted-foreground max-w-lg">
+          Worship, sound teaching, devotionals, and trusted conversations - for every moment of your day.
+        </p>
+        {searchTerm && <p className="mt-2 text-xs text-gold">Showing results for "{searchTerm}".</p>}
       </div>
 
       {hasError && (
@@ -55,16 +64,34 @@ const Listen = () => {
       <div className="flex flex-wrap items-center justify-between gap-4 border-y border-border py-4">
         <div className="flex flex-wrap gap-1">
           {tabs.map((t) => (
-            <button key={t} type="button" onClick={() => setTab(t)} className={cn(
-              "rounded-full px-4 py-1.5 text-sm transition-colors",
-              tab === t ? "bg-red-gradient text-primary-foreground" : "text-muted-foreground hover:text-foreground",
-            )}>{t}</button>
+            <button
+              key={t}
+              type="button"
+              onClick={() => setTab(t)}
+              className={cn(
+                "rounded-full px-4 py-1.5 text-sm transition-colors",
+                tab === t ? "bg-red-gradient text-primary-foreground" : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {t}
+            </button>
           ))}
         </div>
         <div className="flex items-center gap-3">
-          <button type="button" className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground"><Filter className="h-3.5 w-3.5" /> Filters</button>
-          <select value={sort} onChange={(e) => setSort(e.target.value)} className="rounded-full border border-border bg-secondary/60 px-3 py-1.5 text-xs">
-            {sorts.map((s) => <option key={s}>{s}</option>)}
+          <button
+            type="button"
+            className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground"
+          >
+            <Filter className="h-3.5 w-3.5" /> Filters
+          </button>
+          <select
+            value={sort}
+            onChange={(e) => setSort(e.target.value)}
+            className="rounded-full border border-border bg-secondary/60 px-3 py-1.5 text-xs"
+          >
+            {sorts.map((s) => (
+              <option key={s}>{s}</option>
+            ))}
           </select>
         </div>
       </div>
@@ -73,7 +100,9 @@ const Listen = () => {
         <GridSkeleton />
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5">
-          {items.map((item) => <ContentCard key={item.id} item={item} />)}
+          {items.map((item) => (
+            <ContentCard key={item.id} item={item} queue={items} />
+          ))}
           {items.length === 0 && <p className="text-muted-foreground col-span-full py-12 text-center">No content in this category yet.</p>}
         </div>
       )}

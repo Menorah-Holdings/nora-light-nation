@@ -29,7 +29,12 @@ const Devotionals = () => {
           <p className="text-xs uppercase tracking-[0.25em] text-gold">Today</p>
           <h2 className="mt-3 font-display text-3xl md:text-4xl max-w-xl">{featured.title}</h2>
           <p className="mt-3 text-muted-foreground max-w-xl">{featured.description || `A reflection by ${featured.creator}.`}</p>
-          <Link to={`/app/content/${featured.id}`} className="mt-6 inline-flex items-center gap-2 rounded-full bg-red-gradient px-5 py-2.5 text-sm font-medium text-primary-foreground shadow-red-glow">Listen now</Link>
+          <Link
+            to={`/app/content/${featured.id}`}
+            className="mt-6 inline-flex items-center gap-2 rounded-full bg-red-gradient px-5 py-2.5 text-sm font-medium text-primary-foreground shadow-red-glow"
+          >
+            Listen now
+          </Link>
         </div>
       ) : (
         <div className="rounded-3xl border border-dashed border-border p-8 md:p-12 text-sm text-muted-foreground">
@@ -38,11 +43,12 @@ const Devotionals = () => {
       )}
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-        {items.map((item) => <ContentCard key={item.id} item={item} />)}
+        {items.map((item) => (
+          <ContentCard key={item.id} item={item} queue={items} />
+        ))}
       </div>
     </div>
   );
 };
 
 export default Devotionals;
-

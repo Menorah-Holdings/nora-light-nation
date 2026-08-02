@@ -1,13 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Bell, Radio, Play, Music, Clock, Sparkles, X, Settings, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
+import { useNotifications, useMarkAllNotificationsRead, useMarkNotificationRead } from "@/lib/api/hooks/useNotifications";
+import type { ApiNotification } from "@/lib/api/types";
+import { ApiClientError } from "@/lib/api/client";
 
 type NotifType = "live" | "content" | "music" | "reminder" | "subscription";
 type Filter = "all" | "unread" | "live" | "updates";
@@ -22,21 +20,26 @@ interface Notif {
   cta?: string;
 }
 
-const initial: Notif[] = [
-  { id: "1", type: "live", title: "Liberty House is now live", message: "Join tonight's Worship & Prayer Experience.", time: "Just now", unread: true, cta: "Join" },
-  { id: "2", type: "content", title: "New message available", message: "The Secret Place has just been released.", time: "12 min ago", unread: true, cta: "Watch" },
-  { id: "3", type: "music", title: "New worship single", message: "Ascension Sessions released a new track.", time: "1 hr ago", unread: true, cta: "Listen" },
-  { id: "4", type: "reminder", title: "Event starts soon", message: "Global Fire Conference begins in 30 minutes.", time: "2 hr ago", unread: false, cta: "Open" },
-  { id: "5", type: "subscription", title: "Welcome to Premium", message: "Your membership is now active.", time: "Yesterday", unread: false },
-];
+interface NotificationPreferenceState {
+  live: boolean;
+  content: boolean;
+  creators: boolean;
+  subscription: boolean;
+  product: boolean;
+}
 
 const iconFor = (t: NotifType) => {
   switch (t) {
-    case "live": return Radio;
-    case "content": return Play;
-    case "music": return Music;
-    case "reminder": return Clock;
-    case "subscription": return Sparkles;
+    case "live":
+      return Radio;
+    case "content":
+      return Play;
+    case "music":
+      return Music;
+    case "reminder":
+      return Clock;
+    case "subscription":
+      return Sparkles;
   }
 };
 
@@ -52,8 +55,12 @@ export const NotificationsPanel = () => {
   const [open, setOpen] = useState(false);
   const [modal, setModal] = useState(false);
   const [filter, setFilter] = useState<Filter>("all");
-  const [notifs, setNotifs] = useState<Notif[]>(initial);
-  const [settings, setSettings] = useState({
+  const notificationsQuery = useNotifications();
+  const markReadMutation = useMarkNotificationRead();
+  const markAllMutation = useMarkAllNotificationsRead();
+  const [notifs, setNotifs] = useState<Notif[]>([]);
+  const [loadedFromApi, setLoadedFromApi] = useState(false);
+  const [settings, setSettings] = useState<NotificationPreferenceState>({
     live: true,
     content: true,
     creators: true,
@@ -62,7 +69,21 @@ export const NotificationsPanel = () => {
   });
   const ref = useRef<HTMLDivElement>(null);
 
-  const unread = notifs.filter(n => n.unread).length;
+  useEffect(() => {
+    if (!notificationsQuery.data) return;
+    setNotifs(notificationsQuery.data.map(toNotificationItem));
+    setLoadedFromApi(true);
+  }, [notificationsQuery.data]);
+
+  const errorMessage = useMemo(() => {
+    const error = notificationsQuery.error;
+    if (!error) return null;
+    if (error instanceof ApiClientError) return error.message;
+    if (error instanceof Error) return error.message;
+    return "Could not load notifications.";
+  }, [notificationsQuery.error]);
+
+  const unread = notifs.filter((n) => n.unread).length;
 
   useEffect(() => {
     if (!open) return;
@@ -73,10 +94,27 @@ export const NotificationsPanel = () => {
     return () => document.removeEventListener("mousedown", onClick);
   }, [open]);
 
-  const markAll = () => setNotifs(ns => ns.map(n => ({ ...n, unread: false })));
-  const markRead = (id: string) => setNotifs(ns => ns.map(n => n.id === id ? { ...n, unread: false } : n));
+  const markAll = () => {
+    const previous = notifs;
+    setNotifs((ns) => ns.map((n) => ({ ...n, unread: false })));
+    markAllMutation.mutate(undefined, {
+      onError: () => {
+        setNotifs(previous);
+      },
+    });
+  };
 
-  const visible = notifs.filter(n => matchesFilter(n, filter));
+  const markRead = (id: string) => {
+    const previous = notifs;
+    setNotifs((ns) => ns.map((n) => (n.id === id ? { ...n, unread: false } : n)));
+    markReadMutation.mutate(id, {
+      onError: () => {
+        setNotifs(previous);
+      },
+    });
+  };
+
+  const visible = notifs.filter((n) => matchesFilter(n, filter));
 
   const filters: { id: Filter; label: string }[] = [
     { id: "all", label: "All" },
@@ -89,35 +127,32 @@ export const NotificationsPanel = () => {
     const Icon = iconFor(n.type);
     return (
       <button
-        onClick={() => { markRead(n.id); onClick?.(); }}
+        onClick={() => {
+          markRead(n.id);
+          onClick?.();
+        }}
         className={cn(
           "group w-full text-left flex gap-3 rounded-xl p-3 transition-colors",
-          n.unread
-            ? "bg-red/10 hover:bg-red/15 ring-1 ring-gold/15"
-            : "hover:bg-secondary/60"
+          n.unread ? "bg-red/10 hover:bg-red/15 ring-1 ring-gold/15" : "hover:bg-secondary/60",
         )}
       >
-        <div className={cn(
-          "flex h-9 w-9 shrink-0 items-center justify-center rounded-full",
-          n.type === "live" ? "bg-red-gradient text-primary-foreground" : "bg-secondary text-gold"
-        )}>
+        <div
+          className={cn(
+            "flex h-9 w-9 shrink-0 items-center justify-center rounded-full",
+            n.type === "live" ? "bg-red-gradient text-primary-foreground" : "bg-secondary text-gold",
+          )}
+        >
           <Icon className="h-4 w-4" />
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-start gap-2">
-            <p className={cn("text-sm leading-snug truncate", n.unread ? "font-semibold text-foreground" : "text-muted-foreground")}>
-              {n.title}
-            </p>
+            <p className={cn("text-sm leading-snug truncate", n.unread ? "font-semibold text-foreground" : "text-muted-foreground")}>{n.title}</p>
             {n.unread && <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-gold shadow-glow" />}
           </div>
-          <p className={cn("mt-0.5 text-xs leading-snug line-clamp-2", n.unread ? "text-foreground/70" : "text-muted-foreground/80")}>
-            {n.message}
-          </p>
+          <p className={cn("mt-0.5 text-xs leading-snug line-clamp-2", n.unread ? "text-foreground/70" : "text-muted-foreground/80")}>{n.message}</p>
           <div className="mt-1.5 flex items-center justify-between">
             <span className="text-[11px] text-muted-foreground">{n.time}</span>
-            {n.cta && (
-              <span className="text-[11px] font-medium text-gold group-hover:underline">{n.cta} →</span>
-            )}
+            {n.cta && <span className="text-[11px] font-medium text-gold group-hover:underline">{n.cta} →</span>}
           </div>
         </div>
       </button>
@@ -128,7 +163,7 @@ export const NotificationsPanel = () => {
     <>
       <div className="relative" ref={ref}>
         <button
-          onClick={() => setOpen(o => !o)}
+          onClick={() => setOpen((o) => !o)}
           aria-label="Notifications"
           className="relative inline-flex h-9 w-9 items-center justify-center rounded-full bg-secondary text-muted-foreground hover:text-foreground transition-colors"
         >
@@ -158,16 +193,13 @@ export const NotificationsPanel = () => {
                     </span>
                   )}
                 </div>
-                <button
-                  onClick={markAll}
-                  className="text-[11px] text-gold hover:text-gold-soft transition-colors"
-                >
+                <button onClick={markAll} className="text-[11px] text-gold hover:text-gold-soft transition-colors">
                   Mark all as read
                 </button>
               </div>
 
               <div className="px-4 pb-2 flex gap-1.5">
-                {filters.map(f => (
+                {filters.map((f) => (
                   <button
                     key={f.id}
                     onClick={() => setFilter(f.id)}
@@ -175,7 +207,7 @@ export const NotificationsPanel = () => {
                       "text-[11px] px-2.5 py-1 rounded-full transition-all",
                       filter === f.id
                         ? "bg-gold-gradient text-primary-foreground font-semibold shadow-glow"
-                        : "bg-secondary/60 text-muted-foreground hover:text-foreground"
+                        : "bg-secondary/60 text-muted-foreground hover:text-foreground",
                     )}
                   >
                     {f.label}
@@ -184,6 +216,7 @@ export const NotificationsPanel = () => {
               </div>
 
               <div className="max-h-[400px] overflow-y-auto px-2 py-1 space-y-1 scrollbar-none">
+                {errorMessage && <div className="px-4 py-3 text-xs text-red-soft bg-red/10 rounded-xl ring-1 ring-red/30">{errorMessage}</div>}
                 {visible.length === 0 ? (
                   <div className="px-4 py-10 text-center">
                     <div className="mx-auto h-10 w-10 rounded-full bg-gold/10 flex items-center justify-center mb-3">
@@ -193,13 +226,17 @@ export const NotificationsPanel = () => {
                     <p className="text-xs text-muted-foreground mt-1">We'll notify you whenever something new is worth seeing or hearing.</p>
                   </div>
                 ) : (
-                  visible.map(n => <Item key={n.id} n={n} />)
+                  visible.map((n) => <Item key={n.id} n={n} />)
                 )}
               </div>
 
               <div className="border-t border-border/60 px-4 py-2.5">
                 <button
-                  onClick={() => { setOpen(false); setModal(true); }}
+                  onClick={() => {
+                    setOpen(false);
+                    setModal(true);
+                  }}
+                  disabled={notificationsQuery.isLoading && !loadedFromApi}
                   className="w-full text-center text-xs font-medium text-gold hover:text-gold-soft transition-colors"
                 >
                   View all notifications
@@ -211,7 +248,8 @@ export const NotificationsPanel = () => {
       </div>
 
       <Dialog open={modal} onOpenChange={setModal}>
-        <DialogContent className="max-w-2xl p-0 overflow-hidden border-gold/30"
+        <DialogContent
+          className="max-w-2xl p-0 overflow-hidden border-gold/30"
           style={{ background: "linear-gradient(160deg, hsl(350 30% 10%), hsl(350 22% 6%))" }}
         >
           <div className="absolute inset-0 pointer-events-none glow-radial opacity-30" />
@@ -224,7 +262,7 @@ export const NotificationsPanel = () => {
 
             <div className="px-6 pb-3 flex items-center justify-between">
               <div className="flex gap-1.5">
-                {filters.map(f => (
+                {filters.map((f) => (
                   <button
                     key={f.id}
                     onClick={() => setFilter(f.id)}
@@ -232,14 +270,16 @@ export const NotificationsPanel = () => {
                       "text-xs px-3 py-1.5 rounded-full transition-all",
                       filter === f.id
                         ? "bg-gold-gradient text-primary-foreground font-semibold shadow-glow"
-                        : "bg-secondary/60 text-muted-foreground hover:text-foreground"
+                        : "bg-secondary/60 text-muted-foreground hover:text-foreground",
                     )}
                   >
                     {f.label}
                   </button>
                 ))}
               </div>
-              <button onClick={markAll} className="text-xs text-gold hover:text-gold-soft">Mark all as read</button>
+              <button onClick={markAll} className="text-xs text-gold hover:text-gold-soft">
+                Mark all as read
+              </button>
             </div>
 
             <div className="grid md:grid-cols-[1fr_240px] gap-4 px-4 pb-4">
@@ -253,7 +293,7 @@ export const NotificationsPanel = () => {
                     <p className="text-sm text-muted-foreground mt-1">We'll notify you whenever something new is worth seeing or hearing.</p>
                   </div>
                 ) : (
-                  visible.map(n => <Item key={n.id} n={n} />)
+                  visible.map((n) => <Item key={n.id} n={n} />)
                 )}
               </div>
 
@@ -269,13 +309,10 @@ export const NotificationsPanel = () => {
                     { key: "creators", label: "Creator Updates" },
                     { key: "subscription", label: "Subscription Updates" },
                     { key: "product", label: "Product Announcements" },
-                  ].map(s => (
+                  ].map((s: { key: keyof NotificationPreferenceState; label: string }) => (
                     <div key={s.key} className="flex items-center justify-between gap-2">
                       <span className="text-muted-foreground">{s.label}</span>
-                      <Switch
-                        checked={(settings as any)[s.key]}
-                        onCheckedChange={(v) => setSettings(p => ({ ...p, [s.key]: v }))}
-                      />
+                      <Switch checked={settings[s.key]} onCheckedChange={(v) => setSettings((p) => ({ ...p, [s.key]: v }))} />
                     </div>
                   ))}
                 </div>
@@ -287,3 +324,38 @@ export const NotificationsPanel = () => {
     </>
   );
 };
+
+function toNotificationItem(notification: ApiNotification): Notif {
+  return {
+    id: notification.id,
+    type: mapNotificationType(notification.type),
+    title: notification.title,
+    message: notification.subtitle || notification.description || "",
+    time: formatRelativeTime(notification.createdAt),
+    unread: !notification.isRead,
+    cta: notification.actionLabel ?? undefined,
+  };
+}
+
+function mapNotificationType(type: string): NotifType {
+  const normalized = type.toLowerCase();
+  if (normalized.includes("live")) return "live";
+  if (normalized.includes("music")) return "music";
+  if (normalized.includes("reminder")) return "reminder";
+  if (normalized.includes("subscription") || normalized.includes("billing")) return "subscription";
+  return "content";
+}
+
+function formatRelativeTime(value: string): string {
+  const createdAt = new Date(value);
+  if (Number.isNaN(createdAt.getTime())) return "Recently";
+  const diffMs = Date.now() - createdAt.getTime();
+  const diffMinutes = Math.floor(diffMs / 60000);
+  if (diffMinutes < 1) return "Just now";
+  if (diffMinutes < 60) return `${diffMinutes} min ago`;
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) return `${diffHours} hr ago`;
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays < 7) return `${diffDays} day${diffDays === 1 ? "" : "s"} ago`;
+  return createdAt.toLocaleDateString();
+}

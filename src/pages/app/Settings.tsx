@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { ElementType } from "react";
 import { Download, HardDrive, Trash2, Wifi, Sparkles, User, Bell, Shield, Globe, LifeBuoy, ShieldCheck } from "lucide-react";
 import HelpSupport from "@/components/HelpSupport";
 import AccountSettings from "@/components/AccountSettings";
@@ -6,21 +7,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { useUser, CreatorStatus } from "@/lib/user";
@@ -28,7 +16,7 @@ import { CreatorStatusBadge } from "@/components/CreatorStatusBadge";
 
 type TabId = "profile" | "account" | "downloads" | "language" | "notifications" | "privacy" | "help";
 
-const tabs: { id: TabId; label: string; icon: any }[] = [
+const tabs: { id: TabId; label: string; icon: ElementType }[] = [
   { id: "profile", label: "Profile", icon: User },
   { id: "account", label: "Account Settings", icon: ShieldCheck },
   { id: "downloads", label: "Download Settings", icon: Download },
@@ -38,15 +26,7 @@ const tabs: { id: TabId; label: string; icon: any }[] = [
   { id: "help", label: "Help & Support", icon: LifeBuoy },
 ];
 
-const SettingRow = ({
-  title,
-  helper,
-  children,
-}: {
-  title: string;
-  helper?: string;
-  children: React.ReactNode;
-}) => (
+const SettingRow = ({ title, helper, children }: { title: string; helper?: string; children: React.ReactNode }) => (
   <div className="flex flex-col gap-3 py-5 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
     <div className="min-w-0 flex-1">
       <p className="font-display text-sm text-foreground">{title}</p>
@@ -104,17 +84,11 @@ const DownloadSettings = () => {
             <Switch checked={mobileData} onCheckedChange={setMobileData} />
           </SettingRow>
 
-          <SettingRow
-            title="Auto-Download New Episodes"
-            helper="Automatically download new episodes from saved podcasts, series, or devotionals."
-          >
+          <SettingRow title="Auto-Download New Episodes" helper="Automatically download new episodes from saved podcasts, series, or devotionals.">
             <Switch checked={autoDownload} onCheckedChange={setAutoDownload} />
           </SettingRow>
 
-          <SettingRow
-            title="Remove Watched Downloads"
-            helper="Automatically remove completed downloads to save storage."
-          >
+          <SettingRow title="Remove Watched Downloads" helper="Automatically remove completed downloads to save storage.">
             <Switch checked={removeWatched} onCheckedChange={setRemoveWatched} />
           </SettingRow>
         </div>
@@ -138,18 +112,9 @@ const DownloadSettings = () => {
 
           <div className="mt-4 h-2.5 w-full overflow-hidden rounded-full bg-secondary/60 ring-1 ring-border/60">
             <div className="flex h-full">
-              <div
-                className="h-full bg-red-gradient"
-                style={{ width: `${(storage.video / storage.total) * 100}%` }}
-              />
-              <div
-                className="h-full bg-gold-gradient"
-                style={{ width: `${(storage.audio / storage.total) * 100}%` }}
-              />
-              <div
-                className="h-full bg-muted-foreground/50"
-                style={{ width: `${(storage.other / storage.total) * 100}%` }}
-              />
+              <div className="h-full bg-red-gradient" style={{ width: `${(storage.video / storage.total) * 100}%` }} />
+              <div className="h-full bg-gold-gradient" style={{ width: `${(storage.audio / storage.total) * 100}%` }} />
+              <div className="h-full bg-muted-foreground/50" style={{ width: `${(storage.other / storage.total) * 100}%` }} />
             </div>
           </div>
 
@@ -172,9 +137,7 @@ const DownloadSettings = () => {
           </div>
 
           <div className="mt-6 flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs text-muted-foreground">
-              Clearing downloads removes offline files only. You can download them again anytime.
-            </p>
+            <p className="text-xs text-muted-foreground">Clearing downloads removes offline files only. You can download them again anytime.</p>
             <Button
               variant="outline"
               onClick={() => setConfirmOpen(true)}
@@ -189,10 +152,7 @@ const DownloadSettings = () => {
       </div>
 
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <DialogContent
-          className="border-gold/30"
-          style={{ background: "linear-gradient(160deg, hsl(350 30% 11%), hsl(350 22% 7%))" }}
-        >
+        <DialogContent className="border-gold/30" style={{ background: "linear-gradient(160deg, hsl(350 30% 11%), hsl(350 22% 7%))" }}>
           <DialogHeader>
             <DialogTitle className="font-display text-xl">Clear all downloads?</DialogTitle>
             <DialogDescription className="text-muted-foreground">
@@ -260,9 +220,7 @@ const LanguageRegionSettings = () => {
     <div className="space-y-6">
       <div>
         <h2 className="font-display text-2xl text-foreground">Language & Region</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Personalize NoraPlus with your preferred language, country, and regional experience.
-        </p>
+        <p className="mt-1 text-sm text-muted-foreground">Personalize NoraPlus with your preferred language, country, and regional experience.</p>
       </div>
 
       <div
@@ -281,16 +239,15 @@ const LanguageRegionSettings = () => {
               </SelectTrigger>
               <SelectContent>
                 {LANGUAGES.map((l) => (
-                  <SelectItem key={l.value} value={l.value}>{l.label}</SelectItem>
+                  <SelectItem key={l.value} value={l.value}>
+                    {l.label}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </SettingRow>
 
-          <SettingRow
-            title="Region"
-            helper="Your region helps personalize featured content, live event times, and recommendations."
-          >
+          <SettingRow title="Region" helper="Your region helps personalize featured content, live event times, and recommendations.">
             <Select
               value={region}
               onValueChange={(v) => {
@@ -303,23 +260,24 @@ const LanguageRegionSettings = () => {
               </SelectTrigger>
               <SelectContent>
                 {REGIONS.map((r) => (
-                  <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                  <SelectItem key={r.value} value={r.value}>
+                    {r.label}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </SettingRow>
 
-          <SettingRow
-            title="Time Zone"
-            helper="Detected from your region. You can override it manually."
-          >
+          <SettingRow title="Time Zone" helper="Detected from your region. You can override it manually.">
             <Select value={timeZone} onValueChange={(v) => setTzOverride(v)}>
               <SelectTrigger className="w-[260px] border-border bg-secondary/60 focus:ring-1 focus:ring-gold">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {REGIONS.map((r) => (
-                  <SelectItem key={r.tz} value={r.tz}>{r.tz}</SelectItem>
+                  <SelectItem key={r.tz} value={r.tz}>
+                    {r.tz}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -335,7 +293,9 @@ const LanguageRegionSettings = () => {
               ].map((o) => (
                 <div key={o.v} className="flex items-center gap-3">
                   <RadioGroupItem id={`dm-${o.v}`} value={o.v} className="border-border text-gold focus:ring-gold" />
-                  <Label htmlFor={`dm-${o.v}`} className="text-sm text-foreground/90 cursor-pointer">{o.l}</Label>
+                  <Label htmlFor={`dm-${o.v}`} className="text-sm text-foreground/90 cursor-pointer">
+                    {o.l}
+                  </Label>
                 </div>
               ))}
             </RadioGroup>
@@ -348,7 +308,9 @@ const LanguageRegionSettings = () => {
               </SelectTrigger>
               <SelectContent>
                 {SUBTITLES.map((s) => (
-                  <SelectItem key={s} value={s}>{s}</SelectItem>
+                  <SelectItem key={s} value={s}>
+                    {s}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -377,7 +339,9 @@ const LanguageRegionSettings = () => {
               ].map((o) => (
                 <div key={o.v} className="flex items-center gap-3">
                   <RadioGroupItem id={`cp-${o.v}`} value={o.v} className="border-border text-gold focus:ring-gold" />
-                  <Label htmlFor={`cp-${o.v}`} className="text-sm text-foreground/90 cursor-pointer">{o.l}</Label>
+                  <Label htmlFor={`cp-${o.v}`} className="text-sm text-foreground/90 cursor-pointer">
+                    {o.l}
+                  </Label>
                 </div>
               ))}
             </RadioGroup>
@@ -393,8 +357,6 @@ const LanguageRegionSettings = () => {
     </div>
   );
 };
-
-
 
 const ProfileSettings = () => {
   const { user, users, isPrototypeUser, setActiveUserId, setCreatorStatus } = useUser();
@@ -420,8 +382,12 @@ const ProfileSettings = () => {
             <div className="flex flex-wrap items-center gap-3">
               <p className="font-display text-2xl truncate">{user.name}</p>
             </div>
-            <div className="mt-2"><CreatorStatusBadge status={user.creator_status} /></div>
-            <p className="mt-3 text-xs text-muted-foreground">@{user.handle} - {user.email}</p>
+            <div className="mt-2">
+              <CreatorStatusBadge status={user.creator_status} />
+            </div>
+            <p className="mt-3 text-xs text-muted-foreground">
+              @{user.handle} - {user.email}
+            </p>
           </div>
         </div>
       </div>
@@ -437,9 +403,7 @@ const ProfileSettings = () => {
               <Sparkles className="h-4 w-4 text-gold" />
               <h3 className="font-display text-sm text-foreground">Prototype Controls</h3>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Switch between mock users to preview each creator state across the app.
-            </p>
+            <p className="text-xs text-muted-foreground">Switch between mock users to preview each creator state across the app.</p>
 
             <SettingRow title="Active Mock User" helper="Each user has its own creator_status.">
               <Select value={user.id} onValueChange={setActiveUserId}>
@@ -448,7 +412,9 @@ const ProfileSettings = () => {
                 </SelectTrigger>
                 <SelectContent>
                   {users.map((u) => (
-                    <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+                    <SelectItem key={u.id} value={u.id}>
+                      {u.name}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -461,7 +427,9 @@ const ProfileSettings = () => {
                 </SelectTrigger>
                 <SelectContent>
                   {statuses.map((s) => (
-                    <SelectItem key={s} value={s}>{s}</SelectItem>
+                    <SelectItem key={s} value={s}>
+                      {s}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -473,7 +441,7 @@ const ProfileSettings = () => {
   );
 };
 
-const Placeholder = ({ title, message }: { title: string; message: string }) => (
+const DeferredPanel = ({ title, message }: { title: string; message: string }) => (
   <div className="space-y-6">
     <div>
       <h2 className="font-display text-2xl text-foreground">{title}</h2>
@@ -484,7 +452,10 @@ const Placeholder = ({ title, message }: { title: string; message: string }) => 
       style={{ background: "linear-gradient(160deg, hsl(350 25% 10%), hsl(350 20% 6%))" }}
     >
       <Sparkles className="mx-auto h-6 w-6 text-gold" />
-      <p className="mt-3">Coming soon.</p>
+      <p className="mt-3 text-foreground">Deferred for this launch window.</p>
+      <p className="mt-2 text-xs text-muted-foreground">
+        Existing controls in Account Settings are live. Expanded notification/privacy workflows are scheduled post-launch.
+      </p>
     </div>
   </div>
 );
@@ -496,9 +467,7 @@ const Settings = () => {
     <div className="mx-auto max-w-5xl">
       <div className="mb-8">
         <h1 className="font-display text-3xl md:text-4xl">Profile & Settings</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Manage your NoraPlus account, preferences, and downloads.
-        </p>
+        <p className="mt-2 text-sm text-muted-foreground">Manage your NoraPlus account, preferences, and downloads.</p>
       </div>
 
       <div className="grid gap-8 md:grid-cols-[220px_1fr]">
@@ -513,9 +482,7 @@ const Settings = () => {
                   onClick={() => setTab(t.id)}
                   className={cn(
                     "flex items-center gap-3 whitespace-nowrap rounded-lg px-3 py-2.5 text-sm transition-colors",
-                    active
-                      ? "bg-red/15 text-foreground ring-1 ring-gold/30"
-                      : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
+                    active ? "bg-red/15 text-foreground ring-1 ring-gold/30" : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground",
                   )}
                 >
                   <Icon className={cn("h-4 w-4", active ? "text-gold" : "")} />
@@ -531,12 +498,8 @@ const Settings = () => {
           {tab === "language" && <LanguageRegionSettings />}
           {tab === "profile" && <ProfileSettings />}
           {tab === "account" && <AccountSettings />}
-          {tab === "notifications" && (
-            <Placeholder title="Notifications" message="Control how and when NoraPlus reaches you." />
-          )}
-          {tab === "privacy" && (
-            <Placeholder title="Privacy" message="Manage data, security, and permissions." />
-          )}
+          {tab === "notifications" && <DeferredPanel title="Notifications" message="Control how and when NoraPlus reaches you." />}
+          {tab === "privacy" && <DeferredPanel title="Privacy" message="Manage data, security, and permissions." />}
           {tab === "help" && <HelpSupport />}
         </section>
       </div>
@@ -545,5 +508,3 @@ const Settings = () => {
 };
 
 export default Settings;
-
-

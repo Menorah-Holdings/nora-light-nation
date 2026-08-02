@@ -40,10 +40,17 @@ const Watch = () => {
 
       <div className="flex flex-wrap gap-1 border-y border-border py-4">
         {tabs.map((t) => (
-          <button key={t} type="button" onClick={() => setTab(t)} className={cn(
-            "rounded-full px-4 py-1.5 text-sm transition-colors",
-            tab === t ? "bg-red-gradient text-primary-foreground" : "text-muted-foreground hover:text-foreground",
-          )}>{t}</button>
+          <button
+            key={t}
+            type="button"
+            onClick={() => setTab(t)}
+            className={cn(
+              "rounded-full px-4 py-1.5 text-sm transition-colors",
+              tab === t ? "bg-red-gradient text-primary-foreground" : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            {t}
+          </button>
         ))}
       </div>
 
@@ -51,7 +58,9 @@ const Watch = () => {
         <GridSkeleton />
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-          {items.map((item) => <ContentCard key={item.id} item={item} />)}
+          {items.map((item) => (
+            <ContentCard key={item.id} item={item} queue={items} />
+          ))}
           {items.length === 0 && <p className="text-muted-foreground col-span-full py-12 text-center">Nothing here yet.</p>}
         </div>
       )}
