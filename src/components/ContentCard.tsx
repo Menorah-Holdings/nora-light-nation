@@ -27,11 +27,7 @@ export const ContentCard = ({ item, size = "md", queue }: { item: ContentItem; s
   return (
     <article className={cn("group shrink-0 snap-start", w)}>
       <div className="relative overflow-hidden rounded-xl bg-card shadow-card-soft ring-1 ring-border/60 transition-all duration-500 group-hover:ring-gold group-hover:-translate-y-1">
-        <Link
-          to={`/app/content/${item.id}`}
-          aria-label={`View ${item.title}`}
-          className="absolute inset-0 z-10"
-        />
+        <Link to={`/app/content/${item.id}`} aria-label={`View ${item.title}`} className="absolute inset-0 z-10" />
         <div className="aspect-[4/5] overflow-hidden">
           <img
             src={item.image}
