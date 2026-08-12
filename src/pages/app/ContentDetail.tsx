@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { Play, Share2, Pause } from "lucide-react";
+import { Maximize2, Play, Share2, Pause, Volume2, VolumeX } from "lucide-react";
+import ReactPlayer from "react-player";
 import { ContentCard } from "@/components/ContentCard";
 import { NowPlayingMenu } from "@/components/NowPlayingMenu";
 import { SaveToLibraryButton } from "@/components/SaveToLibraryButton";
@@ -16,9 +17,14 @@ const ContentDetail = () => {
   const { id } = useParams();
   const [playing, setPlaying] = useState(false);
   const playerSectionRef = useRef<HTMLDivElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const progressAppliedRef = useRef(false);
+  const videoWrapperRef = useRef<HTMLDivElement>(null);
+  const videoPlayerRef = useRef<HTMLVideoElement | null>(null);
+  const videoSeekAppliedRef = useRef(false);
   const lastProgressWriteRef = useRef(0);
+  const [videoCurrentTime, setVideoCurrentTime] = useState(0);
+  const [videoDuration, setVideoDuration] = useState(0);
+  const [videoVolume, setVideoVolume] = useState(0.9);
+  const [videoMuted, setVideoMuted] = useState(false);
   const detailQuery = useContentDetail(id);
   const relatedQuery = useContentList({ limit: 12 });
   const playbackQuery = useContentPlayback(id);
@@ -32,11 +38,32 @@ const ContentDetail = () => {
     .map(adaptContent)
     .slice(0, 6);
 
+  const isVideo = item?.medium === "video";
+  const playbackUrl = playbackQuery.data?.url ?? null;
+  const premiumDenied = playbackQuery.error instanceof ApiClientError && playbackQuery.error.status === 403;
+  const heroIsPlaying = isVideo ? playing : isActiveTrack && player.isPlaying;
+
   useEffect(() => {
-    progressAppliedRef.current = false;
+    videoSeekAppliedRef.current = false;
     lastProgressWriteRef.current = 0;
+    setVideoCurrentTime(0);
+    setVideoDuration(0);
     setPlaying(false);
   }, [id]);
+
+  useEffect(() => {
+    if (!isVideo || !playbackUrl || videoSeekAppliedRef.current) return;
+
+    const seconds = progressQuery.data?.progressSeconds ?? 0;
+    if (seconds <= 0 || videoDuration <= 0) return;
+
+    const seekTo = Math.min(seconds, Math.max(0, videoDuration - 3));
+    if (seekTo > 0) {
+      seekVideoTo(seekTo);
+      lastProgressWriteRef.current = Math.floor(seekTo);
+    }
+    videoSeekAppliedRef.current = true;
+  }, [isVideo, playbackUrl, progressQuery.data?.progressSeconds, videoDuration]);
 
   if (detailQuery.isLoading && !item) {
     return <DetailSkeleton />;
@@ -53,20 +80,13 @@ const ContentDetail = () => {
     );
   }
 
-  const isVideo = item.medium === "video";
-  const playbackUrl = playbackQuery.data?.url ?? null;
-  const premiumDenied = playbackQuery.error instanceof ApiClientError && playbackQuery.error.status === 403;
-  const heroIsPlaying = isVideo ? playing : isActiveTrack && player.isPlaying;
-
   const handleHeroPlay = () => {
     playerSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
 
     if (!playbackUrl) return;
 
     if (isVideo) {
-      if (videoRef.current) {
-        void videoRef.current.play().catch(() => {});
-      }
+      setPlaying((value) => !value);
       return;
     }
 
@@ -80,19 +100,16 @@ const ContentDetail = () => {
     player.play(item, playbackUrl, progressQuery.data?.progressSeconds ?? 0);
   };
 
-  const applySavedProgress = (media: HTMLMediaElement) => {
-    if (progressAppliedRef.current) return;
-    const seconds = progressQuery.data?.progressSeconds ?? 0;
-    if (seconds > 0 && Number.isFinite(media.duration) && seconds < media.duration - 3) {
-      media.currentTime = seconds;
-    }
-    progressAppliedRef.current = true;
+  const seekVideoTo = (seconds: number) => {
+    if (!videoPlayerRef.current) return;
+    videoPlayerRef.current.currentTime = seconds;
+    setVideoCurrentTime(seconds);
   };
 
-  const writeProgress = (media: HTMLMediaElement, completed = false) => {
-    if (!id || !Number.isFinite(media.currentTime)) return;
+  const writeVideoProgress = (seconds: number, completed = false) => {
+    if (!id || !Number.isFinite(seconds)) return;
 
-    const progressSeconds = Math.floor(media.currentTime);
+    const progressSeconds = Math.floor(seconds);
     if (!completed && progressSeconds - lastProgressWriteRef.current < PROGRESS_WRITE_INTERVAL_SECONDS) return;
 
     lastProgressWriteRef.current = progressSeconds;
@@ -149,7 +166,7 @@ const ContentDetail = () => {
               onClick={handleHeroPlay}
               className="inline-flex items-center gap-2 rounded-full bg-red-gradient px-5 py-2.5 text-sm font-medium text-primary-foreground shadow-red-glow"
             >
-              <Play className="h-4 w-4 fill-current" /> Play
+              {heroIsPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 fill-current" />} {heroIsPlaying ? "Pause" : "Play"}
             </button>
             <SaveToLibraryButton contentId={item.id} showLabel className="border border-border px-5 py-2.5 text-sm text-foreground" />
             <button type="button" className="inline-flex items-center gap-2 rounded-full border border-border px-5 py-2.5 text-sm">
@@ -161,21 +178,108 @@ const ContentDetail = () => {
             <div ref={playerSectionRef} className="rounded-2xl bg-card-gradient p-6 ring-1 ring-gold/20 shadow-[0_12px_40px_hsl(var(--gold)/0.15)]">
               <p className="text-xs uppercase tracking-widest text-gold mb-3">Video player</p>
               {playbackUrl ? (
-                <video
-                  ref={videoRef}
-                  controls
-                  poster={item.image}
-                  className="aspect-video w-full rounded-xl border border-gold/20 bg-background/70"
-                  src={playbackUrl}
-                  onLoadedMetadata={(event) => applySavedProgress(event.currentTarget)}
-                  onPlay={() => setPlaying(true)}
-                  onPause={(event) => {
-                    setPlaying(false);
-                    writeProgress(event.currentTarget);
-                  }}
-                  onTimeUpdate={(event) => writeProgress(event.currentTarget)}
-                  onEnded={(event) => writeProgress(event.currentTarget, true)}
-                />
+                <>
+                  <div ref={videoWrapperRef} className="relative aspect-video overflow-hidden rounded-xl border border-gold/20 bg-background/70">
+                    <ReactPlayer
+                      ref={videoPlayerRef}
+                      src={playbackUrl}
+                      playing={playing}
+                      controls={false}
+                      width="100%"
+                      height="100%"
+                      volume={videoVolume}
+                      muted={videoMuted}
+                      onPlay={() => setPlaying(true)}
+                      onPause={() => {
+                        setPlaying(false);
+                        writeVideoProgress(videoCurrentTime);
+                      }}
+                      onDurationChange={(event) => {
+                        setVideoDuration(event.currentTarget.duration || 0);
+                      }}
+                      onTimeUpdate={(event) => {
+                        const seconds = event.currentTarget.currentTime || 0;
+                        setVideoCurrentTime(seconds);
+                        writeVideoProgress(seconds);
+                      }}
+                      onEnded={() => {
+                        setPlaying(false);
+                        writeVideoProgress(videoDuration || videoCurrentTime, true);
+                      }}
+                    />
+                    <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background/35 via-transparent to-transparent" />
+                  </div>
+
+                  <div className="mt-4 space-y-4 rounded-xl border border-gold/20 bg-background/40 p-4">
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                      <span className="w-10 text-right tabular-nums">{formatTime(videoCurrentTime)}</span>
+                      <div
+                        className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-muted cursor-pointer"
+                        onClick={(event) => {
+                          if (!videoDuration) return;
+                          const rect = event.currentTarget.getBoundingClientRect();
+                          const ratio = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+                          seekVideoTo(ratio * videoDuration);
+                        }}
+                      >
+                        <div
+                          className="absolute inset-y-0 left-0 bg-gold-gradient transition-all duration-200"
+                          style={{ width: videoDuration > 0 ? `${(videoCurrentTime / videoDuration) * 100}%` : "0%" }}
+                        />
+                      </div>
+                      <span className="w-10 tabular-nums">{formatTime(videoDuration)}</span>
+                    </div>
+
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setPlaying((value) => !value)}
+                          className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-red-gradient text-primary-foreground shadow-red-glow"
+                          aria-label={playing ? "Pause video" : "Play video"}
+                        >
+                          {playing ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5 fill-current" />}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setVideoMuted((value) => !value)}
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border text-muted-foreground hover:text-foreground"
+                          aria-label={videoMuted ? "Unmute video" : "Mute video"}
+                        >
+                          {videoMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+                        </button>
+                        <input
+                          type="range"
+                          min={0}
+                          max={1}
+                          step={0.01}
+                          value={videoMuted ? 0 : videoVolume}
+                          onChange={(event) => {
+                            const value = Number(event.target.value);
+                            setVideoVolume(value);
+                            if (videoMuted && value > 0) setVideoMuted(false);
+                          }}
+                          className="accent-[hsl(var(--gold))]"
+                          aria-label="Video volume"
+                        />
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (document.fullscreenElement) {
+                            void document.exitFullscreen();
+                            return;
+                          }
+                          void videoWrapperRef.current?.requestFullscreen?.();
+                        }}
+                        className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground"
+                      >
+                        <Maximize2 className="h-3.5 w-3.5" /> Fullscreen
+                      </button>
+                    </div>
+                  </div>
+                </>
               ) : (
                 <PlayerUnavailable isLoading={playbackQuery.isLoading} isError={playbackQuery.isError} premiumDenied={premiumDenied} />
               )}

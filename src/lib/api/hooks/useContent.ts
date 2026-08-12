@@ -1,7 +1,7 @@
 ﻿import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "../client";
 import { queryKeys } from "../queryKeys";
-import type { ApiContent, ApiPlayback, ListContentQuery } from "../types";
+import type { ApiContent, ApiHomeFeed, ApiPlayback, ListContentQuery } from "../types";
 
 export function useContentList(query?: ListContentQuery) {
   return useQuery({
@@ -14,6 +14,13 @@ export function useFeaturedContent() {
   return useQuery({
     queryKey: queryKeys.content.featured(),
     queryFn: () => apiRequest<ApiContent[]>("/api/content/featured"),
+  });
+}
+
+export function useContentHome() {
+  return useQuery({
+    queryKey: queryKeys.content.home(),
+    queryFn: () => apiRequest<ApiHomeFeed>("/api/content/home"),
   });
 }
 

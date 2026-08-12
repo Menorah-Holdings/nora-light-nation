@@ -17,6 +17,7 @@ export const queryKeys = {
   content: {
     all: ["content"] as const,
     list: (query?: ListContentQuery) => [...queryKeys.content.all, "list", query ?? {}] as const,
+    home: () => [...queryKeys.content.all, "home"] as const,
     featured: () => [...queryKeys.content.all, "featured"] as const,
     detail: (id: string) => [...queryKeys.content.all, "detail", id] as const,
     playback: (id: string) => [...queryKeys.content.all, "playback", id] as const,

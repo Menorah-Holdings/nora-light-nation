@@ -202,6 +202,16 @@ export interface ApiLiveJoin {
   expiresIn: number | null;
 }
 
+export interface ApiHomeFeed {
+  featured: ApiContent[];
+  recommended: ApiContent[];
+  trendingWorship: ApiContent[];
+  newMessages: ApiContent[];
+  moviesStories: ApiContent[];
+  upcomingLive: ApiLiveEvent[];
+  continueListening: ApiPlaybackProgress[];
+}
+
 export interface ApiCreatorAnalytics {
   totalUploads: number;
   publishedContent: number;

@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Trash2, ListVideo } from "lucide-react";
 import { ContentCard } from "@/components/ContentCard";
 import { cn } from "@/lib/utils";
@@ -10,8 +11,17 @@ import type { ApiPlaylist } from "@/lib/api/types";
 
 const tabs = ["Saved", "Continue", "Playlists", "Recently played", "Following"] as const;
 
+function isLibraryTab(value: string | null): value is (typeof tabs)[number] {
+  return Boolean(value && tabs.includes(value as (typeof tabs)[number]));
+}
+
 const Library = () => {
-  const [tab, setTab] = useState<(typeof tabs)[number]>("Saved");
+  const [searchParams] = useSearchParams();
+  const initialTab = useMemo<(typeof tabs)[number]>(() => {
+    const fromQuery = searchParams.get("tab");
+    return isLibraryTab(fromQuery) ? fromQuery : "Saved";
+  }, [searchParams]);
+  const [tab, setTab] = useState<(typeof tabs)[number]>(initialTab);
   const [activePlaylist, setActivePlaylist] = useState<ApiPlaylist | null>(null);
   const libraryQuery = useLibrary();
   const playlistsQuery = usePlaylists();

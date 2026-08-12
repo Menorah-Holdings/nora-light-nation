@@ -1135,14 +1135,14 @@ const FileDrop = ({
 }) => (
   <label
     className={cn(
-      "flex items-center justify-center rounded-2xl border border-dashed border-gold/40 bg-secondary/30 hover:border-gold transition-colors cursor-pointer",
+      "flex items-center justify-center rounded-2xl border border-dashed border-gold/40 bg-secondary/30 px-4 text-center hover:border-gold transition-colors cursor-pointer",
       tall ? "h-44" : "h-28",
     )}
   >
     {onFile && <input type="file" accept={accept} className="sr-only" onChange={(event) => onFile(event.target.files?.[0] ?? null)} />}
     <div className="text-center">
       <Icon className="mx-auto h-6 w-6 text-gold" />
-      <p className="mt-2 text-xs text-muted-foreground">{file?.name ?? label}</p>
+      <p className="mt-2 break-words text-xs text-muted-foreground">{file?.name ?? label}</p>
     </div>
   </label>
 );
@@ -1345,252 +1345,265 @@ const UploadModal = ({ kind, onClose, onSubmit }: { kind: UploadKind; onClose: (
   };
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-background/80 backdrop-blur-xl p-4 animate-fade-in">
-      <div className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-3xl bg-card-gradient ring-1 ring-gold/30 p-6 md:p-10 shadow-glow">
-        <button onClick={onClose} className="absolute top-4 right-4 h-9 w-9 grid place-items-center rounded-full hover:bg-secondary/60">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-2 backdrop-blur-xl animate-fade-in sm:p-4">
+      <div className="relative flex w-full max-w-5xl max-h-[calc(100dvh-1rem)] flex-col overflow-hidden rounded-3xl bg-card-gradient ring-1 ring-gold/30 shadow-glow sm:max-h-[calc(100dvh-2rem)]">
+        <button
+          onClick={onClose}
+          className="absolute right-4 top-4 z-10 grid h-10 w-10 place-items-center rounded-full bg-background/60 hover:bg-secondary/70"
+          aria-label="Close upload dialog"
+        >
           <X className="h-4 w-4" />
         </button>
-        <p className="text-xs uppercase tracking-[0.25em] text-gold">Creator Studio</p>
-        <h2 className="mt-2 font-display text-3xl">{titles[kind]}</h2>
+        <div className="border-b border-border/70 px-5 pb-5 pt-6 sm:px-8 sm:pb-6 sm:pt-8 md:px-10">
+          <p className="text-xs uppercase tracking-[0.25em] text-gold">Creator Studio</p>
+          <h2 className="mt-2 pr-12 font-display text-2xl sm:text-3xl">{titles[kind]}</h2>
+        </div>
 
-        {kind === "audio" && (
-          <div className="mt-8 grid gap-5 md:grid-cols-2">
-            <div className="md:col-span-2">
-              <Field label="Audio file" required>
-                <FileDrop
-                  label="Drop your audio or click to browse - MP3, WAV, AAC"
-                  icon={MusicIcon}
-                  tall
-                  accept={mediaAccept}
-                  file={mediaFile}
-                  onFile={setMediaFile}
-                />
-              </Field>
-            </div>
-            <p className="md:col-span-2 -mt-2 text-xs text-muted-foreground">
-              {isDetectingDuration
-                ? "Detecting audio duration..."
-                : detectedDurationSeconds
-                  ? `Detected duration: ${formatDetectedDuration(detectedDurationSeconds)}`
-                  : "Duration will be detected automatically from the uploaded media."}
-            </p>
-            <Field label="Cover art">
-              <FileDrop
-                label="Upload cover art - 1:1 recommended"
-                icon={ImageIcon}
-                accept="image/jpeg,image/png,image/webp"
-                file={thumbnailFile}
-                onFile={setThumbnailFile}
-              />
-            </Field>
-            <Field label="Title" required>
-              <input className={inputCls} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Encountering Truth" />
-            </Field>
-            <div className="md:col-span-2">
-              <Field label="Description">
-                <textarea
-                  rows={3}
-                  className={cn(inputCls, "resize-none")}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="What is this audio about?"
-                />
-              </Field>
-            </div>
-            <Field label="Category" required>
-              <select className={inputCls} value={category} onChange={(e) => setCategory(e.target.value as ContentCategory)}>
-                {categoryOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field label="Tags">
-              <input className={inputCls} value={tags} onChange={(e) => setTags(e.target.value)} placeholder="worship, faith, prayer" />
-            </Field>
-            <Field label="Language" required>
-              <input className={inputCls} placeholder="English" />
-            </Field>
-            <div className="md:col-span-2">
-              <VisibilityField visibility={visibility} onChange={setVisibility} />
-            </div>
-            <div className="md:col-span-2">
-              <ReleaseField status={releaseStatus} onChange={setReleaseStatus} />
-            </div>
-          </div>
-        )}
-
-        {kind === "video" && (
-          <div className="mt-8 grid gap-5 md:grid-cols-2">
-            <div className="md:col-span-2">
-              <Field label="Video file" required>
-                <FileDrop
-                  label="Drop your video or click to browse - MP4, MOV"
-                  icon={Film}
-                  tall
-                  accept={mediaAccept}
-                  file={mediaFile}
-                  onFile={setMediaFile}
-                />
-              </Field>
-            </div>
-            <p className="md:col-span-2 -mt-2 text-xs text-muted-foreground">
-              {isDetectingDuration
-                ? "Detecting video duration..."
-                : detectedDurationSeconds
-                  ? `Detected duration: ${formatDetectedDuration(detectedDurationSeconds)}`
-                  : "Duration will be detected automatically from the uploaded media."}
-            </p>
-            <Field label="Thumbnail">
-              <FileDrop
-                label="Upload thumbnail - 16:9"
-                icon={ImageIcon}
-                accept="image/jpeg,image/png,image/webp"
-                file={thumbnailFile}
-                onFile={setThumbnailFile}
-              />
-            </Field>
-            <Field label="Trailer (optional)">
-              <FileDrop label="Upload short trailer" icon={Film} />
-            </Field>
-            <Field label="Title" required>
-              <input className={inputCls} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="The Narrow Way" />
-            </Field>
-            <Field label="Category" required>
-              <select className={inputCls} value={category} onChange={(e) => setCategory(e.target.value as ContentCategory)}>
-                {categoryOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <div className="md:col-span-2">
-              <Field label="Description">
-                <textarea
-                  rows={3}
-                  className={cn(inputCls, "resize-none")}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="What is this video about?"
-                />
-              </Field>
-            </div>
-            <Field label="Tags">
-              <input className={inputCls} value={tags} onChange={(e) => setTags(e.target.value)} placeholder="kingdom, story, film" />
-            </Field>
-            <Field label="Language" required>
-              <input className={inputCls} placeholder="English" />
-            </Field>
-            <div className="md:col-span-2">
-              <VisibilityField visibility={visibility} onChange={setVisibility} />
-            </div>
-            <div className="md:col-span-2">
-              <ReleaseField status={releaseStatus} onChange={setReleaseStatus} />
-            </div>
-          </div>
-        )}
-
-        {kind === "live" && (
-          <div className="mt-8 grid gap-5 md:grid-cols-2">
-            <div className="md:col-span-2">
-              <Field label="Event banner" required>
-                <FileDrop label="Upload event banner - 16:9" icon={ImageIcon} tall />
-              </Field>
-            </div>
-            <Field label="Event title" required>
-              <input className={inputCls} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Worship Night Lagos" />
-            </Field>
-            <Field label="Event type" required>
-              <select className={inputCls} value={eventType} onChange={(e) => setEventType(e.target.value as LiveEventType)}>
-                {liveEventTypeOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <div className="md:col-span-2">
-              <Field label="Description">
-                <textarea
-                  rows={3}
-                  className={cn(inputCls, "resize-none")}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="What can guests expect?"
-                />
-              </Field>
-            </div>
-            <Field label="Date" required>
-              <input type="date" className={inputCls} value={eventDate} onChange={(e) => setEventDate(e.target.value)} />
-            </Field>
-            <Field label="Time zone" required>
-              <input className={inputCls} value={timezone} onChange={(e) => setTimezone(e.target.value)} placeholder="Africa/Lagos" />
-            </Field>
-            <Field label="Start time" required>
-              <input type="time" className={inputCls} value={eventStartTime} onChange={(e) => setEventStartTime(e.target.value)} />
-            </Field>
-            <Field label="End time" required>
-              <input type="time" className={inputCls} value={eventEndTime} onChange={(e) => setEventEndTime(e.target.value)} />
-            </Field>
-            <div className="md:col-span-2">
-              <Field label="Streaming URL">
-                <input className={inputCls} value={streamUrl} onChange={(e) => setStreamUrl(e.target.value)} placeholder="rtmp:// or https://" />
-              </Field>
-            </div>
-            <div className="md:col-span-2">
-              <label className="flex items-center justify-between rounded-2xl border border-border bg-secondary/30 p-4 cursor-pointer">
-                <div>
-                  <p className="text-sm font-medium">Require registration</p>
-                  <p className="text-xs text-muted-foreground">Guests register to receive a reminder and link.</p>
-                </div>
-                <input
-                  className="sr-only"
-                  type="checkbox"
-                  checked={registrationRequired}
-                  onChange={(e) => setRegistrationRequired(e.target.checked)}
-                />
-                <span className={cn("relative h-6 w-11 rounded-full transition", registrationRequired ? "bg-gold-gradient" : "bg-muted")}>
-                  <span
-                    className={cn("absolute top-0.5 h-5 w-5 rounded-full bg-background transition", registrationRequired ? "right-0.5" : "left-0.5")}
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-8 sm:py-6 md:px-10">
+          {kind === "audio" && (
+            <div className="grid gap-5 md:grid-cols-2">
+              <div className="md:col-span-2">
+                <Field label="Audio file" required>
+                  <FileDrop
+                    label="Drop your audio or click to browse - MP3, WAV, AAC"
+                    icon={MusicIcon}
+                    tall
+                    accept={mediaAccept}
+                    file={mediaFile}
+                    onFile={setMediaFile}
                   />
-                </span>
-              </label>
+                </Field>
+              </div>
+              <p className="md:col-span-2 -mt-2 text-xs text-muted-foreground">
+                {isDetectingDuration
+                  ? "Detecting audio duration..."
+                  : detectedDurationSeconds
+                    ? `Detected duration: ${formatDetectedDuration(detectedDurationSeconds)}`
+                    : "Duration will be detected automatically from the uploaded media."}
+              </p>
+              <Field label="Cover art">
+                <FileDrop
+                  label="Upload cover art - 1:1 recommended"
+                  icon={ImageIcon}
+                  accept="image/jpeg,image/png,image/webp"
+                  file={thumbnailFile}
+                  onFile={setThumbnailFile}
+                />
+              </Field>
+              <Field label="Title" required>
+                <input className={inputCls} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Encountering Truth" />
+              </Field>
+              <div className="md:col-span-2">
+                <Field label="Description">
+                  <textarea
+                    rows={3}
+                    className={cn(inputCls, "resize-none")}
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="What is this audio about?"
+                  />
+                </Field>
+              </div>
+              <Field label="Category" required>
+                <select className={inputCls} value={category} onChange={(e) => setCategory(e.target.value as ContentCategory)}>
+                  {categoryOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Tags">
+                <input className={inputCls} value={tags} onChange={(e) => setTags(e.target.value)} placeholder="worship, faith, prayer" />
+              </Field>
+              <Field label="Language" required>
+                <input className={inputCls} placeholder="English" />
+              </Field>
+              <div className="md:col-span-2">
+                <VisibilityField visibility={visibility} onChange={setVisibility} />
+              </div>
+              <div className="md:col-span-2">
+                <ReleaseField status={releaseStatus} onChange={setReleaseStatus} />
+              </div>
             </div>
-            <div className="md:col-span-2">
-              <VisibilityField visibility={visibility} onChange={setVisibility} />
-            </div>
-          </div>
-        )}
+          )}
 
-        <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-6">
-          <button onClick={onClose} className="rounded-full px-5 py-2.5 text-sm text-muted-foreground hover:text-foreground">
-            Cancel
-          </button>
-          <div className="flex gap-3">
-            <button
-              disabled={isBusy}
-              onClick={() => submitContent("DRAFT")}
-              className="inline-flex items-center gap-2 rounded-full border border-gold/40 px-5 py-2.5 text-sm text-gold hover:bg-gold/10 disabled:opacity-50"
-            >
-              {isBusy ? "Working..." : "Save Draft"}
+          {kind === "video" && (
+            <div className="grid gap-5 md:grid-cols-2">
+              <div className="md:col-span-2">
+                <Field label="Video file" required>
+                  <FileDrop
+                    label="Drop your video or click to browse - MP4, MOV"
+                    icon={Film}
+                    tall
+                    accept={mediaAccept}
+                    file={mediaFile}
+                    onFile={setMediaFile}
+                  />
+                </Field>
+              </div>
+              <p className="md:col-span-2 -mt-2 text-xs text-muted-foreground">
+                {isDetectingDuration
+                  ? "Detecting video duration..."
+                  : detectedDurationSeconds
+                    ? `Detected duration: ${formatDetectedDuration(detectedDurationSeconds)}`
+                    : "Duration will be detected automatically from the uploaded media."}
+              </p>
+              <Field label="Thumbnail">
+                <FileDrop
+                  label="Upload thumbnail - 16:9"
+                  icon={ImageIcon}
+                  accept="image/jpeg,image/png,image/webp"
+                  file={thumbnailFile}
+                  onFile={setThumbnailFile}
+                />
+              </Field>
+              <Field label="Trailer (optional)">
+                <FileDrop label="Upload short trailer" icon={Film} />
+              </Field>
+              <Field label="Title" required>
+                <input className={inputCls} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="The Narrow Way" />
+              </Field>
+              <Field label="Category" required>
+                <select className={inputCls} value={category} onChange={(e) => setCategory(e.target.value as ContentCategory)}>
+                  {categoryOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <div className="md:col-span-2">
+                <Field label="Description">
+                  <textarea
+                    rows={3}
+                    className={cn(inputCls, "resize-none")}
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="What is this video about?"
+                  />
+                </Field>
+              </div>
+              <Field label="Tags">
+                <input className={inputCls} value={tags} onChange={(e) => setTags(e.target.value)} placeholder="kingdom, story, film" />
+              </Field>
+              <Field label="Language" required>
+                <input className={inputCls} placeholder="English" />
+              </Field>
+              <div className="md:col-span-2">
+                <VisibilityField visibility={visibility} onChange={setVisibility} />
+              </div>
+              <div className="md:col-span-2">
+                <ReleaseField status={releaseStatus} onChange={setReleaseStatus} />
+              </div>
+            </div>
+          )}
+
+          {kind === "live" && (
+            <div className="grid gap-5 md:grid-cols-2">
+              <div className="md:col-span-2">
+                <Field label="Event banner" required>
+                  <FileDrop label="Upload event banner - 16:9" icon={ImageIcon} tall />
+                </Field>
+              </div>
+              <Field label="Event title" required>
+                <input className={inputCls} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Worship Night Lagos" />
+              </Field>
+              <Field label="Event type" required>
+                <select className={inputCls} value={eventType} onChange={(e) => setEventType(e.target.value as LiveEventType)}>
+                  {liveEventTypeOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <div className="md:col-span-2">
+                <Field label="Description">
+                  <textarea
+                    rows={3}
+                    className={cn(inputCls, "resize-none")}
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="What can guests expect?"
+                  />
+                </Field>
+              </div>
+              <Field label="Date" required>
+                <input type="date" className={inputCls} value={eventDate} onChange={(e) => setEventDate(e.target.value)} />
+              </Field>
+              <Field label="Time zone" required>
+                <input className={inputCls} value={timezone} onChange={(e) => setTimezone(e.target.value)} placeholder="Africa/Lagos" />
+              </Field>
+              <Field label="Start time" required>
+                <input type="time" className={inputCls} value={eventStartTime} onChange={(e) => setEventStartTime(e.target.value)} />
+              </Field>
+              <Field label="End time" required>
+                <input type="time" className={inputCls} value={eventEndTime} onChange={(e) => setEventEndTime(e.target.value)} />
+              </Field>
+              <div className="md:col-span-2">
+                <Field label="Streaming URL">
+                  <input className={inputCls} value={streamUrl} onChange={(e) => setStreamUrl(e.target.value)} placeholder="rtmp:// or https://" />
+                </Field>
+              </div>
+              <div className="md:col-span-2">
+                <label className="flex items-center justify-between rounded-2xl border border-border bg-secondary/30 p-4 cursor-pointer">
+                  <div>
+                    <p className="text-sm font-medium">Require registration</p>
+                    <p className="text-xs text-muted-foreground">Guests register to receive a reminder and link.</p>
+                  </div>
+                  <input
+                    className="sr-only"
+                    type="checkbox"
+                    checked={registrationRequired}
+                    onChange={(e) => setRegistrationRequired(e.target.checked)}
+                  />
+                  <span className={cn("relative h-6 w-11 rounded-full transition", registrationRequired ? "bg-gold-gradient" : "bg-muted")}>
+                    <span
+                      className={cn(
+                        "absolute top-0.5 h-5 w-5 rounded-full bg-background transition",
+                        registrationRequired ? "right-0.5" : "left-0.5",
+                      )}
+                    />
+                  </span>
+                </label>
+              </div>
+              <div className="md:col-span-2">
+                <VisibilityField visibility={visibility} onChange={setVisibility} />
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="border-t border-border bg-card-gradient/95 px-5 py-4 sm:px-8 md:px-10">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <button onClick={onClose} className="rounded-full px-5 py-2.5 text-sm text-muted-foreground hover:text-foreground">
+              Cancel
             </button>
-            <button
-              disabled={isBusy}
-              onClick={() => submitContent(releaseStatus)}
-              className="inline-flex items-center gap-2 rounded-full bg-red-gradient px-6 py-2.5 text-sm font-medium text-primary-foreground shadow-red-glow disabled:opacity-50"
-            >
-              {kind === "live" ? (
-                <>
-                  <Calendar className="h-4 w-4" /> Schedule Event
-                </>
-              ) : (
-                <>
-                  <Sparkles className="h-4 w-4" /> {releaseStatus === "PUBLISHED" ? "Publish" : "Save Draft"}
-                </>
-              )}
-            </button>
+            <div className="flex gap-3">
+              <button
+                disabled={isBusy}
+                onClick={() => submitContent("DRAFT")}
+                className="inline-flex items-center gap-2 rounded-full border border-gold/40 px-5 py-2.5 text-sm text-gold hover:bg-gold/10 disabled:opacity-50"
+              >
+                {isBusy ? "Working..." : "Save Draft"}
+              </button>
+              <button
+                disabled={isBusy}
+                onClick={() => submitContent(releaseStatus)}
+                className="inline-flex items-center gap-2 rounded-full bg-red-gradient px-6 py-2.5 text-sm font-medium text-primary-foreground shadow-red-glow disabled:opacity-50"
+              >
+                {kind === "live" ? (
+                  <>
+                    <Calendar className="h-4 w-4" /> Schedule Event
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4" /> {releaseStatus === "PUBLISHED" ? "Publish" : "Save Draft"}
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </div>
