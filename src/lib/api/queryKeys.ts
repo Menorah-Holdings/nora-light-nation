@@ -51,6 +51,11 @@ export const queryKeys = {
     list: () => [...queryKeys.playlists.all, "list"] as const,
     detail: (id: string) => [...queryKeys.playlists.all, "detail", id] as const,
   },
+  buckets: {
+    all: ["buckets"] as const,
+    list: () => [...queryKeys.buckets.all, "list"] as const,
+    detail: (id: string) => [...queryKeys.buckets.all, "detail", id] as const,
+  },
   admin: {
     all: ["admin"] as const,
     stats: () => [...queryKeys.admin.all, "stats"] as const,

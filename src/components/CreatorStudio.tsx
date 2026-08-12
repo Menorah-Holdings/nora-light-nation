@@ -5,6 +5,7 @@ import {
   Headphones,
   Play,
   Radio,
+  Layers,
   BarChart3,
   UserCircle,
   Settings as SettingsIcon,
@@ -49,6 +50,7 @@ import {
   useUpdateOwnLiveEvent,
 } from "@/lib/api/hooks/useCreators";
 import { uploadFileToPresignedUrl, useConfirmUpload, usePresignUpload } from "@/lib/api/hooks/useUpload";
+import { BucketsLibrary } from "@/components/studio/BucketsLibrary";
 import type {
   ApiContent,
   ApiLiveEvent,
@@ -61,7 +63,7 @@ import type {
   UploadAssetRole,
 } from "@/lib/api/types";
 
-type Section = "overview" | "upload" | "audio" | "video" | "live" | "analytics" | "profile" | "settings";
+type Section = "overview" | "upload" | "audio" | "video" | "buckets" | "live" | "analytics" | "profile" | "settings";
 type UploadKind = "audio" | "video" | "live" | null;
 type StudioContentItem = {
   id: string;
@@ -127,6 +129,7 @@ const nav: { id: Section; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "upload", label: "Upload Content", icon: Upload },
   { id: "audio", label: "Audio", icon: Headphones },
   { id: "video", label: "Video", icon: Play },
+  { id: "buckets", label: "Buckets", icon: Layers },
   { id: "live", label: "Live Events", icon: Radio },
   { id: "analytics", label: "Analytics", icon: BarChart3 },
   { id: "profile", label: "Creator Profile", icon: UserCircle },
@@ -1345,8 +1348,8 @@ const UploadModal = ({ kind, onClose, onSubmit }: { kind: UploadKind; onClose: (
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-2 backdrop-blur-xl animate-fade-in sm:p-4">
-      <div className="relative flex w-full max-w-5xl max-h-[calc(100dvh-1rem)] flex-col overflow-hidden rounded-3xl bg-card-gradient ring-1 ring-gold/30 shadow-glow sm:max-h-[calc(100dvh-2rem)]">
+    <div className="fixed inset-0 z-50 overflow-y-auto scrollbar-theme bg-background/80 p-2 backdrop-blur-xl animate-fade-in sm:p-4">
+      <div className="relative mx-auto my-4 flex w-full max-w-5xl flex-col overflow-hidden rounded-3xl bg-card-gradient ring-1 ring-gold/30 shadow-glow sm:my-8">
         <button
           onClick={onClose}
           className="absolute right-4 top-4 z-10 grid h-10 w-10 place-items-center rounded-full bg-background/60 hover:bg-secondary/70"
@@ -1359,7 +1362,7 @@ const UploadModal = ({ kind, onClose, onSubmit }: { kind: UploadKind; onClose: (
           <h2 className="mt-2 pr-12 font-display text-2xl sm:text-3xl">{titles[kind]}</h2>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-8 sm:py-6 md:px-10">
+        <div className="px-5 py-5 sm:px-8 sm:py-6 md:px-10">
           {kind === "audio" && (
             <div className="grid gap-5 md:grid-cols-2">
               <div className="md:col-span-2">
@@ -1668,6 +1671,8 @@ export const CreatorStudio = () => {
         return <AudioLibrary openUpload={openUpload} items={audioItemsForStudio} />;
       case "video":
         return <VideoLibrary openUpload={openUpload} items={videoItemsForStudio} />;
+      case "buckets":
+        return <BucketsLibrary />;
       case "live":
         return <LiveManager openUpload={openUpload} />;
       case "analytics":

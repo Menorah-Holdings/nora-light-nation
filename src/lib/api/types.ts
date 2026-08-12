@@ -168,6 +168,8 @@ export interface ApiContent {
   likeCount?: number;
   scriptureReference?: string | null;
   tags?: string[];
+  bucketId?: string | null;
+  bucketPosition?: number | null;
   createdAt: string;
   updatedAt?: string;
   creator?: ApiCreatorSummary | null;
@@ -400,6 +402,27 @@ export interface ApiPlaylist {
   updatedAt: string;
   items: ApiPlaylistItem[];
 }
+
+export interface ApiContentBucket {
+  id: string;
+  creatorId: string;
+  type: ContentType;
+  title: string;
+  description?: string | null;
+  coverArtUrl?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  items: ApiContent[];
+}
+
+export interface CreateContentBucketInput {
+  title: string;
+  description?: string;
+  type: ContentType;
+  coverArtUrl?: string;
+}
+
+export type UpdateContentBucketInput = Partial<Omit<CreateContentBucketInput, "type">>;
 
 export interface AdminStats {
   users: { total: number; premium: number };
