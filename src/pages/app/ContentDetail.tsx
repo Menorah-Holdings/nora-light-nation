@@ -1,14 +1,21 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { Maximize2, Play, Share2, Pause, Volume2, VolumeX } from "lucide-react";
+import { Flag, Maximize2, Play, Share2, Pause, Volume2, VolumeX } from "lucide-react";
 import ReactPlayer from "react-player";
+import { toast } from "sonner";
 import { ContentCard } from "@/components/ContentCard";
 import { NowPlayingMenu } from "@/components/NowPlayingMenu";
 import { SaveToLibraryButton } from "@/components/SaveToLibraryButton";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { adaptContent, contentTypeLabel } from "@/lib/api/adapters";
 import { ApiClientError } from "@/lib/api/client";
 import { useContentDetail, useContentList, useContentPlayback } from "@/lib/api/hooks/useContent";
 import { usePlaybackProgress, useUpdateProgress } from "@/lib/api/hooks/useLibrary";
+import { useCreateReport } from "@/lib/api/hooks/useReports";
 import { usePlayer, formatTime } from "@/lib/player";
 
 const PROGRESS_WRITE_INTERVAL_SECONDS = 15;
@@ -30,9 +37,31 @@ const ContentDetail = () => {
   const playbackQuery = useContentPlayback(id);
   const progressQuery = usePlaybackProgress(id);
   const updateProgress = useUpdateProgress();
+  const createReport = useCreateReport();
   const player = usePlayer();
   const item = detailQuery.data ? adaptContent(detailQuery.data) : null;
   const isActiveTrack = player.track?.id === item?.id;
+
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportReason, setReportReason] = useState("");
+  const [reportDescription, setReportDescription] = useState("");
+
+  const submitReport = () => {
+    if (!id || !reportReason.trim()) return;
+
+    createReport.mutate(
+      { targetId: id, reason: reportReason.trim(), description: reportDescription.trim() || undefined },
+      {
+        onSuccess: () => {
+          setReportOpen(false);
+          setReportReason("");
+          setReportDescription("");
+          toast.success("Report submitted — thanks for helping keep NoraPlus safe.");
+        },
+        onError: (error) => toast.error(error instanceof ApiClientError ? error.message : "Could not submit report."),
+      },
+    );
+  };
   const related = (relatedQuery.data ?? [])
     .filter((content) => content.id !== id)
     .map(adaptContent)
@@ -171,6 +200,13 @@ const ContentDetail = () => {
             <SaveToLibraryButton contentId={item.id} showLabel className="border border-border px-5 py-2.5 text-sm text-foreground" />
             <button type="button" className="inline-flex items-center gap-2 rounded-full border border-border px-5 py-2.5 text-sm">
               <Share2 className="h-4 w-4" /> Share
+            </button>
+            <button
+              type="button"
+              onClick={() => setReportOpen(true)}
+              className="inline-flex items-center gap-2 rounded-full border border-border px-5 py-2.5 text-sm text-muted-foreground hover:text-destructive"
+            >
+              <Flag className="h-4 w-4" /> Report
             </button>
           </div>
 
@@ -362,6 +398,43 @@ const ContentDetail = () => {
           </div>
         )}
       </section>
+
+      <Dialog open={reportOpen} onOpenChange={setReportOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Report content</DialogTitle>
+            <DialogDescription>Help us keep NoraPlus safe. What's wrong with "{item.title}"?</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="report-reason">Reason</Label>
+              <Input
+                id="report-reason"
+                value={reportReason}
+                onChange={(e) => setReportReason(e.target.value)}
+                placeholder="e.g. Inappropriate content, copyright violation"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="report-description">Additional details (optional)</Label>
+              <Textarea
+                id="report-description"
+                value={reportDescription}
+                onChange={(e) => setReportDescription(e.target.value)}
+                rows={4}
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="ghost" onClick={() => setReportOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={submitReport} disabled={!reportReason.trim() || createReport.isPending}>
+              {createReport.isPending ? "Submitting..." : "Submit Report"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

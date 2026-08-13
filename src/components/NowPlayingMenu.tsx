@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { ReactElement, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import {
@@ -126,7 +126,7 @@ export const NowPlayingMenu = ({ item, variant = "default", canDownload = false,
   const handleShare = (key: string, label: string) => {
     setShareOpen(false);
     if (key === "copy") {
-      navigator.clipboard?.writeText(`${window.location.origin}/app/content/${item.id}`).catch(() => {});
+      navigator.clipboard?.writeText(`${window.location.origin}/app/content/${item.id}`).catch(() => { });
       toast.success("Link Copied");
     } else {
       toast.success(`Shared via ${label}`);
@@ -151,7 +151,7 @@ export const NowPlayingMenu = ({ item, variant = "default", canDownload = false,
 
   const Row = ({
     icon: Icon, label, onSelect, active, danger,
-  }: { icon: any; label: string; onSelect: () => void; active?: boolean; danger?: boolean }) => (
+  }: { icon: React.ElementType; label: string; onSelect: () => void; active?: boolean; danger?: boolean }) => (
     <button
       onClick={onSelect}
       className={cn(

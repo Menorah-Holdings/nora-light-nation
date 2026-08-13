@@ -4,8 +4,17 @@ import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { useNotifications, useMarkAllNotificationsRead, useMarkNotificationRead } from "@/lib/api/hooks/useNotifications";
-import type { ApiNotification } from "@/lib/api/types";
+import { useCurrentUser, useUpdateCurrentUser } from "@/lib/api/hooks/useUsers";
+import type { ApiNotification, UpdateCurrentUserInput } from "@/lib/api/types";
 import { ApiClientError } from "@/lib/api/client";
+
+const PREFERENCE_FIELD: Record<keyof NotificationPreferenceState, keyof UpdateCurrentUserInput> = {
+  live: "liveEventAlerts",
+  content: "emailNotif",
+  creators: "creatorUpdates",
+  subscription: "subscriptionUpdates",
+  product: "productAnnouncements",
+};
 
 type NotifType = "live" | "content" | "music" | "reminder" | "subscription";
 type Filter = "all" | "unread" | "live" | "updates";
@@ -58,6 +67,8 @@ export const NotificationsPanel = () => {
   const notificationsQuery = useNotifications();
   const markReadMutation = useMarkNotificationRead();
   const markAllMutation = useMarkAllNotificationsRead();
+  const currentUserQuery = useCurrentUser();
+  const updateUserMutation = useUpdateCurrentUser();
   const [notifs, setNotifs] = useState<Notif[]>([]);
   const [loadedFromApi, setLoadedFromApi] = useState(false);
   const [settings, setSettings] = useState<NotificationPreferenceState>({
@@ -68,6 +79,23 @@ export const NotificationsPanel = () => {
     product: false,
   });
   const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const apiUser = currentUserQuery.data;
+    if (!apiUser) return;
+    setSettings({
+      live: apiUser.liveEventAlerts ?? true,
+      content: apiUser.emailNotif ?? true,
+      creators: apiUser.creatorUpdates ?? true,
+      subscription: apiUser.subscriptionUpdates ?? true,
+      product: apiUser.productAnnouncements ?? false,
+    });
+  }, [currentUserQuery.data]);
+
+  const updatePreference = (key: keyof NotificationPreferenceState, value: boolean) => {
+    setSettings((prev) => ({ ...prev, [key]: value }));
+    updateUserMutation.mutate({ [PREFERENCE_FIELD[key]]: value } as UpdateCurrentUserInput);
+  };
 
   useEffect(() => {
     if (!notificationsQuery.data) return;
@@ -312,7 +340,7 @@ export const NotificationsPanel = () => {
                   ].map((s: { key: keyof NotificationPreferenceState; label: string }) => (
                     <div key={s.key} className="flex items-center justify-between gap-2">
                       <span className="text-muted-foreground">{s.label}</span>
-                      <Switch checked={settings[s.key]} onCheckedChange={(v) => setSettings((p) => ({ ...p, [s.key]: v }))} />
+                      <Switch checked={settings[s.key]} onCheckedChange={(v) => updatePreference(s.key, v)} />
                     </div>
                   ))}
                 </div>

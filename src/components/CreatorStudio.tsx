@@ -41,6 +41,7 @@ import {
   useCreateOwnLiveEvent,
   useDeleteOwnLiveEvent,
   useMyCreatorAnalytics,
+  useMyDailyCreatorAnalytics,
   useMyCreatorProfile,
   useDeleteOwnContent,
   useOwnCreatorContent,
@@ -332,6 +333,8 @@ function formatLiveEventType(type?: LiveEventType | null) {
 
 const Overview = ({ goto, openUpload, items }: { goto: (s: Section) => void; openUpload: (k: UploadKind) => void; items: StudioContentItem[] }) => {
   const { user } = useUser();
+  const analyticsQuery = useMyCreatorAnalytics();
+  const analytics = analyticsQuery.data;
   const publishedCount = items.filter((item) => item.contentStatus === "PUBLISHED").length;
   const draftCount = items.length - publishedCount;
   const recentItems = items.slice(0, 4);
@@ -339,9 +342,9 @@ const Overview = ({ goto, openUpload, items }: { goto: (s: Section) => void; ope
     { label: "Uploads", value: String(items.length) },
     { label: "Published", value: String(publishedCount) },
     { label: "Drafts", value: String(draftCount) },
-    { label: "Followers", value: "0" },
-    { label: "Total Plays", value: "0" },
-    { label: "Upcoming Live", value: "0" },
+    { label: "Followers", value: formatCompactNumber(analytics?.followersCount ?? 0) },
+    { label: "Total Plays", value: formatCompactNumber(analytics?.totalPlays ?? 0) },
+    { label: "Upcoming Live", value: formatCompactNumber(analytics?.upcomingLiveEvents ?? 0) },
   ];
   const activity = [
     { t: "Published “Encountering Truth”", at: "2h ago" },
@@ -455,11 +458,27 @@ const Overview = ({ goto, openUpload, items }: { goto: (s: Section) => void; ope
 
 /* ---------- Library tables ---------- */
 
-const Toolbar = ({ placeholder, filters }: { placeholder: string; filters: string[] }) => (
+const Toolbar = ({
+  placeholder,
+  value,
+  onChange,
+  filters,
+  activeFilter,
+  onFilterClick,
+}: {
+  placeholder: string;
+  value: string;
+  onChange: (value: string) => void;
+  filters: string[];
+  activeFilter?: string | null;
+  onFilterClick?: (filter: string) => void;
+}) => (
   <div className="flex flex-wrap items-center gap-3">
     <div className="relative flex-1 min-w-[220px] max-w-md">
       <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
       <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         className="w-full rounded-full border border-border bg-secondary/60 py-2.5 pl-10 pr-4 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-gold"
       />
@@ -467,7 +486,13 @@ const Toolbar = ({ placeholder, filters }: { placeholder: string; filters: strin
     {filters.map((f) => (
       <button
         key={f}
-        className="inline-flex items-center gap-2 rounded-full border border-border bg-secondary/40 px-4 py-2 text-xs text-muted-foreground hover:border-gold/40 hover:text-foreground transition"
+        onClick={() => onFilterClick?.(f)}
+        className={cn(
+          "inline-flex items-center gap-2 rounded-full border px-4 py-2 text-xs transition",
+          activeFilter === f
+            ? "border-gold/50 bg-gold/10 text-gold"
+            : "border-border bg-secondary/40 text-muted-foreground hover:border-gold/40 hover:text-foreground",
+        )}
       >
         <Filter className="h-3.5 w-3.5" /> {f}
       </button>
@@ -532,7 +557,32 @@ const RowActions = ({ item }: { item: StudioContentItem }) => {
   );
 };
 
+function useLibraryTableControls(items: StudioContentItem[]) {
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"Published" | "Draft" | null>(null);
+  const [sortDesc, setSortDesc] = useState(true);
+
+  const cycleStatus = () =>
+    setStatusFilter((prev) => (prev === null ? "Published" : prev === "Published" ? "Draft" : null));
+
+  const filtered = useMemo(() => {
+    let next = items.filter((item) => item.title.toLowerCase().includes(search.trim().toLowerCase()));
+    if (statusFilter) next = next.filter((item) => item.status === statusFilter);
+    if (!sortDesc) next = next.slice().reverse();
+    return next;
+  }, [items, search, statusFilter, sortDesc]);
+
+  const activeFilter = statusFilter ? "Status" : !sortDesc ? "Sort" : null;
+  const onFilterClick = (filter: string) => {
+    if (filter === "Status") cycleStatus();
+    if (filter === "Sort") setSortDesc((prev) => !prev);
+  };
+
+  return { search, setSearch, filtered, activeFilter, onFilterClick };
+}
+
 const AudioLibrary = ({ openUpload, items }: { openUpload: (k: UploadKind) => void; items: StudioContentItem[] }) => {
+  const { search, setSearch, filtered, activeFilter, onFilterClick } = useLibraryTableControls(items);
   if (items.length === 0) {
     return <EmptyState icon={Headphones} title="No audio uploaded yet." cta="Upload Audio" onCta={() => openUpload("audio")} />;
   }
@@ -551,7 +601,17 @@ const AudioLibrary = ({ openUpload, items }: { openUpload: (k: UploadKind) => vo
           </button>
         }
       />
-      <Toolbar placeholder="Search audio…" filters={["Category", "Status", "Sort"]} />
+      <Toolbar
+        placeholder="Search audio…"
+        value={search}
+        onChange={setSearch}
+        filters={["Status", "Sort"]}
+        activeFilter={activeFilter}
+        onFilterClick={onFilterClick}
+      />
+      {filtered.length === 0 ? (
+        <p className="py-10 text-center text-sm text-muted-foreground">No audio matches your search.</p>
+      ) : (
       <div className="rounded-2xl bg-card-gradient ring-1 ring-border/60 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -567,7 +627,7 @@ const AudioLibrary = ({ openUpload, items }: { openUpload: (k: UploadKind) => vo
               </tr>
             </thead>
             <tbody>
-              {items.map((item) => (
+              {filtered.map((item) => (
                 <tr key={item.id} className="border-t border-border/60 hover:bg-background/40">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
@@ -591,11 +651,13 @@ const AudioLibrary = ({ openUpload, items }: { openUpload: (k: UploadKind) => vo
           </table>
         </div>
       </div>
+      )}
     </div>
   );
 };
 
 const VideoLibrary = ({ openUpload, items }: { openUpload: (k: UploadKind) => void; items: StudioContentItem[] }) => {
+  const { search, setSearch, filtered, activeFilter, onFilterClick } = useLibraryTableControls(items);
   if (items.length === 0) {
     return <EmptyState icon={Play} title="No videos uploaded yet." cta="Upload Video" onCta={() => openUpload("video")} />;
   }
@@ -614,7 +676,17 @@ const VideoLibrary = ({ openUpload, items }: { openUpload: (k: UploadKind) => vo
           </button>
         }
       />
-      <Toolbar placeholder="Search video…" filters={["Category", "Status", "Sort"]} />
+      <Toolbar
+        placeholder="Search video…"
+        value={search}
+        onChange={setSearch}
+        filters={["Status", "Sort"]}
+        activeFilter={activeFilter}
+        onFilterClick={onFilterClick}
+      />
+      {filtered.length === 0 ? (
+        <p className="py-10 text-center text-sm text-muted-foreground">No video matches your search.</p>
+      ) : (
       <div className="rounded-2xl bg-card-gradient ring-1 ring-border/60 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -630,7 +702,7 @@ const VideoLibrary = ({ openUpload, items }: { openUpload: (k: UploadKind) => vo
               </tr>
             </thead>
             <tbody>
-              {items.map((item) => (
+              {filtered.map((item) => (
                 <tr key={item.id} className="border-t border-border/60 hover:bg-background/40">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
@@ -654,6 +726,7 @@ const VideoLibrary = ({ openUpload, items }: { openUpload: (k: UploadKind) => vo
           </table>
         </div>
       </div>
+      )}
     </div>
   );
 };
@@ -662,7 +735,12 @@ const LiveManager = ({ openUpload }: { openUpload: (k: UploadKind) => void }) =>
   const liveQuery = useOwnCreatorLiveEvents({ limit: 50 });
   const deleteLive = useDeleteOwnLiveEvent();
   const updateLive = useUpdateOwnLiveEvent();
-  const items = useMemo(() => (liveQuery.data ?? []).map(toStudioLiveItem), [liveQuery.data]);
+  const allItems = useMemo(() => (liveQuery.data ?? []).map(toStudioLiveItem), [liveQuery.data]);
+  const [liveSearch, setLiveSearch] = useState("");
+  const items = useMemo(
+    () => allItems.filter((e) => e.title.toLowerCase().includes(liveSearch.trim().toLowerCase())),
+    [allItems, liveSearch],
+  );
 
   const editEvent = (event: StudioLiveItem) => {
     const title = window.prompt("Event title", event.title)?.trim();
@@ -694,7 +772,7 @@ const LiveManager = ({ openUpload }: { openUpload: (k: UploadKind) => void }) =>
     });
   };
 
-  if (!liveQuery.isLoading && items.length === 0) {
+  if (!liveQuery.isLoading && allItems.length === 0) {
     return <EmptyState icon={Radio} title="No live events scheduled." cta="Create Live Event" onCta={() => openUpload("live")} />;
   }
 
@@ -713,7 +791,7 @@ const LiveManager = ({ openUpload }: { openUpload: (k: UploadKind) => void }) =>
           </button>
         }
       />
-      <Toolbar placeholder="Search events…" filters={["Event type", "Status", "Upcoming only"]} />
+      <Toolbar placeholder="Search events…" value={liveSearch} onChange={setLiveSearch} filters={[]} />
       <div className="rounded-2xl bg-card-gradient ring-1 ring-border/60 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -731,6 +809,13 @@ const LiveManager = ({ openUpload }: { openUpload: (k: UploadKind) => void }) =>
                 <tr>
                   <td colSpan={7} className="px-6 py-8 text-center text-muted-foreground">
                     Loading live events...
+                  </td>
+                </tr>
+              )}
+              {!liveQuery.isLoading && items.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="px-6 py-8 text-center text-muted-foreground">
+                    No events match your search.
                   </td>
                 </tr>
               )}
@@ -797,8 +882,12 @@ const LiveManager = ({ openUpload }: { openUpload: (k: UploadKind) => void }) =>
 
 const Analytics = () => {
   const analyticsQuery = useMyCreatorAnalytics();
+  const dailyQuery = useMyDailyCreatorAnalytics("30d");
   const analytics = analyticsQuery.data;
   const stats = adaptCreatorAnalytics(analytics);
+  const dailyPoints = dailyQuery.data ?? [];
+  const maxPlays = Math.max(1, ...dailyPoints.map((p) => p.totalPlays));
+
   return (
     <div className="space-y-8">
       <SectionHeader eyebrow="Insights" title="Analytics" subtitle="Track how your content is performing across NoraPlus." />
@@ -820,11 +909,22 @@ const Analytics = () => {
       </div>
       <div className="rounded-2xl bg-card-gradient ring-1 ring-border/60 p-8">
         <h3 className="font-display text-lg">Plays over the last 30 days</h3>
-        <div className="mt-6 h-48 flex items-end gap-2">
-          {[40, 55, 38, 62, 70, 48, 80, 92, 76, 88, 95, 72, 84, 100, 90].map((h, i) => (
-            <div key={i} className="flex-1 rounded-t-md bg-gradient-to-t from-red/60 to-gold/60" style={{ height: `${h}%` }} />
-          ))}
-        </div>
+        {dailyPoints.length === 0 ? (
+          <p className="mt-6 text-sm text-muted-foreground">
+            Not enough data yet — this chart fills in day by day as your content gets plays.
+          </p>
+        ) : (
+          <div className="mt-6 h-48 flex items-end gap-2">
+            {dailyPoints.map((p) => (
+              <div
+                key={p.date}
+                title={`${new Date(p.date).toLocaleDateString()}: ${p.totalPlays} plays`}
+                className="flex-1 rounded-t-md bg-gradient-to-t from-red/60 to-gold/60"
+                style={{ height: `${Math.max(4, (p.totalPlays / maxPlays) * 100)}%` }}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

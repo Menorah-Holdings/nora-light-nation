@@ -2,10 +2,12 @@
 import { apiRequest } from "../client";
 import { queryKeys } from "../queryKeys";
 import type {
+  AnalyticsRange,
   ApiContent,
   ApiCreator,
   ApiCreatorAnalytics,
   ApiCreatorApplication,
+  ApiDailyAnalyticsPoint,
   ApiLiveEvent,
   CreatorApplicationInput,
   CreatorProfileUpdateInput,
@@ -53,6 +55,20 @@ export function useOwnCreatorContent(query?: ListContentQuery) {
   return useQuery({
     queryKey: queryKeys.creators.ownContent(query),
     queryFn: () => apiRequest<ApiContent[]>("/api/creators/me/content", { query }),
+  });
+}
+
+export function useMyFollowedCreators(query?: ListLiveEventsQuery) {
+  return useQuery({
+    queryKey: queryKeys.creators.myFollowing(query),
+    queryFn: () => apiRequest<ApiCreator[]>("/api/creators/me/following", { query }),
+  });
+}
+
+export function useMyDailyCreatorAnalytics(range: AnalyticsRange = "30d") {
+  return useQuery({
+    queryKey: queryKeys.creators.myAnalyticsDaily(range),
+    queryFn: () => apiRequest<ApiDailyAnalyticsPoint[]>("/api/creators/me/analytics/daily", { query: { range } }),
   });
 }
 

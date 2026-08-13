@@ -1,13 +1,14 @@
 import { useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
-import { Trash2, ListVideo } from "lucide-react";
+import { Link, useSearchParams } from "react-router-dom";
+import { Trash2, ListVideo, UserRound } from "lucide-react";
 import { ContentCard } from "@/components/ContentCard";
 import { cn } from "@/lib/utils";
-import { adaptContent } from "@/lib/api/adapters";
+import { adaptContent, adaptCreator, formatCategory } from "@/lib/api/adapters";
 import { useLibrary } from "@/lib/api/hooks/useLibrary";
 import { usePlaylists, useDeletePlaylist, useRemoveFromPlaylist } from "@/lib/api/hooks/usePlaylists";
+import { useMyFollowedCreators, useUnfollowCreator } from "@/lib/api/hooks/useCreators";
 import { toast } from "sonner";
-import type { ApiPlaylist } from "@/lib/api/types";
+import type { ApiCreator, ApiPlaylist } from "@/lib/api/types";
 
 const tabs = ["Saved", "Continue", "Playlists", "Recently played", "Following"] as const;
 
@@ -27,6 +28,8 @@ const Library = () => {
   const playlistsQuery = usePlaylists();
   const deletePlaylist = useDeletePlaylist();
   const removeFromPlaylist = useRemoveFromPlaylist();
+  const followingQuery = useMyFollowedCreators({ limit: 50 });
+  const unfollowCreator = useUnfollowCreator();
   const savedItems = (libraryQuery.data?.saved ?? []).map((entry) => adaptContent(entry.content));
   const continueItems = (libraryQuery.data?.inProgress ?? []).filter((entry) => entry.content).map((entry) => adaptContent(entry.content!));
 
@@ -102,9 +105,15 @@ const Library = () => {
           />
         )
       ) : (
-        <DeferredPanel
-          title="Following list is not backed by the API yet"
-          message="Creator follow actions are available, but the API does not yet expose a current user's following list."
+        <FollowingGrid
+          creators={followingQuery.data ?? []}
+          isLoading={followingQuery.isLoading}
+          onUnfollow={(id) =>
+            unfollowCreator.mutate(id, {
+              onSuccess: () => toast.success("Unfollowed"),
+              onError: () => toast.error("Could not unfollow creator"),
+            })
+          }
         />
       )}
     </div>
@@ -189,6 +198,57 @@ const PlaylistsGrid = ({
           </button>
         </div>
       ))}
+    </div>
+  );
+};
+
+const FollowingGrid = ({
+  creators,
+  isLoading,
+  onUnfollow,
+}: {
+  creators: ApiCreator[];
+  isLoading: boolean;
+  onUnfollow: (id: string) => void;
+}) => {
+  if (isLoading) return <GridSkeleton />;
+  if (creators.length === 0) {
+    return (
+      <div className="rounded-2xl border border-dashed border-border p-12 text-center">
+        <p className="font-display text-xl">Not following anyone yet</p>
+        <p className="mt-2 text-sm text-muted-foreground">Follow creators from their profile page to see them here.</p>
+      </div>
+    );
+  }
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {creators.map((apiCreator) => {
+        const creator = adaptCreator(apiCreator);
+        return (
+          <div key={creator.id} className="group relative rounded-2xl bg-card-gradient ring-1 ring-border/60 overflow-hidden">
+            <Link to={`/app/creators/${creator.id}`} className="flex items-center gap-3 p-5">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-secondary/60">
+                {creator.image ? (
+                  <img src={creator.image} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <UserRound className="h-5 w-5 text-gold" />
+                )}
+              </div>
+              <div className="min-w-0">
+                <p className="font-display truncate">{creator.name}</p>
+                <p className="text-xs text-muted-foreground">{formatCategory(apiCreator.category)}</p>
+              </div>
+            </Link>
+            <button
+              onClick={() => onUnfollow(creator.id)}
+              className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 rounded-lg p-1.5 text-muted-foreground hover:text-destructive transition-all"
+              aria-label="Unfollow creator"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
+        );
+      })}
     </div>
   );
 };

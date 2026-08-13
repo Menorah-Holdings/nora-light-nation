@@ -33,6 +33,11 @@ export interface ApiUser {
   privateListening?: boolean;
   hideRecentlyPlayed?: boolean;
   personalizedRecs?: boolean;
+  liveEventAlerts?: boolean;
+  subscriptionUpdates?: boolean;
+  productAnnouncements?: boolean;
+  marketingEmails?: boolean;
+  dataCollectionOptIn?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -194,6 +199,7 @@ export interface ApiLiveEvent {
   registrationRequired?: boolean;
   visibility: ContentVisibility;
   status: LiveEventStatus;
+  isFeatured?: boolean;
   viewerCount: number;
   createdAt: string;
   creator?: Pick<ApiCreator, "id" | "displayName" | "avatarUrl"> | null;
@@ -259,6 +265,7 @@ export interface ListContentQuery {
 
 export interface ListCreatorsQuery {
   category?: ContentCategory;
+  search?: string;
   page?: number;
   limit?: number;
 }
@@ -280,6 +287,11 @@ export interface UpdateCurrentUserInput {
   privateListening?: boolean;
   hideRecentlyPlayed?: boolean;
   personalizedRecs?: boolean;
+  liveEventAlerts?: boolean;
+  subscriptionUpdates?: boolean;
+  productAnnouncements?: boolean;
+  marketingEmails?: boolean;
+  dataCollectionOptIn?: boolean;
 }
 
 export interface CreatorApplicationInput {
@@ -450,4 +462,117 @@ export interface AdminCreatorActivationInput {
 
 export interface AdminAnalyticsRefreshResponse {
   refreshed: number;
+}
+
+export type ReportTargetType = "CONTENT";
+export type ReportStatus = "PENDING" | "RESOLVED" | "DISMISSED";
+
+export interface ApiReport {
+  id: string;
+  reporterId: string;
+  targetType: ReportTargetType;
+  targetId: string;
+  targetTitle?: string | null;
+  reason: string;
+  description?: string | null;
+  status: ReportStatus;
+  resolvedById?: string | null;
+  resolutionNote?: string | null;
+  createdAt: string;
+  resolvedAt?: string | null;
+  reporter?: Pick<ApiUser, "id" | "name" | "email">;
+  resolvedBy?: Pick<ApiUser, "id" | "name"> | null;
+}
+
+export interface CreateReportInput {
+  targetId: string;
+  reason: string;
+  description?: string;
+}
+
+export interface ReviewReportInput {
+  status: "RESOLVED" | "DISMISSED";
+  resolutionNote?: string;
+}
+
+export type PlatformListType = "LANGUAGE" | "REGION";
+export type GuidelineType = "CREATOR" | "COMMUNITY";
+
+export interface ApiPlatformListItem {
+  id: string;
+  type: PlatformListType;
+  name: string;
+  code?: string | null;
+  isActive: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PlatformListItemInput {
+  name: string;
+  code?: string;
+  isActive?: boolean;
+  sortOrder?: number;
+}
+
+export interface ApiNotificationTemplate {
+  id: string;
+  key: string;
+  name: string;
+  subject: string;
+  body: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface NotificationTemplateInput {
+  key: string;
+  name: string;
+  subject: string;
+  body: string;
+  isActive?: boolean;
+}
+
+export interface ApiGuideline {
+  id: string;
+  type: GuidelineType;
+  title: string;
+  body: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GuidelineInput {
+  title: string;
+  body: string;
+}
+
+export interface ApiPlatformAnnouncement {
+  id: string;
+  title: string;
+  body: string;
+  startsAt?: string | null;
+  endsAt?: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PlatformAnnouncementInput {
+  title: string;
+  body: string;
+  startsAt?: string;
+  endsAt?: string;
+  isActive?: boolean;
+}
+
+export type AnalyticsRange = "7d" | "30d" | "90d";
+
+export interface ApiDailyAnalyticsPoint {
+  date: string;
+  totalPlays: number;
+  totalViews: number;
+  followersCount?: number;
 }
