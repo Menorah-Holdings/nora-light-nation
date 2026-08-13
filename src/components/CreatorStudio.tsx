@@ -5,6 +5,7 @@ import {
   Headphones,
   Play,
   Radio,
+  Layers,
   BarChart3,
   UserCircle,
   Settings as SettingsIcon,
@@ -40,6 +41,7 @@ import {
   useCreateOwnLiveEvent,
   useDeleteOwnLiveEvent,
   useMyCreatorAnalytics,
+  useMyDailyCreatorAnalytics,
   useMyCreatorProfile,
   useDeleteOwnContent,
   useOwnCreatorContent,
@@ -49,6 +51,7 @@ import {
   useUpdateOwnLiveEvent,
 } from "@/lib/api/hooks/useCreators";
 import { uploadFileToPresignedUrl, useConfirmUpload, usePresignUpload } from "@/lib/api/hooks/useUpload";
+import { BucketsLibrary } from "@/components/studio/BucketsLibrary";
 import type {
   ApiContent,
   ApiLiveEvent,
@@ -61,7 +64,7 @@ import type {
   UploadAssetRole,
 } from "@/lib/api/types";
 
-type Section = "overview" | "upload" | "audio" | "video" | "live" | "analytics" | "profile" | "settings";
+type Section = "overview" | "upload" | "audio" | "video" | "buckets" | "live" | "analytics" | "profile" | "settings";
 type UploadKind = "audio" | "video" | "live" | null;
 type StudioContentItem = {
   id: string;
@@ -127,6 +130,7 @@ const nav: { id: Section; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "upload", label: "Upload Content", icon: Upload },
   { id: "audio", label: "Audio", icon: Headphones },
   { id: "video", label: "Video", icon: Play },
+  { id: "buckets", label: "Buckets", icon: Layers },
   { id: "live", label: "Live Events", icon: Radio },
   { id: "analytics", label: "Analytics", icon: BarChart3 },
   { id: "profile", label: "Creator Profile", icon: UserCircle },
@@ -329,6 +333,8 @@ function formatLiveEventType(type?: LiveEventType | null) {
 
 const Overview = ({ goto, openUpload, items }: { goto: (s: Section) => void; openUpload: (k: UploadKind) => void; items: StudioContentItem[] }) => {
   const { user } = useUser();
+  const analyticsQuery = useMyCreatorAnalytics();
+  const analytics = analyticsQuery.data;
   const publishedCount = items.filter((item) => item.contentStatus === "PUBLISHED").length;
   const draftCount = items.length - publishedCount;
   const recentItems = items.slice(0, 4);
@@ -336,9 +342,9 @@ const Overview = ({ goto, openUpload, items }: { goto: (s: Section) => void; ope
     { label: "Uploads", value: String(items.length) },
     { label: "Published", value: String(publishedCount) },
     { label: "Drafts", value: String(draftCount) },
-    { label: "Followers", value: "0" },
-    { label: "Total Plays", value: "0" },
-    { label: "Upcoming Live", value: "0" },
+    { label: "Followers", value: formatCompactNumber(analytics?.followersCount ?? 0) },
+    { label: "Total Plays", value: formatCompactNumber(analytics?.totalPlays ?? 0) },
+    { label: "Upcoming Live", value: formatCompactNumber(analytics?.upcomingLiveEvents ?? 0) },
   ];
   const activity = [
     { t: "Published “Encountering Truth”", at: "2h ago" },
@@ -452,11 +458,27 @@ const Overview = ({ goto, openUpload, items }: { goto: (s: Section) => void; ope
 
 /* ---------- Library tables ---------- */
 
-const Toolbar = ({ placeholder, filters }: { placeholder: string; filters: string[] }) => (
+const Toolbar = ({
+  placeholder,
+  value,
+  onChange,
+  filters,
+  activeFilter,
+  onFilterClick,
+}: {
+  placeholder: string;
+  value: string;
+  onChange: (value: string) => void;
+  filters: string[];
+  activeFilter?: string | null;
+  onFilterClick?: (filter: string) => void;
+}) => (
   <div className="flex flex-wrap items-center gap-3">
     <div className="relative flex-1 min-w-[220px] max-w-md">
       <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
       <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         className="w-full rounded-full border border-border bg-secondary/60 py-2.5 pl-10 pr-4 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-gold"
       />
@@ -464,7 +486,13 @@ const Toolbar = ({ placeholder, filters }: { placeholder: string; filters: strin
     {filters.map((f) => (
       <button
         key={f}
-        className="inline-flex items-center gap-2 rounded-full border border-border bg-secondary/40 px-4 py-2 text-xs text-muted-foreground hover:border-gold/40 hover:text-foreground transition"
+        onClick={() => onFilterClick?.(f)}
+        className={cn(
+          "inline-flex items-center gap-2 rounded-full border px-4 py-2 text-xs transition",
+          activeFilter === f
+            ? "border-gold/50 bg-gold/10 text-gold"
+            : "border-border bg-secondary/40 text-muted-foreground hover:border-gold/40 hover:text-foreground",
+        )}
       >
         <Filter className="h-3.5 w-3.5" /> {f}
       </button>
@@ -529,7 +557,32 @@ const RowActions = ({ item }: { item: StudioContentItem }) => {
   );
 };
 
+function useLibraryTableControls(items: StudioContentItem[]) {
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"Published" | "Draft" | null>(null);
+  const [sortDesc, setSortDesc] = useState(true);
+
+  const cycleStatus = () =>
+    setStatusFilter((prev) => (prev === null ? "Published" : prev === "Published" ? "Draft" : null));
+
+  const filtered = useMemo(() => {
+    let next = items.filter((item) => item.title.toLowerCase().includes(search.trim().toLowerCase()));
+    if (statusFilter) next = next.filter((item) => item.status === statusFilter);
+    if (!sortDesc) next = next.slice().reverse();
+    return next;
+  }, [items, search, statusFilter, sortDesc]);
+
+  const activeFilter = statusFilter ? "Status" : !sortDesc ? "Sort" : null;
+  const onFilterClick = (filter: string) => {
+    if (filter === "Status") cycleStatus();
+    if (filter === "Sort") setSortDesc((prev) => !prev);
+  };
+
+  return { search, setSearch, filtered, activeFilter, onFilterClick };
+}
+
 const AudioLibrary = ({ openUpload, items }: { openUpload: (k: UploadKind) => void; items: StudioContentItem[] }) => {
+  const { search, setSearch, filtered, activeFilter, onFilterClick } = useLibraryTableControls(items);
   if (items.length === 0) {
     return <EmptyState icon={Headphones} title="No audio uploaded yet." cta="Upload Audio" onCta={() => openUpload("audio")} />;
   }
@@ -548,7 +601,17 @@ const AudioLibrary = ({ openUpload, items }: { openUpload: (k: UploadKind) => vo
           </button>
         }
       />
-      <Toolbar placeholder="Search audio…" filters={["Category", "Status", "Sort"]} />
+      <Toolbar
+        placeholder="Search audio…"
+        value={search}
+        onChange={setSearch}
+        filters={["Status", "Sort"]}
+        activeFilter={activeFilter}
+        onFilterClick={onFilterClick}
+      />
+      {filtered.length === 0 ? (
+        <p className="py-10 text-center text-sm text-muted-foreground">No audio matches your search.</p>
+      ) : (
       <div className="rounded-2xl bg-card-gradient ring-1 ring-border/60 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -564,7 +627,7 @@ const AudioLibrary = ({ openUpload, items }: { openUpload: (k: UploadKind) => vo
               </tr>
             </thead>
             <tbody>
-              {items.map((item) => (
+              {filtered.map((item) => (
                 <tr key={item.id} className="border-t border-border/60 hover:bg-background/40">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
@@ -588,11 +651,13 @@ const AudioLibrary = ({ openUpload, items }: { openUpload: (k: UploadKind) => vo
           </table>
         </div>
       </div>
+      )}
     </div>
   );
 };
 
 const VideoLibrary = ({ openUpload, items }: { openUpload: (k: UploadKind) => void; items: StudioContentItem[] }) => {
+  const { search, setSearch, filtered, activeFilter, onFilterClick } = useLibraryTableControls(items);
   if (items.length === 0) {
     return <EmptyState icon={Play} title="No videos uploaded yet." cta="Upload Video" onCta={() => openUpload("video")} />;
   }
@@ -611,7 +676,17 @@ const VideoLibrary = ({ openUpload, items }: { openUpload: (k: UploadKind) => vo
           </button>
         }
       />
-      <Toolbar placeholder="Search video…" filters={["Category", "Status", "Sort"]} />
+      <Toolbar
+        placeholder="Search video…"
+        value={search}
+        onChange={setSearch}
+        filters={["Status", "Sort"]}
+        activeFilter={activeFilter}
+        onFilterClick={onFilterClick}
+      />
+      {filtered.length === 0 ? (
+        <p className="py-10 text-center text-sm text-muted-foreground">No video matches your search.</p>
+      ) : (
       <div className="rounded-2xl bg-card-gradient ring-1 ring-border/60 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -627,7 +702,7 @@ const VideoLibrary = ({ openUpload, items }: { openUpload: (k: UploadKind) => vo
               </tr>
             </thead>
             <tbody>
-              {items.map((item) => (
+              {filtered.map((item) => (
                 <tr key={item.id} className="border-t border-border/60 hover:bg-background/40">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
@@ -651,6 +726,7 @@ const VideoLibrary = ({ openUpload, items }: { openUpload: (k: UploadKind) => vo
           </table>
         </div>
       </div>
+      )}
     </div>
   );
 };
@@ -659,7 +735,12 @@ const LiveManager = ({ openUpload }: { openUpload: (k: UploadKind) => void }) =>
   const liveQuery = useOwnCreatorLiveEvents({ limit: 50 });
   const deleteLive = useDeleteOwnLiveEvent();
   const updateLive = useUpdateOwnLiveEvent();
-  const items = useMemo(() => (liveQuery.data ?? []).map(toStudioLiveItem), [liveQuery.data]);
+  const allItems = useMemo(() => (liveQuery.data ?? []).map(toStudioLiveItem), [liveQuery.data]);
+  const [liveSearch, setLiveSearch] = useState("");
+  const items = useMemo(
+    () => allItems.filter((e) => e.title.toLowerCase().includes(liveSearch.trim().toLowerCase())),
+    [allItems, liveSearch],
+  );
 
   const editEvent = (event: StudioLiveItem) => {
     const title = window.prompt("Event title", event.title)?.trim();
@@ -691,7 +772,7 @@ const LiveManager = ({ openUpload }: { openUpload: (k: UploadKind) => void }) =>
     });
   };
 
-  if (!liveQuery.isLoading && items.length === 0) {
+  if (!liveQuery.isLoading && allItems.length === 0) {
     return <EmptyState icon={Radio} title="No live events scheduled." cta="Create Live Event" onCta={() => openUpload("live")} />;
   }
 
@@ -710,7 +791,7 @@ const LiveManager = ({ openUpload }: { openUpload: (k: UploadKind) => void }) =>
           </button>
         }
       />
-      <Toolbar placeholder="Search events…" filters={["Event type", "Status", "Upcoming only"]} />
+      <Toolbar placeholder="Search events…" value={liveSearch} onChange={setLiveSearch} filters={[]} />
       <div className="rounded-2xl bg-card-gradient ring-1 ring-border/60 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -728,6 +809,13 @@ const LiveManager = ({ openUpload }: { openUpload: (k: UploadKind) => void }) =>
                 <tr>
                   <td colSpan={7} className="px-6 py-8 text-center text-muted-foreground">
                     Loading live events...
+                  </td>
+                </tr>
+              )}
+              {!liveQuery.isLoading && items.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="px-6 py-8 text-center text-muted-foreground">
+                    No events match your search.
                   </td>
                 </tr>
               )}
@@ -794,8 +882,12 @@ const LiveManager = ({ openUpload }: { openUpload: (k: UploadKind) => void }) =>
 
 const Analytics = () => {
   const analyticsQuery = useMyCreatorAnalytics();
+  const dailyQuery = useMyDailyCreatorAnalytics("30d");
   const analytics = analyticsQuery.data;
   const stats = adaptCreatorAnalytics(analytics);
+  const dailyPoints = dailyQuery.data ?? [];
+  const maxPlays = Math.max(1, ...dailyPoints.map((p) => p.totalPlays));
+
   return (
     <div className="space-y-8">
       <SectionHeader eyebrow="Insights" title="Analytics" subtitle="Track how your content is performing across NoraPlus." />
@@ -817,11 +909,22 @@ const Analytics = () => {
       </div>
       <div className="rounded-2xl bg-card-gradient ring-1 ring-border/60 p-8">
         <h3 className="font-display text-lg">Plays over the last 30 days</h3>
-        <div className="mt-6 h-48 flex items-end gap-2">
-          {[40, 55, 38, 62, 70, 48, 80, 92, 76, 88, 95, 72, 84, 100, 90].map((h, i) => (
-            <div key={i} className="flex-1 rounded-t-md bg-gradient-to-t from-red/60 to-gold/60" style={{ height: `${h}%` }} />
-          ))}
-        </div>
+        {dailyPoints.length === 0 ? (
+          <p className="mt-6 text-sm text-muted-foreground">
+            Not enough data yet — this chart fills in day by day as your content gets plays.
+          </p>
+        ) : (
+          <div className="mt-6 h-48 flex items-end gap-2">
+            {dailyPoints.map((p) => (
+              <div
+                key={p.date}
+                title={`${new Date(p.date).toLocaleDateString()}: ${p.totalPlays} plays`}
+                className="flex-1 rounded-t-md bg-gradient-to-t from-red/60 to-gold/60"
+                style={{ height: `${Math.max(4, (p.totalPlays / maxPlays) * 100)}%` }}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1135,14 +1238,14 @@ const FileDrop = ({
 }) => (
   <label
     className={cn(
-      "flex items-center justify-center rounded-2xl border border-dashed border-gold/40 bg-secondary/30 hover:border-gold transition-colors cursor-pointer",
+      "flex items-center justify-center rounded-2xl border border-dashed border-gold/40 bg-secondary/30 px-4 text-center hover:border-gold transition-colors cursor-pointer",
       tall ? "h-44" : "h-28",
     )}
   >
     {onFile && <input type="file" accept={accept} className="sr-only" onChange={(event) => onFile(event.target.files?.[0] ?? null)} />}
     <div className="text-center">
       <Icon className="mx-auto h-6 w-6 text-gold" />
-      <p className="mt-2 text-xs text-muted-foreground">{file?.name ?? label}</p>
+      <p className="mt-2 break-words text-xs text-muted-foreground">{file?.name ?? label}</p>
     </div>
   </label>
 );
@@ -1345,252 +1448,265 @@ const UploadModal = ({ kind, onClose, onSubmit }: { kind: UploadKind; onClose: (
   };
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-background/80 backdrop-blur-xl p-4 animate-fade-in">
-      <div className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-3xl bg-card-gradient ring-1 ring-gold/30 p-6 md:p-10 shadow-glow">
-        <button onClick={onClose} className="absolute top-4 right-4 h-9 w-9 grid place-items-center rounded-full hover:bg-secondary/60">
+    <div className="fixed inset-0 z-50 overflow-y-auto scrollbar-theme bg-background/80 p-2 backdrop-blur-xl animate-fade-in sm:p-4">
+      <div className="relative mx-auto my-4 flex w-full max-w-5xl flex-col overflow-hidden rounded-3xl bg-card-gradient ring-1 ring-gold/30 shadow-glow sm:my-8">
+        <button
+          onClick={onClose}
+          className="absolute right-4 top-4 z-10 grid h-10 w-10 place-items-center rounded-full bg-background/60 hover:bg-secondary/70"
+          aria-label="Close upload dialog"
+        >
           <X className="h-4 w-4" />
         </button>
-        <p className="text-xs uppercase tracking-[0.25em] text-gold">Creator Studio</p>
-        <h2 className="mt-2 font-display text-3xl">{titles[kind]}</h2>
+        <div className="border-b border-border/70 px-5 pb-5 pt-6 sm:px-8 sm:pb-6 sm:pt-8 md:px-10">
+          <p className="text-xs uppercase tracking-[0.25em] text-gold">Creator Studio</p>
+          <h2 className="mt-2 pr-12 font-display text-2xl sm:text-3xl">{titles[kind]}</h2>
+        </div>
 
-        {kind === "audio" && (
-          <div className="mt-8 grid gap-5 md:grid-cols-2">
-            <div className="md:col-span-2">
-              <Field label="Audio file" required>
-                <FileDrop
-                  label="Drop your audio or click to browse - MP3, WAV, AAC"
-                  icon={MusicIcon}
-                  tall
-                  accept={mediaAccept}
-                  file={mediaFile}
-                  onFile={setMediaFile}
-                />
-              </Field>
-            </div>
-            <p className="md:col-span-2 -mt-2 text-xs text-muted-foreground">
-              {isDetectingDuration
-                ? "Detecting audio duration..."
-                : detectedDurationSeconds
-                  ? `Detected duration: ${formatDetectedDuration(detectedDurationSeconds)}`
-                  : "Duration will be detected automatically from the uploaded media."}
-            </p>
-            <Field label="Cover art">
-              <FileDrop
-                label="Upload cover art - 1:1 recommended"
-                icon={ImageIcon}
-                accept="image/jpeg,image/png,image/webp"
-                file={thumbnailFile}
-                onFile={setThumbnailFile}
-              />
-            </Field>
-            <Field label="Title" required>
-              <input className={inputCls} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Encountering Truth" />
-            </Field>
-            <div className="md:col-span-2">
-              <Field label="Description">
-                <textarea
-                  rows={3}
-                  className={cn(inputCls, "resize-none")}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="What is this audio about?"
-                />
-              </Field>
-            </div>
-            <Field label="Category" required>
-              <select className={inputCls} value={category} onChange={(e) => setCategory(e.target.value as ContentCategory)}>
-                {categoryOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field label="Tags">
-              <input className={inputCls} value={tags} onChange={(e) => setTags(e.target.value)} placeholder="worship, faith, prayer" />
-            </Field>
-            <Field label="Language" required>
-              <input className={inputCls} placeholder="English" />
-            </Field>
-            <div className="md:col-span-2">
-              <VisibilityField visibility={visibility} onChange={setVisibility} />
-            </div>
-            <div className="md:col-span-2">
-              <ReleaseField status={releaseStatus} onChange={setReleaseStatus} />
-            </div>
-          </div>
-        )}
-
-        {kind === "video" && (
-          <div className="mt-8 grid gap-5 md:grid-cols-2">
-            <div className="md:col-span-2">
-              <Field label="Video file" required>
-                <FileDrop
-                  label="Drop your video or click to browse - MP4, MOV"
-                  icon={Film}
-                  tall
-                  accept={mediaAccept}
-                  file={mediaFile}
-                  onFile={setMediaFile}
-                />
-              </Field>
-            </div>
-            <p className="md:col-span-2 -mt-2 text-xs text-muted-foreground">
-              {isDetectingDuration
-                ? "Detecting video duration..."
-                : detectedDurationSeconds
-                  ? `Detected duration: ${formatDetectedDuration(detectedDurationSeconds)}`
-                  : "Duration will be detected automatically from the uploaded media."}
-            </p>
-            <Field label="Thumbnail">
-              <FileDrop
-                label="Upload thumbnail - 16:9"
-                icon={ImageIcon}
-                accept="image/jpeg,image/png,image/webp"
-                file={thumbnailFile}
-                onFile={setThumbnailFile}
-              />
-            </Field>
-            <Field label="Trailer (optional)">
-              <FileDrop label="Upload short trailer" icon={Film} />
-            </Field>
-            <Field label="Title" required>
-              <input className={inputCls} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="The Narrow Way" />
-            </Field>
-            <Field label="Category" required>
-              <select className={inputCls} value={category} onChange={(e) => setCategory(e.target.value as ContentCategory)}>
-                {categoryOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <div className="md:col-span-2">
-              <Field label="Description">
-                <textarea
-                  rows={3}
-                  className={cn(inputCls, "resize-none")}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="What is this video about?"
-                />
-              </Field>
-            </div>
-            <Field label="Tags">
-              <input className={inputCls} value={tags} onChange={(e) => setTags(e.target.value)} placeholder="kingdom, story, film" />
-            </Field>
-            <Field label="Language" required>
-              <input className={inputCls} placeholder="English" />
-            </Field>
-            <div className="md:col-span-2">
-              <VisibilityField visibility={visibility} onChange={setVisibility} />
-            </div>
-            <div className="md:col-span-2">
-              <ReleaseField status={releaseStatus} onChange={setReleaseStatus} />
-            </div>
-          </div>
-        )}
-
-        {kind === "live" && (
-          <div className="mt-8 grid gap-5 md:grid-cols-2">
-            <div className="md:col-span-2">
-              <Field label="Event banner" required>
-                <FileDrop label="Upload event banner - 16:9" icon={ImageIcon} tall />
-              </Field>
-            </div>
-            <Field label="Event title" required>
-              <input className={inputCls} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Worship Night Lagos" />
-            </Field>
-            <Field label="Event type" required>
-              <select className={inputCls} value={eventType} onChange={(e) => setEventType(e.target.value as LiveEventType)}>
-                {liveEventTypeOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <div className="md:col-span-2">
-              <Field label="Description">
-                <textarea
-                  rows={3}
-                  className={cn(inputCls, "resize-none")}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="What can guests expect?"
-                />
-              </Field>
-            </div>
-            <Field label="Date" required>
-              <input type="date" className={inputCls} value={eventDate} onChange={(e) => setEventDate(e.target.value)} />
-            </Field>
-            <Field label="Time zone" required>
-              <input className={inputCls} value={timezone} onChange={(e) => setTimezone(e.target.value)} placeholder="Africa/Lagos" />
-            </Field>
-            <Field label="Start time" required>
-              <input type="time" className={inputCls} value={eventStartTime} onChange={(e) => setEventStartTime(e.target.value)} />
-            </Field>
-            <Field label="End time" required>
-              <input type="time" className={inputCls} value={eventEndTime} onChange={(e) => setEventEndTime(e.target.value)} />
-            </Field>
-            <div className="md:col-span-2">
-              <Field label="Streaming URL">
-                <input className={inputCls} value={streamUrl} onChange={(e) => setStreamUrl(e.target.value)} placeholder="rtmp:// or https://" />
-              </Field>
-            </div>
-            <div className="md:col-span-2">
-              <label className="flex items-center justify-between rounded-2xl border border-border bg-secondary/30 p-4 cursor-pointer">
-                <div>
-                  <p className="text-sm font-medium">Require registration</p>
-                  <p className="text-xs text-muted-foreground">Guests register to receive a reminder and link.</p>
-                </div>
-                <input
-                  className="sr-only"
-                  type="checkbox"
-                  checked={registrationRequired}
-                  onChange={(e) => setRegistrationRequired(e.target.checked)}
-                />
-                <span className={cn("relative h-6 w-11 rounded-full transition", registrationRequired ? "bg-gold-gradient" : "bg-muted")}>
-                  <span
-                    className={cn("absolute top-0.5 h-5 w-5 rounded-full bg-background transition", registrationRequired ? "right-0.5" : "left-0.5")}
+        <div className="px-5 py-5 sm:px-8 sm:py-6 md:px-10">
+          {kind === "audio" && (
+            <div className="grid gap-5 md:grid-cols-2">
+              <div className="md:col-span-2">
+                <Field label="Audio file" required>
+                  <FileDrop
+                    label="Drop your audio or click to browse - MP3, WAV, AAC"
+                    icon={MusicIcon}
+                    tall
+                    accept={mediaAccept}
+                    file={mediaFile}
+                    onFile={setMediaFile}
                   />
-                </span>
-              </label>
+                </Field>
+              </div>
+              <p className="md:col-span-2 -mt-2 text-xs text-muted-foreground">
+                {isDetectingDuration
+                  ? "Detecting audio duration..."
+                  : detectedDurationSeconds
+                    ? `Detected duration: ${formatDetectedDuration(detectedDurationSeconds)}`
+                    : "Duration will be detected automatically from the uploaded media."}
+              </p>
+              <Field label="Cover art">
+                <FileDrop
+                  label="Upload cover art - 1:1 recommended"
+                  icon={ImageIcon}
+                  accept="image/jpeg,image/png,image/webp"
+                  file={thumbnailFile}
+                  onFile={setThumbnailFile}
+                />
+              </Field>
+              <Field label="Title" required>
+                <input className={inputCls} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Encountering Truth" />
+              </Field>
+              <div className="md:col-span-2">
+                <Field label="Description">
+                  <textarea
+                    rows={3}
+                    className={cn(inputCls, "resize-none")}
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="What is this audio about?"
+                  />
+                </Field>
+              </div>
+              <Field label="Category" required>
+                <select className={inputCls} value={category} onChange={(e) => setCategory(e.target.value as ContentCategory)}>
+                  {categoryOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Tags">
+                <input className={inputCls} value={tags} onChange={(e) => setTags(e.target.value)} placeholder="worship, faith, prayer" />
+              </Field>
+              <Field label="Language" required>
+                <input className={inputCls} placeholder="English" />
+              </Field>
+              <div className="md:col-span-2">
+                <VisibilityField visibility={visibility} onChange={setVisibility} />
+              </div>
+              <div className="md:col-span-2">
+                <ReleaseField status={releaseStatus} onChange={setReleaseStatus} />
+              </div>
             </div>
-            <div className="md:col-span-2">
-              <VisibilityField visibility={visibility} onChange={setVisibility} />
-            </div>
-          </div>
-        )}
+          )}
 
-        <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-6">
-          <button onClick={onClose} className="rounded-full px-5 py-2.5 text-sm text-muted-foreground hover:text-foreground">
-            Cancel
-          </button>
-          <div className="flex gap-3">
-            <button
-              disabled={isBusy}
-              onClick={() => submitContent("DRAFT")}
-              className="inline-flex items-center gap-2 rounded-full border border-gold/40 px-5 py-2.5 text-sm text-gold hover:bg-gold/10 disabled:opacity-50"
-            >
-              {isBusy ? "Working..." : "Save Draft"}
+          {kind === "video" && (
+            <div className="grid gap-5 md:grid-cols-2">
+              <div className="md:col-span-2">
+                <Field label="Video file" required>
+                  <FileDrop
+                    label="Drop your video or click to browse - MP4, MOV"
+                    icon={Film}
+                    tall
+                    accept={mediaAccept}
+                    file={mediaFile}
+                    onFile={setMediaFile}
+                  />
+                </Field>
+              </div>
+              <p className="md:col-span-2 -mt-2 text-xs text-muted-foreground">
+                {isDetectingDuration
+                  ? "Detecting video duration..."
+                  : detectedDurationSeconds
+                    ? `Detected duration: ${formatDetectedDuration(detectedDurationSeconds)}`
+                    : "Duration will be detected automatically from the uploaded media."}
+              </p>
+              <Field label="Thumbnail">
+                <FileDrop
+                  label="Upload thumbnail - 16:9"
+                  icon={ImageIcon}
+                  accept="image/jpeg,image/png,image/webp"
+                  file={thumbnailFile}
+                  onFile={setThumbnailFile}
+                />
+              </Field>
+              <Field label="Trailer (optional)">
+                <FileDrop label="Upload short trailer" icon={Film} />
+              </Field>
+              <Field label="Title" required>
+                <input className={inputCls} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="The Narrow Way" />
+              </Field>
+              <Field label="Category" required>
+                <select className={inputCls} value={category} onChange={(e) => setCategory(e.target.value as ContentCategory)}>
+                  {categoryOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <div className="md:col-span-2">
+                <Field label="Description">
+                  <textarea
+                    rows={3}
+                    className={cn(inputCls, "resize-none")}
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="What is this video about?"
+                  />
+                </Field>
+              </div>
+              <Field label="Tags">
+                <input className={inputCls} value={tags} onChange={(e) => setTags(e.target.value)} placeholder="kingdom, story, film" />
+              </Field>
+              <Field label="Language" required>
+                <input className={inputCls} placeholder="English" />
+              </Field>
+              <div className="md:col-span-2">
+                <VisibilityField visibility={visibility} onChange={setVisibility} />
+              </div>
+              <div className="md:col-span-2">
+                <ReleaseField status={releaseStatus} onChange={setReleaseStatus} />
+              </div>
+            </div>
+          )}
+
+          {kind === "live" && (
+            <div className="grid gap-5 md:grid-cols-2">
+              <div className="md:col-span-2">
+                <Field label="Event banner" required>
+                  <FileDrop label="Upload event banner - 16:9" icon={ImageIcon} tall />
+                </Field>
+              </div>
+              <Field label="Event title" required>
+                <input className={inputCls} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Worship Night Lagos" />
+              </Field>
+              <Field label="Event type" required>
+                <select className={inputCls} value={eventType} onChange={(e) => setEventType(e.target.value as LiveEventType)}>
+                  {liveEventTypeOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <div className="md:col-span-2">
+                <Field label="Description">
+                  <textarea
+                    rows={3}
+                    className={cn(inputCls, "resize-none")}
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="What can guests expect?"
+                  />
+                </Field>
+              </div>
+              <Field label="Date" required>
+                <input type="date" className={inputCls} value={eventDate} onChange={(e) => setEventDate(e.target.value)} />
+              </Field>
+              <Field label="Time zone" required>
+                <input className={inputCls} value={timezone} onChange={(e) => setTimezone(e.target.value)} placeholder="Africa/Lagos" />
+              </Field>
+              <Field label="Start time" required>
+                <input type="time" className={inputCls} value={eventStartTime} onChange={(e) => setEventStartTime(e.target.value)} />
+              </Field>
+              <Field label="End time" required>
+                <input type="time" className={inputCls} value={eventEndTime} onChange={(e) => setEventEndTime(e.target.value)} />
+              </Field>
+              <div className="md:col-span-2">
+                <Field label="Streaming URL">
+                  <input className={inputCls} value={streamUrl} onChange={(e) => setStreamUrl(e.target.value)} placeholder="rtmp:// or https://" />
+                </Field>
+              </div>
+              <div className="md:col-span-2">
+                <label className="flex items-center justify-between rounded-2xl border border-border bg-secondary/30 p-4 cursor-pointer">
+                  <div>
+                    <p className="text-sm font-medium">Require registration</p>
+                    <p className="text-xs text-muted-foreground">Guests register to receive a reminder and link.</p>
+                  </div>
+                  <input
+                    className="sr-only"
+                    type="checkbox"
+                    checked={registrationRequired}
+                    onChange={(e) => setRegistrationRequired(e.target.checked)}
+                  />
+                  <span className={cn("relative h-6 w-11 rounded-full transition", registrationRequired ? "bg-gold-gradient" : "bg-muted")}>
+                    <span
+                      className={cn(
+                        "absolute top-0.5 h-5 w-5 rounded-full bg-background transition",
+                        registrationRequired ? "right-0.5" : "left-0.5",
+                      )}
+                    />
+                  </span>
+                </label>
+              </div>
+              <div className="md:col-span-2">
+                <VisibilityField visibility={visibility} onChange={setVisibility} />
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="border-t border-border bg-card-gradient/95 px-5 py-4 sm:px-8 md:px-10">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <button onClick={onClose} className="rounded-full px-5 py-2.5 text-sm text-muted-foreground hover:text-foreground">
+              Cancel
             </button>
-            <button
-              disabled={isBusy}
-              onClick={() => submitContent(releaseStatus)}
-              className="inline-flex items-center gap-2 rounded-full bg-red-gradient px-6 py-2.5 text-sm font-medium text-primary-foreground shadow-red-glow disabled:opacity-50"
-            >
-              {kind === "live" ? (
-                <>
-                  <Calendar className="h-4 w-4" /> Schedule Event
-                </>
-              ) : (
-                <>
-                  <Sparkles className="h-4 w-4" /> {releaseStatus === "PUBLISHED" ? "Publish" : "Save Draft"}
-                </>
-              )}
-            </button>
+            <div className="flex gap-3">
+              <button
+                disabled={isBusy}
+                onClick={() => submitContent("DRAFT")}
+                className="inline-flex items-center gap-2 rounded-full border border-gold/40 px-5 py-2.5 text-sm text-gold hover:bg-gold/10 disabled:opacity-50"
+              >
+                {isBusy ? "Working..." : "Save Draft"}
+              </button>
+              <button
+                disabled={isBusy}
+                onClick={() => submitContent(releaseStatus)}
+                className="inline-flex items-center gap-2 rounded-full bg-red-gradient px-6 py-2.5 text-sm font-medium text-primary-foreground shadow-red-glow disabled:opacity-50"
+              >
+                {kind === "live" ? (
+                  <>
+                    <Calendar className="h-4 w-4" /> Schedule Event
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4" /> {releaseStatus === "PUBLISHED" ? "Publish" : "Save Draft"}
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -1655,6 +1771,8 @@ export const CreatorStudio = () => {
         return <AudioLibrary openUpload={openUpload} items={audioItemsForStudio} />;
       case "video":
         return <VideoLibrary openUpload={openUpload} items={videoItemsForStudio} />;
+      case "buckets":
+        return <BucketsLibrary />;
       case "live":
         return <LiveManager openUpload={openUpload} />;
       case "analytics":

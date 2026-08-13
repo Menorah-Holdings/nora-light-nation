@@ -1,13 +1,11 @@
 import { Link } from "react-router-dom";
-import { Play, Headphones, Radio as RadioIcon, BookOpen, Film, Mic2, Sparkles } from "lucide-react";
+import { Play, Headphones, Radio as RadioIcon, BookOpen, Film, Mic2 } from "lucide-react";
 import { ContentRow } from "@/components/ContentRow";
 import { HeroSlider, type HeroSlide } from "@/components/HeroSlider";
 import { cn } from "@/lib/utils";
 import type { ContentItem } from "@/lib/mockData";
-import { adaptContent, adaptCreator, adaptLiveEvent, contentTypeLabel, type UiLiveEvent } from "@/lib/api/adapters";
-import { useContentList, useFeaturedContent } from "@/lib/api/hooks/useContent";
-import { useCreatorsList } from "@/lib/api/hooks/useCreators";
-import { useLiveEvents } from "@/lib/api/hooks/useLive";
+import { adaptContent, adaptLiveEvent, contentTypeLabel, type UiLiveEvent } from "@/lib/api/adapters";
+import { useContentHome } from "@/lib/api/hooks/useContent";
 
 const chips = [
   { label: "Messages", icon: Mic2, to: "/app/listen" },
@@ -18,30 +16,24 @@ const chips = [
   { label: "Live", icon: RadioIcon, to: "/app/live" },
 ];
 
-type FeaturedItem =
-  | { kind: "content"; item: ContentItem }
-  | { kind: "live"; item: UiLiveEvent };
+type FeaturedItem = { kind: "content"; item: ContentItem } | { kind: "live"; item: UiLiveEvent };
 
 const Discover = () => {
-  const featuredQuery = useFeaturedContent();
-  const contentQuery = useContentList({ limit: 24 });
-  const liveQuery = useLiveEvents({ limit: 12 });
-  const creatorsQuery = useCreatorsList({ limit: 8 });
+  const homeQuery = useContentHome();
 
-  const featuredContent = (featuredQuery.data ?? []).map(adaptContent);
-  const allContent = (contentQuery.data ?? []).map(adaptContent);
-  const liveEvents = (liveQuery.data ?? []).map(adaptLiveEvent);
-  const creators = (creatorsQuery.data ?? []).map(adaptCreator);
-  const contentPool = featuredContent.length > 0 ? featuredContent : allContent;
+  const featuredContent = (homeQuery.data?.featured ?? []).map(adaptContent);
+  const recommendedContent = (homeQuery.data?.recommended ?? []).map(adaptContent);
+  const trendingWorship = (homeQuery.data?.trendingWorship ?? []).map(adaptContent);
+  const newMessages = (homeQuery.data?.newMessages ?? []).map(adaptContent);
+  const moviesStories = (homeQuery.data?.moviesStories ?? []).map(adaptContent);
+  const continueListening = (homeQuery.data?.continueListening ?? []).flatMap((entry) => (entry.content ? [adaptContent(entry.content)] : []));
+  const liveEvents = (homeQuery.data?.upcomingLive ?? []).map(adaptLiveEvent);
+  const contentPool = featuredContent.length > 0 ? featuredContent : recommendedContent;
   const activeOrUpcoming = liveEvents.filter((event) => event.status !== "replay");
   const heroSlides = buildHeroSlides(contentPool, activeOrUpcoming);
   const featuredWeek = buildFeaturedItems(contentPool, activeOrUpcoming);
-  const followed = creators[0];
-  const becauseYouFollow = allContent
-    .filter((item) => item.type === "message" || item.type === "devotional")
-    .slice(0, 6);
-  const isLoading = featuredQuery.isLoading || contentQuery.isLoading || liveQuery.isLoading || creatorsQuery.isLoading;
-  const hasError = featuredQuery.isError || contentQuery.isError || liveQuery.isError || creatorsQuery.isError;
+  const isLoading = homeQuery.isLoading;
+  const hasError = homeQuery.isError;
 
   return (
     <div className="space-y-14">
@@ -52,9 +44,7 @@ const Discover = () => {
             NoraPlus<span className="text-gold">.</span>
           </h1>
         </div>
-        <p className="text-xs text-muted-foreground max-w-xs">
-          Light for every nation - curated kingdom content for your journey today.
-        </p>
+        <p className="text-xs text-muted-foreground max-w-xs">Light for every nation - curated kingdom content for your journey today.</p>
       </div>
 
       {hasError && (
@@ -135,50 +125,23 @@ const Discover = () => {
         )}
       </section>
 
-      <ContentRow title="New & Noteworthy" subtitle="Freshly published for your faith journey" items={allContent.slice(0, 5)} />
-      <ContentRow title="Recommended for You" subtitle="Selected from the NoraPlus catalog" items={allContent.slice(2, 8)} />
-      <ContentRow title="Trending Worship" items={allContent.filter((item) => item.type === "music" || item.type === "music-video")} />
-      <ContentRow title="New Messages" subtitle="Sound teaching curated for this week" items={allContent.filter((item) => item.type === "message")} />
-      <ContentRow title="Movies & Stories" items={allContent.filter((item) => item.type === "movie" || item.type === "skit")} />
-
-      {followed && (
-        <section className="space-y-5">
-          <div className="flex items-end justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="relative h-14 w-14 overflow-hidden rounded-full ring-1 ring-gold/40">
-                <img src={followed.image} alt={followed.name} className="h-full w-full object-cover" />
-                <div className="absolute inset-0 ring-1 ring-inset ring-background/40" />
-              </div>
-              <div>
-                <p className="text-[11px] uppercase tracking-[0.25em] text-gold flex items-center gap-1.5">
-                  <Sparkles className="h-3 w-3" /> Creator spotlight
-                </p>
-                <h2 className="mt-1 font-display text-2xl md:text-3xl">{followed.name}</h2>
-                <p className="text-xs text-muted-foreground">
-                  Recommended messages, devotionals, and live replays from similar voices.
-                </p>
-              </div>
-            </div>
-          </div>
-          {becauseYouFollow.length > 0 ? (
-            <div className="flex gap-5 overflow-x-auto pb-2 snap-x scrollbar-none -mx-6 px-6">
-              {becauseYouFollow.map((item) => (
-                <div key={item.id} className="w-56 shrink-0 snap-start">
-                  <Link to={`/app/content/${item.id}`} className="group block">
-                    <div className="relative aspect-square overflow-hidden rounded-xl ring-1 ring-border/60 group-hover:ring-gold/40 transition">
-                      <img src={item.image} alt={item.title} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" />
-                      <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-transparent to-transparent" />
-                    </div>
-                    <p className="mt-3 font-display text-sm leading-snug line-clamp-2">{item.title}</p>
-                    <p className="text-xs text-muted-foreground">{item.creator}</p>
-                  </Link>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <EmptyPanel message="More creator-based recommendations will appear as content is published." />
-          )}
-        </section>
+      <ContentRow
+        title="New & Noteworthy"
+        subtitle="Freshly published for your faith journey"
+        items={featuredContent.slice(0, 5)}
+        viewAllTo="/app/listen"
+      />
+      <ContentRow title="Recommended for You" subtitle="Selected from the NoraPlus catalog" items={recommendedContent} viewAllTo="/app/listen" />
+      <ContentRow title="Trending Worship" items={trendingWorship} viewAllTo="/app/listen" />
+      <ContentRow title="New Messages" subtitle="Sound teaching curated for this week" items={newMessages} viewAllTo="/app/listen" />
+      <ContentRow title="Movies & Stories" items={moviesStories} viewAllTo="/app/watch" />
+      {continueListening.length > 0 && (
+        <ContentRow
+          title="Continue Listening"
+          subtitle="Pick up where you left off"
+          items={continueListening}
+          viewAllTo="/app/library?tab=Continue"
+        />
       )}
 
       <section className="space-y-4">
@@ -203,7 +166,9 @@ const Discover = () => {
                   <p className="mt-1 text-xs text-muted-foreground">Host: {event.host}</p>
                   <div className="mt-4 flex items-center justify-between">
                     <span className="text-xs text-muted-foreground">{event.access} access</span>
-                    <Link to="/app/live" className="text-xs text-gold hover:underline">View event</Link>
+                    <Link to="/app/live" className="text-xs text-gold hover:underline">
+                      View event
+                    </Link>
                   </div>
                 </div>
               </div>
@@ -218,25 +183,29 @@ const Discover = () => {
 };
 
 function buildHeroSlides(content: ContentItem[], liveEvents: UiLiveEvent[]): HeroSlide[] {
-  const contentSlides = content.slice(0, 4).map((item): HeroSlide => ({
-    id: `content-${item.id}`,
-    badge: contentTypeLabel(item.type),
-    title: item.title,
-    description: item.description || `By ${item.creator}`,
-    image: item.image,
-    primary: { label: item.medium === "video" ? "Watch Now" : "Listen Now", to: `/app/content/${item.id}`, icon: "play" },
-    secondary: { label: "View Details", to: `/app/content/${item.id}` },
-  }));
+  const contentSlides = content.slice(0, 4).map(
+    (item): HeroSlide => ({
+      id: `content-${item.id}`,
+      badge: contentTypeLabel(item.type),
+      title: item.title,
+      description: item.description || `By ${item.creator}`,
+      image: item.image,
+      primary: { label: item.medium === "video" ? "Watch Now" : "Listen Now", to: `/app/content/${item.id}`, icon: "play" },
+      secondary: { label: "View Details", to: `/app/content/${item.id}` },
+    }),
+  );
 
-  const liveSlides = liveEvents.slice(0, 1).map((event): HeroSlide => ({
-    id: `live-${event.id}`,
-    badge: event.status === "live" ? "Live Now" : "Live Event",
-    title: event.title,
-    description: event.description || `Hosted by ${event.host}`,
-    image: event.image,
-    primary: { label: event.status === "live" ? "Join Live" : "View Event", to: "/app/live", icon: "live" },
-    secondary: { label: "All Events", to: "/app/live" },
-  }));
+  const liveSlides = liveEvents.slice(0, 1).map(
+    (event): HeroSlide => ({
+      id: `live-${event.id}`,
+      badge: event.status === "live" ? "Live Now" : "Live Event",
+      title: event.title,
+      description: event.description || `Hosted by ${event.host}`,
+      image: event.image,
+      primary: { label: event.status === "live" ? "Join Live" : "View Event", to: "/app/live", icon: "live" },
+      secondary: { label: "All Events", to: "/app/live" },
+    }),
+  );
 
   return [...liveSlides, ...contentSlides].slice(0, 5);
 }
@@ -257,10 +226,7 @@ const GridSkeleton = () => (
 );
 
 const EmptyPanel = ({ message }: { message: string }) => (
-  <div className="rounded-2xl border border-dashed border-border p-8 text-sm text-muted-foreground">
-    {message}
-  </div>
+  <div className="rounded-2xl border border-dashed border-border p-8 text-sm text-muted-foreground">{message}</div>
 );
 
 export default Discover;
-

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   KeyRound,
   ShieldCheck,
@@ -43,6 +43,7 @@ import {
   useUserSessions,
 } from "@/lib/api/hooks/useUsers";
 import { ApiClientError } from "@/lib/api/client";
+import { authApi } from "@/lib/api/auth";
 import type { ApiSession } from "@/lib/api/types";
 
 const PANEL = "relative overflow-hidden rounded-2xl border border-gold/20 shadow-elegant";
@@ -162,6 +163,7 @@ const AccountSettings = () => {
 
   // Password
   const [pwd, setPwd] = useState({ current: "", next: "", confirm: "" });
+  const [pwdSaving, setPwdSaving] = useState(false);
 
   // Security toggles
   const [twoFA, setTwoFA] = useState(false);
@@ -192,6 +194,57 @@ const AccountSettings = () => {
     personalized: true,
     dataCollection: true,
   });
+
+  useEffect(() => {
+    const apiUser = currentUserQuery.data;
+    if (!apiUser) return;
+    setComms((prev) => ({
+      ...prev,
+      email: apiUser.emailNotif ?? prev.email,
+      productUpdates: apiUser.productAnnouncements ?? prev.productUpdates,
+      creatorAnnouncements: apiUser.creatorUpdates ?? prev.creatorAnnouncements,
+      subscriptionEmails: apiUser.subscriptionUpdates ?? prev.subscriptionEmails,
+      marketing: apiUser.marketingEmails ?? prev.marketing,
+    }));
+    setPrivacy((prev) => ({
+      ...prev,
+      privateHistory: apiUser.privateListening ?? prev.privateHistory,
+      hideRecent: apiUser.hideRecentlyPlayed ?? prev.hideRecent,
+      personalized: apiUser.personalizedRecs ?? prev.personalized,
+      dataCollection: apiUser.dataCollectionOptIn ?? prev.dataCollection,
+    }));
+  }, [currentUserQuery.data]);
+
+  const saveComms = () => {
+    updateUserMutation.mutate(
+      {
+        emailNotif: comms.email,
+        productAnnouncements: comms.productUpdates,
+        creatorUpdates: comms.creatorAnnouncements,
+        subscriptionUpdates: comms.subscriptionEmails,
+        marketingEmails: comms.marketing,
+      },
+      {
+        onSuccess: () => toast.success("Settings saved"),
+        onError: (error) => toast.error(getErrorMessage(error, "Could not save preferences")),
+      },
+    );
+  };
+
+  const savePrivacy = () => {
+    updateUserMutation.mutate(
+      {
+        privateListening: privacy.privateHistory,
+        hideRecentlyPlayed: privacy.hideRecent,
+        personalizedRecs: privacy.personalized,
+        dataCollectionOptIn: privacy.dataCollection,
+      },
+      {
+        onSuccess: () => toast.success("Settings saved"),
+        onError: (error) => toast.error(getErrorMessage(error, "Could not save privacy settings")),
+      },
+    );
+  };
 
   // Delete account
   const [delPwd, setDelPwd] = useState("");
@@ -232,7 +285,7 @@ const AccountSettings = () => {
     );
   };
 
-  const updatePassword = () => {
+  const updatePassword = async () => {
     if (!pwd.current || !pwd.next || !pwd.confirm) {
       toast.error("Please fill all password fields");
       return;
@@ -245,9 +298,17 @@ const AccountSettings = () => {
       toast.error("Passwords do not match");
       return;
     }
-    setPwd({ current: "", next: "", confirm: "" });
-    setPwdOpen(false);
-    toast.success("Password updated");
+    setPwdSaving(true);
+    try {
+      await authApi.changePassword({ currentPassword: pwd.current, newPassword: pwd.next });
+      setPwd({ current: "", next: "", confirm: "" });
+      setPwdOpen(false);
+      toast.success("Password updated");
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Could not update password"));
+    } finally {
+      setPwdSaving(false);
+    }
   };
 
   const signOutDevice = (id: string) => {
@@ -471,10 +532,11 @@ const AccountSettings = () => {
           </div>
           <div className="relative border-t border-border/40 px-5 sm:px-6 py-4 flex justify-end">
             <Button
-              onClick={() => toast.success("Settings saved")}
-              className="bg-red-gradient text-primary-foreground hover:opacity-90 hover:shadow-glow"
+              onClick={saveComms}
+              disabled={updateUserMutation.isPending}
+              className="bg-red-gradient text-primary-foreground hover:opacity-90 hover:shadow-glow disabled:opacity-60"
             >
-              Save Preferences
+              {updateUserMutation.isPending ? "Saving..." : "Save Preferences"}
             </Button>
           </div>
         </div>
@@ -513,10 +575,11 @@ const AccountSettings = () => {
           </div>
           <div className="relative border-t border-border/40 px-5 sm:px-6 py-4 flex justify-end">
             <Button
-              onClick={() => toast.success("Settings saved")}
-              className="bg-red-gradient text-primary-foreground hover:opacity-90 hover:shadow-glow"
+              onClick={savePrivacy}
+              disabled={updateUserMutation.isPending}
+              className="bg-red-gradient text-primary-foreground hover:opacity-90 hover:shadow-glow disabled:opacity-60"
             >
-              Save Privacy Settings
+              {updateUserMutation.isPending ? "Saving..." : "Save Privacy Settings"}
             </Button>
           </div>
         </div>
@@ -832,8 +895,12 @@ const AccountSettings = () => {
             <Button variant="ghost" onClick={() => setPwdOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={updatePassword} className="bg-red-gradient text-primary-foreground hover:opacity-90">
-              Update Password
+            <Button
+              onClick={updatePassword}
+              disabled={pwdSaving}
+              className="bg-red-gradient text-primary-foreground hover:opacity-90 disabled:opacity-60"
+            >
+              {pwdSaving ? "Updating..." : "Update Password"}
             </Button>
           </DialogFooter>
         </DialogContent>

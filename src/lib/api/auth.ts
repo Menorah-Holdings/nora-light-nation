@@ -96,6 +96,12 @@ export interface ResetPasswordOtpInput {
   password: string;
 }
 
+export interface ChangePasswordInput {
+  currentPassword: string;
+  newPassword: string;
+  revokeOtherSessions?: boolean;
+}
+
 export const authApi = {
   getSession: () => authRequest<AuthSession | null>("/get-session"),
   signUpEmail: (body: SignUpEmailInput) =>
@@ -123,6 +129,8 @@ export const authApi = {
     authRequest<{ status: boolean }>("/reset-password", { body }),
   resetPasswordOtp: (body: ResetPasswordOtpInput) =>
     authRequest<{ success: boolean }>("/email-otp/reset-password", { body }),
+  changePassword: (body: ChangePasswordInput) =>
+    authRequest<{ token?: string | null; user?: ApiUser }>("/change-password", { body }),
 };
 
 export async function authRequest<T>(
