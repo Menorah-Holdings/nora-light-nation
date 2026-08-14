@@ -51,6 +51,7 @@ import {
   useUpdateOwnLiveEvent,
 } from "@/lib/api/hooks/useCreators";
 import { uploadFileToPresignedUrl, useConfirmUpload, usePresignUpload } from "@/lib/api/hooks/useUpload";
+import { useAddBucketItem, useBuckets } from "@/lib/api/hooks/useBuckets";
 import { BucketsLibrary } from "@/components/studio/BucketsLibrary";
 import type {
   ApiContent,
@@ -1315,11 +1316,14 @@ const UploadModal = ({ kind, onClose, onSubmit }: { kind: UploadKind; onClose: (
   const [timezone, setTimezone] = useState("Africa/Lagos");
   const [streamUrl, setStreamUrl] = useState("");
   const [registrationRequired, setRegistrationRequired] = useState(true);
+  const [bucketId, setBucketId] = useState("");
   const createContent = useCreateOwnContent();
   const createLiveEvent = useCreateOwnLiveEvent();
   const updateContent = useUpdateOwnContent();
   const presignUpload = usePresignUpload();
   const confirmUpload = useConfirmUpload();
+  const addBucketItem = useAddBucketItem();
+  const bucketsQuery = useBuckets();
 
   useEffect(() => {
     let cancelled = false;
@@ -1349,10 +1353,16 @@ const UploadModal = ({ kind, onClose, onSubmit }: { kind: UploadKind; onClose: (
     live: "Create Live Event",
   };
   const isBusy =
-    createContent.isPending || createLiveEvent.isPending || updateContent.isPending || presignUpload.isPending || confirmUpload.isPending;
+    createContent.isPending ||
+    createLiveEvent.isPending ||
+    updateContent.isPending ||
+    presignUpload.isPending ||
+    confirmUpload.isPending ||
+    addBucketItem.isPending;
   const contentType: ContentType = kind === "video" ? "VIDEO" : "AUDIO";
   const mediaFolder = kind === "video" ? "videos" : "audio";
   const mediaAccept = kind === "video" ? "video/mp4,video/webm,video/quicktime" : "audio/mpeg,audio/mp4,audio/wav,audio/ogg";
+  const eligibleBuckets = (bucketsQuery.data ?? []).filter((bucket) => bucket.type === contentType);
 
   const submitContent = async (targetStatus: ContentStatus) => {
     if (kind === "live") {
@@ -1431,6 +1441,10 @@ const UploadModal = ({ kind, onClose, onSubmit }: { kind: UploadKind; onClose: (
         });
         await uploadFileToPresignedUrl(mediaFile, media.uploadUrl);
         await confirmUpload.mutateAsync({ key: media.key, contentId: created.id, assetRole });
+      }
+
+      if (bucketId) {
+        await addBucketItem.mutateAsync({ bucketId, contentId: created.id });
       }
 
       if (targetStatus === "PUBLISHED") {
@@ -1522,6 +1536,21 @@ const UploadModal = ({ kind, onClose, onSubmit }: { kind: UploadKind; onClose: (
               <Field label="Language" required>
                 <input className={inputCls} placeholder="English" />
               </Field>
+              <Field label="Add to bucket" hint="Optional — group this into an album">
+                <select
+                  className={inputCls}
+                  value={bucketId}
+                  onChange={(e) => setBucketId(e.target.value)}
+                  disabled={eligibleBuckets.length === 0}
+                >
+                  <option value="">{eligibleBuckets.length === 0 ? "No albums yet" : "No bucket"}</option>
+                  {eligibleBuckets.map((bucket) => (
+                    <option key={bucket.id} value={bucket.id}>
+                      {bucket.title}
+                    </option>
+                  ))}
+                </select>
+              </Field>
               <div className="md:col-span-2">
                 <VisibilityField visibility={visibility} onChange={setVisibility} />
               </div>
@@ -1592,6 +1621,21 @@ const UploadModal = ({ kind, onClose, onSubmit }: { kind: UploadKind; onClose: (
               </Field>
               <Field label="Language" required>
                 <input className={inputCls} placeholder="English" />
+              </Field>
+              <Field label="Add to bucket" hint="Optional — group this into a series">
+                <select
+                  className={inputCls}
+                  value={bucketId}
+                  onChange={(e) => setBucketId(e.target.value)}
+                  disabled={eligibleBuckets.length === 0}
+                >
+                  <option value="">{eligibleBuckets.length === 0 ? "No series yet" : "No bucket"}</option>
+                  {eligibleBuckets.map((bucket) => (
+                    <option key={bucket.id} value={bucket.id}>
+                      {bucket.title}
+                    </option>
+                  ))}
+                </select>
               </Field>
               <div className="md:col-span-2">
                 <VisibilityField visibility={visibility} onChange={setVisibility} />
