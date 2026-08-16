@@ -137,6 +137,8 @@ export interface ApiCreatorApplication {
   category: ContentCategory;
   displayName: string;
   requestedHandle?: string | null;
+  email?: string | null;
+  description?: string | null;
   websiteUrl?: string | null;
   avatarUrl?: string | null;
   bannerUrl?: string | null;
@@ -300,16 +302,19 @@ export interface CreatorApplicationInput {
   organizationName?: string;
   handle?: string;
   category: ContentCategory;
+  description?: string;
   websiteUrl?: string;
   avatarUrl?: string;
   bannerUrl?: string;
-  socialLinks?: Partial<Record<CreatorSocialPlatform, string>>;
+  /** Lowercase platform keys (instagram, youtube, ...) — see toApiSocialLinks. */
+  socialLinks?: Record<string, string>;
 }
 
 export interface CreatorProfileUpdateInput {
   individualProfile?: Partial<Omit<ApiIndividualCreatorProfile, "id" | "createdAt" | "updatedAt">>;
   ministryOrganizationProfile?: Partial<Omit<ApiMinistryOrganizationProfile, "id" | "createdAt" | "updatedAt">>;
-  socialLinks?: Partial<Record<CreatorSocialPlatform, string>>;
+  /** Lowercase platform keys (instagram, youtube, ...) — see toApiSocialLinks. */
+  socialLinks?: Record<string, string>;
   contentCategories?: ContentCategory[];
 }
 
