@@ -1,5 +1,27 @@
 import { images, type ContentItem, type ContentType as UiContentType } from "@/lib/mockData";
-import type { ApiContent, ApiCreator, ApiCreatorAnalytics, ApiLiveEvent, ContentCategory, ContentMediaType, ContentType } from "./types";
+import type {
+  ApiContent,
+  ApiCreator,
+  ApiCreatorAnalytics,
+  ApiLiveEvent,
+  ContentCategory,
+  ContentMediaType,
+  ContentType,
+  CreatorSocialPlatform,
+} from "./types";
+
+/**
+ * The backend's write schema keys social links lowercase (instagram, youtube, ...),
+ * while CreatorSocialPlatform (and API read responses) use the uppercase enum form.
+ * Convert before sending any socialLinks object in a request body.
+ */
+export function toApiSocialLinks(
+  links: Partial<Record<CreatorSocialPlatform, string>>,
+): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(links).map(([key, value]) => [key.toLowerCase(), value]),
+  );
+}
 
 export interface UiCreator {
   id: string;

@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Logo } from "@/components/Logo";
 import { ArrowRight, Globe, BarChart3, ShieldCheck, Radio, DollarSign, Sparkles } from "lucide-react";
 
@@ -12,7 +12,10 @@ const values = [
   { icon: BarChart3, title: "Real analytics", desc: "Understand plays, watch-time, and audience growth in clear detail." },
 ];
 
-const Partner = () => (
+const Partner = () => {
+  const navigate = useNavigate();
+
+  return (
   <div className="min-h-screen bg-background">
     <header className="container flex items-center justify-between py-6">
       <Logo />
@@ -49,34 +52,20 @@ const Partner = () => (
       </div>
     </section>
 
-    {/* Form */}
+    {/* CTA */}
     <section className="container py-24">
-      <div className="mx-auto max-w-2xl rounded-3xl bg-card-gradient p-8 md:p-12 ring-1 ring-gold/20 shadow-elegant">
+      <div className="mx-auto max-w-2xl rounded-3xl bg-card-gradient p-8 md:p-12 ring-1 ring-gold/20 shadow-elegant text-center">
         <p className="text-xs uppercase tracking-[0.25em] text-gold">Apply to Partner</p>
         <h2 className="mt-3 font-display text-3xl md:text-4xl">Let's bring your work to the world.</h2>
-        <form className="mt-8 grid gap-5" onSubmit={(e) => { e.preventDefault(); alert("Application received — we'll be in touch."); }}>
-          <div className="grid gap-5 md:grid-cols-2">
-            <Field label="Name / Organization" placeholder="Sounds of Heaven" />
-            <Field label="Email" type="email" placeholder="hello@yourministry.org" />
-          </div>
-          <div className="grid gap-5 md:grid-cols-2">
-            <div>
-              <label className="text-xs text-muted-foreground">Content type</label>
-              <select className="mt-1 w-full rounded-lg border border-border bg-secondary/60 px-4 py-3 text-sm">
-                <option>Church / Ministry</option><option>Gospel Artist</option><option>Podcaster</option>
-                <option>Filmmaker</option><option>Skit Maker</option><option>Event Organizer</option>
-              </select>
-            </div>
-            <Field label="Website / social link" placeholder="https://" />
-          </div>
-          <div>
-            <label className="text-xs text-muted-foreground">Tell us about your work</label>
-            <textarea rows={4} className="mt-1 w-full rounded-lg border border-border bg-secondary/60 px-4 py-3 text-sm" placeholder="Briefly share your mission, audience, and the kind of content you publish." />
-          </div>
-          <button className="inline-flex items-center justify-center gap-2 rounded-full bg-gold-gradient px-6 py-3 text-sm font-medium text-primary-foreground shadow-glow">
-            Submit Application <ArrowRight className="h-4 w-4" />
-          </button>
-        </form>
+        <p className="mt-4 text-muted-foreground">
+          Applications are submitted from inside NoraPlus, so we can tie your profile to your account. Sign in (or create one) and the application only takes a few minutes.
+        </p>
+        <button
+          onClick={() => navigate("/app/admin")}
+          className="mt-8 inline-flex items-center justify-center gap-2 rounded-full bg-gold-gradient px-6 py-3 text-sm font-medium text-primary-foreground shadow-glow"
+        >
+          Start Your Application <ArrowRight className="h-4 w-4" />
+        </button>
       </div>
     </section>
 
@@ -87,13 +76,7 @@ const Partner = () => (
       </div>
     </footer>
   </div>
-);
-
-const Field = ({ label, ...props }: { label: string } & React.InputHTMLAttributes<HTMLInputElement>) => (
-  <div>
-    <label className="text-xs text-muted-foreground">{label}</label>
-    <input {...props} className="mt-1 w-full rounded-lg border border-border bg-secondary/60 px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-gold" />
-  </div>
-);
+  );
+};
 
 export default Partner;

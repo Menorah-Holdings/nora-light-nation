@@ -35,7 +35,7 @@ import { content } from "@/lib/mockData";
 import { useUser } from "@/lib/user";
 import { toast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
-import { adaptContent, adaptCreatorAnalytics, formatCategory, formatCompactNumber } from "@/lib/api/adapters";
+import { adaptContent, adaptCreatorAnalytics, formatCategory, formatCompactNumber, toApiSocialLinks } from "@/lib/api/adapters";
 import {
   useCreateOwnContent,
   useCreateOwnLiveEvent,
@@ -347,12 +347,10 @@ const Overview = ({ goto, openUpload, items }: { goto: (s: Section) => void; ope
     { label: "Total Plays", value: formatCompactNumber(analytics?.totalPlays ?? 0) },
     { label: "Upcoming Live", value: formatCompactNumber(analytics?.upcomingLiveEvents ?? 0) },
   ];
-  const activity = [
-    { t: "Published “Encountering Truth”", at: "2h ago" },
-    { t: "1,204 new followers this week", at: "1d ago" },
-    { t: "Live Event scheduled · Worship Night Lagos", at: "2d ago" },
-    { t: "“Morning Light Devotional” reached 50K plays", at: "4d ago" },
-  ];
+  const activity = recentItems.map((item) => ({
+    t: `${item.status === "Published" ? "Published" : "Draft saved"} "${item.title}"`,
+    at: item.published,
+  }));
 
   return (
     <div className="space-y-10">
@@ -440,6 +438,7 @@ const Overview = ({ goto, openUpload, items }: { goto: (s: Section) => void; ope
           <div className="border-b border-border px-6 py-4">
             <h3 className="font-display text-lg">Recent activity</h3>
           </div>
+          {activity.length === 0 && <div className="px-6 py-8 text-sm text-muted-foreground">Your recent activity will appear here.</div>}
           <ul className="divide-y divide-border/60">
             {activity.map((a, i) => (
               <li key={i} className="flex items-start gap-3 px-6 py-4">
@@ -990,7 +989,7 @@ const CreatorProfileView = () => {
     updateProfile.mutate(
       {
         contentCategories: selectedCategories,
-        ...(Object.keys(cleanSocialLinks).length > 0 && { socialLinks: cleanSocialLinks }),
+        ...(Object.keys(cleanSocialLinks).length > 0 && { socialLinks: toApiSocialLinks(cleanSocialLinks) }),
         ...(profile.creatorType === "INDIVIDUAL"
           ? { individualProfile: cleanIndividualProfile }
           : { ministryOrganizationProfile: cleanOrganizationProfile }),

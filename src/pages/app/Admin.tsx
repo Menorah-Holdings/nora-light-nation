@@ -9,9 +9,10 @@ import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { useUser } from "@/lib/user";
 import CreatorStudio from "@/components/CreatorStudio";
-import { useSubmitCreatorApplication } from "@/lib/api/hooks/useCreators";
+import { useMyCreatorApplication, useSubmitCreatorApplication } from "@/lib/api/hooks/useCreators";
 import { uploadFileToPresignedUrl, useConfirmUserMedia, usePresignUserMedia } from "@/lib/api/hooks/useUpload";
 import type { ContentCategory, CreatorApplicationInput, CreatorSocialPlatform } from "@/lib/api/types";
+import { formatCategory, toApiSocialLinks } from "@/lib/api/adapters";
 
 
 /* -------------------- Creator dashboard (approved) -------------------- */
@@ -96,6 +97,92 @@ const PendingReview = ({ onView }: { onView: () => void }) => (
   </div>
 );
 
+/* -------------------- Submitted application (read-only) -------------------- */
+
+const SummaryRow = ({ label, value }: { label: string; value?: React.ReactNode }) =>
+  value ? (
+    <div className="flex items-start justify-between gap-4 border-t border-border/60 py-3 first:border-t-0">
+      <span className="text-sm text-muted-foreground">{label}</span>
+      <span className="text-sm text-right">{value}</span>
+    </div>
+  ) : null;
+
+const SOCIAL_LABELS: Record<string, string> = {
+  INSTAGRAM: "Instagram",
+  FACEBOOK: "Facebook",
+  YOUTUBE: "YouTube",
+  TIKTOK: "TikTok",
+  X: "X",
+  WEBSITE: "Website",
+};
+
+const ApplicationSummary = ({ onBack }: { onBack: () => void }) => {
+  const applicationQuery = useMyCreatorApplication();
+  const application = applicationQuery.data;
+
+  return (
+    <div className="mx-auto max-w-2xl">
+      <div className="rounded-3xl bg-card-gradient ring-1 ring-border/60 p-6 md:p-10">
+        <div className="flex items-center justify-between">
+          <h1 className="font-display text-2xl md:text-3xl">Your Application</h1>
+          <span className="inline-flex items-center gap-2 rounded-full bg-gold/15 px-3 py-1 text-xs uppercase tracking-[0.2em] text-gold ring-1 ring-gold/30">
+            <Clock className="h-3 w-3" /> Under Review
+          </span>
+        </div>
+
+        {applicationQuery.isLoading && (
+          <p className="mt-8 text-center text-sm text-muted-foreground">Loading your application...</p>
+        )}
+
+        {!applicationQuery.isLoading && !application && (
+          <p className="mt-8 text-center text-sm text-muted-foreground">We couldn't find your submitted application.</p>
+        )}
+
+        {application && (
+          <div className="mt-6">
+            {(application.avatarUrl || application.bannerUrl) && (
+              <div className="mb-4 flex items-center gap-4">
+                {application.avatarUrl && (
+                  <img src={application.avatarUrl} alt="" className="h-16 w-16 rounded-full object-cover ring-1 ring-border" />
+                )}
+                {application.bannerUrl && (
+                  <img src={application.bannerUrl} alt="" className="h-16 flex-1 rounded-xl object-cover ring-1 ring-border" />
+                )}
+              </div>
+            )}
+            <SummaryRow label="Type" value={application.creatorType === "INDIVIDUAL" ? "Individual Creator" : "Ministry or Organization"} />
+            <SummaryRow label="Display name" value={application.displayName} />
+            <SummaryRow label="Handle" value={application.requestedHandle ? `@${application.requestedHandle}` : undefined} />
+            <SummaryRow label="Category" value={formatCategory(application.category)} />
+            <SummaryRow label="Bio" value={application.description} />
+            <SummaryRow label="Website" value={application.websiteUrl} />
+            {application.socialLinks && Object.keys(application.socialLinks).length > 0 && (
+              <SummaryRow
+                label="Social links"
+                value={
+                  <div className="space-y-1">
+                    {Object.entries(application.socialLinks).map(([platform, url]) => (
+                      <div key={platform}>{SOCIAL_LABELS[platform] ?? platform}: {url}</div>
+                    ))}
+                  </div>
+                }
+              />
+            )}
+            <SummaryRow label="Submitted" value={new Date(application.submittedAt).toLocaleDateString()} />
+          </div>
+        )}
+
+        <button
+          onClick={onBack}
+          className="mt-8 inline-flex items-center gap-2 rounded-full border border-gold/40 px-6 py-2.5 text-sm text-gold hover:bg-gold/10 transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" /> Back
+        </button>
+      </div>
+    </div>
+  );
+};
+
 /* -------------------- Multi-step application -------------------- */
 
 type CreatorType = "individual" | "organization" | null;
@@ -131,10 +218,12 @@ const CATEGORIES: { label: string; value: ContentCategory }[] = [
   { label: "Messages", value: "SERMON" },
   { label: "Podcasts", value: "PODCAST" },
   { label: "Devotionals", value: "DEVOTIONAL" },
-  { label: "Live Events", value: "WORSHIP" },
+  { label: "Worship", value: "WORSHIP" },
   { label: "Teaching Series", value: "BIBLE_STUDY" },
   { label: "Films", value: "FILM" },
-  { label: "Worship", value: "WORSHIP" },
+  { label: "Prayer", value: "PRAYER" },
+  { label: "Testimony", value: "TESTIMONY" },
+  { label: "Other", value: "OTHER" },
 ];
 
 const SOCIAL: { key: CreatorSocialPlatform; label: string; icon: typeof Instagram; ph: string }[] = [
@@ -248,8 +337,9 @@ const Application = ({
   const [type, setType] = useState<CreatorType>(null);
   const [handle, setHandle] = useState("");
   const [applicationName, setApplicationName] = useState("");
+  const [bio, setBio] = useState("");
   const [websiteUrl, setWebsiteUrl] = useState("");
-  const [categories, setCategories] = useState<ContentCategory[]>([]);
+  const [category, setCategory] = useState<ContentCategory | null>(null);
   const [socialLinks, setSocialLinks] = useState<Partial<Record<CreatorSocialPlatform, string>>>({});
   const [avatarUpload, setAvatarUpload] = useState<ApplicationUpload | null>(null);
   const [bannerUpload, setBannerUpload] = useState<ApplicationUpload | null>(null);
@@ -262,16 +352,13 @@ const Application = ({
   const canNext = useMemo(() => {
     if (step === 1) return type !== null;
     if (step === 2) return applicationName.trim().length >= 2;
-    if (step === 4) return categories.length > 0;
+    if (step === 4) return category !== null;
     if (step === 6) return agree1 && agree2;
     return true;
-  }, [step, type, applicationName, categories.length, agree1, agree2]);
+  }, [step, type, applicationName, category, agree1, agree2]);
 
   const next = () => setStep(s => Math.min(TOTAL_STEPS, s + 1));
   const back = () => (step === 1 ? onCancel() : setStep(s => s - 1));
-
-  const toggleCat = (c: ContentCategory) =>
-    setCategories(prev => (prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c]));
 
   const submit = () => {
     if (!canNext || isSubmitting) return;
@@ -286,11 +373,12 @@ const Application = ({
         ? { displayName: applicationName.trim() }
         : { organizationName: applicationName.trim() }),
       ...(handle.trim() && { handle: handle.trim() }),
-      category: categories[0] ?? "OTHER",
+      category: category ?? "OTHER",
+      ...(bio.trim() && { description: bio.trim() }),
       ...(websiteUrl.trim() && { websiteUrl: websiteUrl.trim() }),
       ...(avatarUpload?.url && { avatarUrl: avatarUpload.url }),
       ...(bannerUpload?.url && { bannerUrl: bannerUpload.url }),
-      ...(Object.keys(links).length > 0 && { socialLinks: links }),
+      ...(Object.keys(links).length > 0 && { socialLinks: toApiSocialLinks(links) }),
     });
   };
 
@@ -351,14 +439,14 @@ const Application = ({
               <Field
                 label="Creator Handle"
                 required
-                hint={<>Your creator page: <span className="text-gold">noraplus.io/@{handle || "yourhandle"}</span><div className="mt-1 text-muted-foreground/80">Unique · lowercase · letters, numbers, hyphens</div></>}
+                hint={<>Your creator page: <span className="text-gold">noraplus.io/@{handle || "yourhandle"}</span><div className="mt-1 text-muted-foreground/80">Unique · lowercase · letters, numbers, periods, underscores</div></>}
               >
                 <div className="flex items-center rounded-xl border border-border bg-secondary/40 focus-within:ring-1 focus-within:ring-gold focus-within:border-gold/60">
                   <span className="pl-4 text-sm text-muted-foreground">@</span>
                   <input
                     className="w-full bg-transparent px-2 py-2.5 text-sm focus:outline-none"
                     value={handle}
-                    onChange={e => setHandle(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+                    onChange={e => setHandle(e.target.value.toLowerCase().replace(/[^a-z0-9._]/g, ""))}
                     placeholder="yourhandle"
                   />
                 </div>
@@ -387,7 +475,7 @@ const Application = ({
                   <input
                     className="w-full bg-transparent px-2 py-2.5 text-sm focus:outline-none"
                     value={handle}
-                    onChange={e => setHandle(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+                    onChange={e => setHandle(e.target.value.toLowerCase().replace(/[^a-z0-9._]/g, ""))}
                     placeholder="yourhandle"
                   />
                 </div>
@@ -433,7 +521,13 @@ const Application = ({
               )}
               <div className="md:col-span-2">
                 <Field label="Short Bio">
-                  <textarea rows={4} className={cn(inputCls, "resize-none")} placeholder="Tell us about your ministry or creative work..." />
+                  <textarea
+                  rows={4}
+                  className={cn(inputCls, "resize-none")}
+                  value={bio}
+                  onChange={(e) => setBio(e.target.value)}
+                  placeholder="Tell us about your ministry or creative work..."
+                />
                 </Field>
               </div>
               <div className="md:col-span-2">
@@ -445,16 +539,16 @@ const Application = ({
 
         {step === 4 && (
           <div className="space-y-8">
-            <StepHeader step={4} title="Content Categories" />
-            <p className="text-sm text-muted-foreground -mt-4">Select all that apply to the content you plan to share.</p>
+            <StepHeader step={4} title="Content Category" />
+            <p className="text-sm text-muted-foreground -mt-4">Pick the category that best describes the content you plan to share.</p>
             <div className="flex flex-wrap gap-3">
               {CATEGORIES.map(c => {
-                const active = categories.includes(c.value);
+                const active = category === c.value;
                 return (
                   <button
                     key={c.value}
                     type="button"
-                    onClick={() => toggleCat(c.value)}
+                    onClick={() => setCategory(c.value)}
                     className={cn(
                       "rounded-full px-5 py-2.5 text-sm transition-all border",
                       active
@@ -617,7 +711,7 @@ const RejectedView = ({ reason, onReapply }: { reason?: string; onReapply: () =>
 
 /* -------------------- Page shell -------------------- */
 
-type View = "hero" | "applying" | "success" | "pending" | "rejected" | "dashboard";
+type View = "hero" | "applying" | "success" | "pending" | "viewing" | "rejected" | "dashboard";
 
 const viewForStatus = (s: ReturnType<typeof useUser>["user"]["creator_status"]): View => {
   switch (s) {
@@ -629,14 +723,14 @@ const viewForStatus = (s: ReturnType<typeof useUser>["user"]["creator_status"]):
 };
 
 const Admin = () => {
-  const { user, setCreatorStatus } = useUser();
+  const { user, setCreatorStatus, isPrototypeUser } = useUser();
   const status = user.creator_status;
   const [view, setView] = useState<View>(() => viewForStatus(status));
   const submitApplication = useSubmitCreatorApplication();
 
   useEffect(() => {
-    // Snap to canonical view when status changes externally, unless mid-application or success
-    if (view !== "applying" && view !== "success") setView(viewForStatus(status));
+    // Snap to canonical view when status changes externally, unless mid-application, success, or viewing
+    if (view !== "applying" && view !== "success" && view !== "viewing") setView(viewForStatus(status));
   }, [status]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (view === "dashboard") return <CreatorDashboard />;
@@ -667,13 +761,14 @@ const Admin = () => {
         />
       )}
       {view === "success" && <SuccessView onHome={() => setView("pending")} />}
-      {view === "pending" && <PendingReview onView={() => setView("applying")} />}
+      {view === "pending" && <PendingReview onView={() => setView("viewing")} />}
+      {view === "viewing" && <ApplicationSummary onBack={() => setView("pending")} />}
       {view === "rejected" && (
         <RejectedView reason={user.rejectionReason} onReapply={() => setView("applying")} />
       )}
 
-      {/* Dev helper */}
-      {status === "Under Review" && view === "pending" && (
+      {/* Dev helper — prototype/mock session only, never for real accounts */}
+      {isPrototypeUser && status === "Under Review" && view === "pending" && (
         <div className="mx-auto max-w-2xl text-center">
           <button
             onClick={() => setCreatorStatus("Approved")}

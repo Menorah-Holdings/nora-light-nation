@@ -25,7 +25,10 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { useUser } from "@/lib/user";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useCreatorDetail, useCreatorsList } from "@/lib/api/hooks/useCreators";
 import { useContentDetail } from "@/lib/api/hooks/useContent";
 import {
@@ -305,15 +308,21 @@ const UserDetailDialog = ({ id, onClose }: { id: string | null; onClose: () => v
 
 /* ---------- Sections ---------- */
 
+const applicationActivityTone = (status: ApiCreatorApplication["status"]) =>
+  status === "APPROVED" ? "green" : status === "REJECTED" ? "red" : "gold";
+
+const applicationActivityLabel = (status: ApiCreatorApplication["status"]) =>
+  status === "APPROVED" ? "Creator application approved" : status === "REJECTED" ? "Creator application declined" : "Creator application submitted";
+
 const DashboardView = () => {
   const { data: stats } = useAdminStats();
-  const activity = [
-    { t: "Creator application", who: "Ada Okafor", time: "2m ago", tone: "gold" as const },
-    { t: "Content published", who: "Sounds of Heaven - Anchored Live Sessions", time: "18m ago", tone: "green" as const },
-    { t: "Subscription upgraded", who: "u-1842 -> Premium", time: "1h ago", tone: "default" as const },
-    { t: "Report filed", who: 'Comment on "The Narrow Way"', time: "3h ago", tone: "red" as const },
-    { t: "Live event started", who: "Youth Revival - Nairobi", time: "5h ago", tone: "red" as const },
-  ];
+  const recentApplicationsQuery = useAdminApplications({ limit: 5 });
+  const activity = (recentApplicationsQuery.data ?? []).map((app) => ({
+    t: applicationActivityLabel(app.status),
+    who: app.displayName,
+    time: new Date(app.reviewedAt ?? app.submittedAt).toLocaleDateString(),
+    tone: applicationActivityTone(app.status),
+  }));
   return (
     <div className="space-y-8">
       <SectionHeader title="Platform Dashboard" subtitle="A live snapshot of activity across the NoraPlus platform." />
@@ -328,7 +337,7 @@ const DashboardView = () => {
           tone="red"
         />
         <Stat label="Revenue (MTD)" value="$184,250" sub="+12.4% MoM" icon={DollarSign} tone="gold" />
-        <Stat label="Live Events" value={"3"} sub="2 streaming now" icon={Radio} tone="red" />
+        <Stat label="Live Events" value={stats ? String(stats.live.active) : "—"} sub="currently live" icon={Radio} tone="red" />
         <Stat label="Published Content" value={stats ? stats.content.total.toLocaleString() : "—"} sub="audio / video / live" icon={FileVideo} />
         <Stat
           label="Pending Applications"
@@ -341,9 +350,15 @@ const DashboardView = () => {
       </div>
       <Card>
         <div className="flex items-center justify-between">
-          <h3 className="font-display text-xl">Recent Platform Activity</h3>
-          <Pill tone="muted">Last 24 hours</Pill>
+          <h3 className="font-display text-xl">Recent Creator Applications</h3>
+          <Pill tone="muted">Most recent 5</Pill>
         </div>
+        {recentApplicationsQuery.isLoading && (
+          <p className="mt-5 text-center text-sm text-muted-foreground">Loading...</p>
+        )}
+        {!recentApplicationsQuery.isLoading && activity.length === 0 && (
+          <p className="mt-5 text-center text-sm text-muted-foreground">No applications yet.</p>
+        )}
         <ul className="mt-5 divide-y divide-border/60">
           {activity.map((a, i) => (
             <li key={i} className="flex items-center justify-between py-3">
@@ -354,7 +369,6 @@ const DashboardView = () => {
                     a.tone === "gold" && "bg-gold",
                     a.tone === "red" && "bg-red",
                     a.tone === "green" && "bg-emerald-400",
-                    a.tone === "default" && "bg-muted-foreground",
                   )}
                 />
                 <div>
@@ -476,22 +490,27 @@ const ContentView = () => {
 const CreatorsView = () => {
   const [search, setSearch] = useState("");
   const [viewCreatorId, setViewCreatorId] = useState<string | null>(null);
+  const [declineTarget, setDeclineTarget] = useState<ApiCreatorApplication | null>(null);
+  const [declineReason, setDeclineReason] = useState("");
   const applicationsQuery = useAdminApplications({ status: "PENDING", limit: 50 });
   const creatorsQuery = useCreatorsList({ limit: 50, search: search.trim() || undefined });
   const reviewApplication = useReviewAdminApplication();
   const updateCreatorStatus = useUpdateAdminCreatorStatus();
 
-  const review = (application: ApiCreatorApplication, status: "APPROVED" | "REJECTED") => {
-    const declineReason = status === "REJECTED" ? window.prompt("Decline reason")?.trim() : undefined;
-    if (status === "REJECTED" && !declineReason) return;
-
+  const submitReview = (application: ApiCreatorApplication, status: "APPROVED" | "REJECTED", reason?: string) => {
     reviewApplication.mutate(
       {
         id: application.id,
-        input: buildAdminReviewApplicationInput(application, status, declineReason),
+        input: buildAdminReviewApplicationInput(application, status, reason),
       },
       {
-        onSuccess: () => toast({ title: status === "APPROVED" ? "Application approved" : "Application declined" }),
+        onSuccess: () => {
+          toast({ title: status === "APPROVED" ? "Application approved" : "Application declined" });
+          if (status === "REJECTED") {
+            setDeclineTarget(null);
+            setDeclineReason("");
+          }
+        },
         onError: (error) =>
           toast({
             title: "Review failed",
@@ -500,6 +519,13 @@ const CreatorsView = () => {
           }),
       },
     );
+  };
+
+  const approve = (application: ApiCreatorApplication) => submitReview(application, "APPROVED");
+
+  const confirmDecline = () => {
+    if (!declineTarget || !declineReason.trim()) return;
+    submitReview(declineTarget, "REJECTED", declineReason.trim());
   };
 
   const toggleCreator = (id: string, isActive: boolean | undefined) => {
@@ -571,8 +597,8 @@ const CreatorsView = () => {
                   </td>
                   <td className="px-5 py-3">
                     <div className="flex justify-end gap-2">
-                      <RowAction icon={Check} label="Approve" tone="gold" onClick={() => review(app, "APPROVED")} />
-                      <RowAction icon={X} label="Decline" tone="red" onClick={() => review(app, "REJECTED")} />
+                      <RowAction icon={Check} label="Approve" tone="gold" onClick={() => approve(app)} />
+                      <RowAction icon={X} label="Decline" tone="red" onClick={() => { setDeclineTarget(app); setDeclineReason(""); }} />
                     </div>
                   </td>
                 </tr>
@@ -628,6 +654,38 @@ const CreatorsView = () => {
         </div>
       </Card>
       <CreatorDetailDialog id={viewCreatorId} onClose={() => setViewCreatorId(null)} />
+      <Dialog open={Boolean(declineTarget)} onOpenChange={(open) => !open && setDeclineTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Decline application</DialogTitle>
+            <DialogDescription>
+              Let {declineTarget?.displayName ?? "the applicant"} know why this application wasn't approved. They'll see this reason and can reapply.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-1.5 py-2">
+            <Label htmlFor="decline-reason">Reason</Label>
+            <Textarea
+              id="decline-reason"
+              value={declineReason}
+              onChange={(e) => setDeclineReason(e.target.value)}
+              placeholder="e.g. We need more information about your content and rights ownership."
+              rows={4}
+            />
+          </div>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="ghost" onClick={() => setDeclineTarget(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDecline}
+              disabled={!declineReason.trim() || reviewApplication.isPending}
+            >
+              {reviewApplication.isPending ? "Declining..." : "Decline Application"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
