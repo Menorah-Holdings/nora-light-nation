@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import {
   Upload, Headphones, Play, Radio,
   Sparkles, User, Building2, ArrowLeft, ArrowRight, Check, Clock,
-  Image as ImageIcon, Instagram, Facebook, Youtube, Music2, Twitter, XCircle,
+  Image as ImageIcon, Instagram, Facebook, Youtube, Music2, Twitter, XCircle, Lock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
@@ -709,13 +709,31 @@ const RejectedView = ({ reason, onReapply }: { reason?: string; onReapply: () =>
   </div>
 );
 
+const DeactivatedView = () => (
+  <div className="mx-auto max-w-2xl">
+    <div className="rounded-3xl bg-card-gradient ring-1 ring-destructive/30 p-10 text-center">
+      <div className="mx-auto inline-flex items-center gap-2 rounded-full bg-destructive/15 px-4 py-1.5 text-xs uppercase tracking-[0.2em] text-destructive ring-1 ring-destructive/30">
+        <Lock className="h-3.5 w-3.5" /> Creator Access Suspended
+      </div>
+      <h1 className="mt-6 font-display text-3xl md:text-4xl">Your creator access has been paused</h1>
+      <p className="mt-3 text-muted-foreground leading-relaxed">
+        Your NoraPlus creator account is currently deactivated, so Creator Studio isn't available right now. Contact NoraPlus support if you believe this is a mistake.
+      </p>
+    </div>
+  </div>
+);
+
 /* -------------------- Page shell -------------------- */
 
-type View = "hero" | "applying" | "success" | "pending" | "viewing" | "rejected" | "dashboard";
+type View = "hero" | "applying" | "success" | "pending" | "viewing" | "rejected" | "deactivated" | "dashboard";
 
-const viewForStatus = (s: ReturnType<typeof useUser>["user"]["creator_status"]): View => {
-  switch (s) {
-    case "Approved": return "dashboard";
+const viewForUser = (user: ReturnType<typeof useUser>["user"]): View => {
+  switch (user.creator_status) {
+    // An approved application only unlocks the studio while the account still holds
+    // creator-level API access — an admin can deactivate a creator without reversing
+    // their application status, which would otherwise route them into a dashboard
+    // whose requests all 403.
+    case "Approved": return user.role === "CREATOR" || user.role === "ADMIN" ? "dashboard" : "deactivated";
     case "Under Review": return "pending";
     case "Rejected": return "rejected";
     default: return "hero";
@@ -724,14 +742,13 @@ const viewForStatus = (s: ReturnType<typeof useUser>["user"]["creator_status"]):
 
 const Admin = () => {
   const { user, setCreatorStatus, isPrototypeUser } = useUser();
-  const status = user.creator_status;
-  const [view, setView] = useState<View>(() => viewForStatus(status));
+  const [view, setView] = useState<View>(() => viewForUser(user));
   const submitApplication = useSubmitCreatorApplication();
 
   useEffect(() => {
     // Snap to canonical view when status changes externally, unless mid-application, success, or viewing
-    if (view !== "applying" && view !== "success" && view !== "viewing") setView(viewForStatus(status));
-  }, [status]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (view !== "applying" && view !== "success" && view !== "viewing") setView(viewForUser(user));
+  }, [user.creator_status, user.role]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (view === "dashboard") return <CreatorDashboard />;
 
@@ -740,7 +757,7 @@ const Admin = () => {
       {view === "hero" && <OnboardingHero onStart={() => setView("applying")} />}
       {view === "applying" && (
         <Application
-          onCancel={() => setView(viewForStatus(status))}
+          onCancel={() => setView(viewForUser(user))}
           isSubmitting={submitApplication.isPending}
           onSubmit={(input) => {
             submitApplication.mutate(input, {
@@ -766,9 +783,10 @@ const Admin = () => {
       {view === "rejected" && (
         <RejectedView reason={user.rejectionReason} onReapply={() => setView("applying")} />
       )}
+      {view === "deactivated" && <DeactivatedView />}
 
       {/* Dev helper — prototype/mock session only, never for real accounts */}
-      {isPrototypeUser && status === "Under Review" && view === "pending" && (
+      {isPrototypeUser && user.creator_status === "Under Review" && view === "pending" && (
         <div className="mx-auto max-w-2xl text-center">
           <button
             onClick={() => setCreatorStatus("Approved")}

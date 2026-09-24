@@ -46,6 +46,13 @@ const ContentDetail = () => {
   const [reportReason, setReportReason] = useState("");
   const [reportDescription, setReportDescription] = useState("");
 
+  const handleShare = () => {
+    if (!item) return;
+    const url = `${window.location.origin}/app/content/${item.id}`;
+    navigator.clipboard?.writeText(url).catch(() => {});
+    toast.success("Link Copied");
+  };
+
   const submitReport = () => {
     if (!id || !reportReason.trim()) return;
 
@@ -198,7 +205,11 @@ const ContentDetail = () => {
               {heroIsPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 fill-current" />} {heroIsPlaying ? "Pause" : "Play"}
             </button>
             <SaveToLibraryButton contentId={item.id} showLabel className="border border-border px-5 py-2.5 text-sm text-foreground" />
-            <button type="button" className="inline-flex items-center gap-2 rounded-full border border-border px-5 py-2.5 text-sm">
+            <button
+              type="button"
+              onClick={handleShare}
+              className="inline-flex items-center gap-2 rounded-full border border-border px-5 py-2.5 text-sm"
+            >
               <Share2 className="h-4 w-4" /> Share
             </button>
             <button
