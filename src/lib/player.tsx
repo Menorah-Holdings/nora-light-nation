@@ -1,9 +1,10 @@
-import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { apiRequest } from "@/lib/api/client";
 import { adaptContent } from "@/lib/api/adapters";
 import type { ApiContent, ApiPlayback } from "@/lib/api/types";
 import { useUpdateProgress } from "@/lib/api/hooks/useLibrary";
 import type { ContentItem } from "@/lib/mockData";
+import { useUser } from "@/lib/user";
 
 const PROGRESS_WRITE_INTERVAL = 15; // seconds between writes
 
@@ -42,6 +43,32 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const lastWriteRef = useRef(0);
   const updateProgress = useUpdateProgress();
+  const { user } = useUser();
+  const currentUserIdRef = useRef(user.id);
+
+  // Reset all playback state when the signed-in user changes (e.g. sign out / sign in as
+  // someone else), so the next user never inherits the previous user's track or position.
+  useEffect(() => {
+    if (currentUserIdRef.current === user.id) return;
+    currentUserIdRef.current = user.id;
+
+    const audio = audioRef.current;
+    if (audio) {
+      audio.pause();
+      audio.removeAttribute("src");
+      audio.load();
+    }
+    playbackUrlCacheRef.current.clear();
+    playbackRequestRef.current += 1;
+    lastWriteRef.current = 0;
+    setTrack(null);
+    setIsPlaying(false);
+    setCurrentTime(0);
+    setDuration(0);
+    setQueue([]);
+    setQueueIndex(-1);
+    setIsExpanded(false);
+  }, [user.id]);
 
   const writeProgress = useCallback(
     (el: HTMLAudioElement, completed = false) => {

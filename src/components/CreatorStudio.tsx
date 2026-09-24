@@ -31,6 +31,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { content } from "@/lib/mockData";
 import { useUser } from "@/lib/user";
 import { toast } from "@/hooks/use-toast";
@@ -1521,13 +1522,18 @@ const UploadModal = ({ kind, onClose, onSubmit }: { kind: UploadKind; onClose: (
                 </Field>
               </div>
               <Field label="Category" required>
-                <select className={inputCls} value={category} onChange={(e) => setCategory(e.target.value as ContentCategory)}>
-                  {categoryOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
+                <Select value={category} onValueChange={(value) => setCategory(value as ContentCategory)}>
+                  <SelectTrigger className="border-border bg-secondary/40 focus:ring-1 focus:ring-gold focus:border-gold/60">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categoryOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </Field>
               <Field label="Tags">
                 <input className={inputCls} value={tags} onChange={(e) => setTags(e.target.value)} placeholder="worship, faith, prayer" />
@@ -1596,13 +1602,18 @@ const UploadModal = ({ kind, onClose, onSubmit }: { kind: UploadKind; onClose: (
                 <input className={inputCls} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="The Narrow Way" />
               </Field>
               <Field label="Category" required>
-                <select className={inputCls} value={category} onChange={(e) => setCategory(e.target.value as ContentCategory)}>
-                  {categoryOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
+                <Select value={category} onValueChange={(value) => setCategory(value as ContentCategory)}>
+                  <SelectTrigger className="border-border bg-secondary/40 focus:ring-1 focus:ring-gold focus:border-gold/60">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categoryOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </Field>
               <div className="md:col-span-2">
                 <Field label="Description">
@@ -1792,13 +1803,17 @@ const SuccessModal = ({ onClose, onAnother }: { onClose: () => void; onAnother: 
 export const CreatorStudio = () => {
   const [section, setSection] = useState<Section>("overview");
   const [upload, setUpload] = useState<UploadKind>(null);
+  const [uploadSession, setUploadSession] = useState(0);
   const [success, setSuccess] = useState(false);
   const ownContentQuery = useOwnCreatorContent({ limit: 50 });
   const studioItems = useMemo(() => (ownContentQuery.data ?? []).map(toStudioContentItem), [ownContentQuery.data]);
   const audioItemsForStudio = studioItems.filter((item) => item.type !== "VIDEO");
   const videoItemsForStudio = studioItems.filter((item) => item.type === "VIDEO");
 
-  const openUpload = (k: UploadKind) => setUpload(k);
+  const openUpload = (k: UploadKind) => {
+    setUploadSession((session) => session + 1);
+    setUpload(k);
+  };
   const finishUpload = () => {
     setUpload(null);
     setSuccess(true);
@@ -1857,7 +1872,7 @@ export const CreatorStudio = () => {
 
       <div className="min-w-0">{body}</div>
 
-      <UploadModal kind={upload} onClose={() => setUpload(null)} onSubmit={finishUpload} />
+      <UploadModal key={uploadSession} kind={upload} onClose={() => setUpload(null)} onSubmit={finishUpload} />
       {success && (
         <SuccessModal
           onClose={() => {
